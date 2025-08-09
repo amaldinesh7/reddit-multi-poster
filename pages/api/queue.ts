@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { redditClient, refreshAccessToken, submitPost, addPrefixesToTitle } from '../../utils/reddit';
+import { redditClient, refreshAccessToken, submitPost, addSmartPrefixesToTitle, getSubredditRules } from '../../utils/reddit';
 import formidable from 'formidable';
 import fs from 'fs';
 
@@ -30,10 +30,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     files = uploadedFiles;
   } else {
     // Parse JSON body (fallback for URL-only posts)
-    const body = JSON.parse(req.body || '{}');
+    console.log('Raw req.body:', req.body);
+    console.log('Type of req.body:', typeof req.body);
+    
+    let bodyStr = '';
+    if (typeof req.body === 'string') {
+      bodyStr = req.body;
+    } else if (Buffer.isBuffer(req.body)) {
+      bodyStr = req.body.toString();
+    } else if (req.body) {
+      bodyStr = JSON.stringify(req.body);
+    } else {
+      // Read from request stream
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of req) {
+        chunks.push(chunk);
+      }
+      bodyStr = Buffer.concat(chunks).toString();
+    }
+    
+    console.log('Body string:', bodyStr);
+    const body = JSON.parse(bodyStr || '{}');
+    console.log('Parsed body:', body);
+    
     items = body.items || [];
     caption = body.caption || '';
     prefixes = body.prefixes || {};
+    
+    console.log('Extracted items:', items);
+    console.log('Items length:', items.length);
   }
   
   if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: 'No items' });
@@ -70,32 +95,73 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      const title = addPrefixesToTitle(caption, prefixes || {});
       write({ index: i, status: 'posting', subreddit: item.subreddit });
       
+      // Get subreddit rules to determine if prefixes are needed
+      let subredditRules;
       try {
-        // Get file if uploaded for this item
-        let file: File | undefined;
-        const fileKey = `file_${i}`;
-        if (files[fileKey]) {
-          const uploadedFile = Array.isArray(files[fileKey]) ? files[fileKey][0] : files[fileKey];
-          if (uploadedFile) {
-            // Convert formidable file to File object
-            const buffer = fs.readFileSync(uploadedFile.filepath);
-            file = new File([buffer], uploadedFile.originalFilename || 'upload', {
-              type: uploadedFile.mimetype || 'application/octet-stream'
-            });
+        subredditRules = await getSubredditRules(client, item.subreddit);
+      } catch (error) {
+        console.warn(`Failed to get rules for r/${item.subreddit}:`, error);
+        subredditRules = undefined;
+      }
+      
+      const title = addSmartPrefixesToTitle(caption, item.subreddit, prefixes || {}, subredditRules);
+      
+      try {
+        // Get files if uploaded for this item (support multiple files)
+        const itemFiles: File[] = [];
+        
+        // Check if there's a fileCount for this item (multiple files)
+        const fileCountKey = `fileCount_${i}`;
+        const fileCount = files[fileCountKey] ? parseInt(files[fileCountKey] as string) : 1;
+        
+        // Collect all files for this item
+        for (let fileIndex = 0; fileIndex < fileCount; fileIndex++) {
+          const fileKey = `file_${i}_${fileIndex}`;
+          if (files[fileKey]) {
+            const uploadedFile = Array.isArray(files[fileKey]) ? files[fileKey][0] : files[fileKey];
+            if (uploadedFile) {
+              // Convert formidable file to File object
+              const buffer = fs.readFileSync(uploadedFile.filepath);
+              const file = new File([buffer], uploadedFile.originalFilename || 'upload', {
+                type: uploadedFile.mimetype || 'application/octet-stream'
+              });
+              itemFiles.push(file);
+            }
           }
+        }
+        
+        // Fallback: check for single file with old format
+        if (itemFiles.length === 0) {
+          const fileKey = `file_${i}`;
+          if (files[fileKey]) {
+            const uploadedFile = Array.isArray(files[fileKey]) ? files[fileKey][0] : files[fileKey];
+            if (uploadedFile) {
+              const buffer = fs.readFileSync(uploadedFile.filepath);
+              const file = new File([buffer], uploadedFile.originalFilename || 'upload', {
+                type: uploadedFile.mimetype || 'application/octet-stream'
+              });
+              itemFiles.push(file);
+            }
+          }
+        }
+        
+        // Determine post kind based on number of files
+        let postKind = item.kind;
+        if (itemFiles.length > 1) {
+          postKind = 'gallery';
         }
         
         const result = await submitPost(client, {
           subreddit: item.subreddit,
           title,
-          kind: item.kind,
+          kind: postKind,
           url: item.url,
           text: item.text,
           flair_id: item.flairId,
-          file,
+          files: itemFiles.length > 0 ? itemFiles : undefined,
+          file: itemFiles.length === 1 ? itemFiles[0] : undefined,
         });
         
         console.log(`Post result for r/${item.subreddit}:`, result);
@@ -114,9 +180,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         write({ index: i, status: 'error', subreddit: item.subreddit, error: msg });
       }
 
-      // Add random delay between posts (10-45 seconds)
+      // Add random delay between posts (1-10 seconds)
       if (i < items.length - 1) { // Don't delay after the last post
-        const delayMs = Math.floor(Math.random() * (45000 - 10000 + 1)) + 10000; // 10s to 45s
+        const delayMs = Math.floor(Math.random() * (10000 - 1000 + 1)) + 1000; // 1s to 10s
         const delaySeconds = Math.round(delayMs / 1000);
         write({ index: i, status: 'waiting', subreddit: '', delaySeconds });
         await new Promise(resolve => setTimeout(resolve, delayMs));

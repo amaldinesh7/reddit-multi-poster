@@ -19,35 +19,7 @@ interface MeResponse {
   subs?: string[];
 }
 
-// Curated list from user
-const CURATED_SUBS = [
-  'IndianHotwife',
-  'indiansgetlaid',
-  'DesiNSFWSubs',
-  'Bangaloresluts', // normalized from BangaloreSluts
-  'DesiStree', // normalized from Desistree
-  'DesiSlutGW',
-  'DesiGW',
-  'KeralaGW', // normalized from Kerala GW
-  'Bangalorecouples',
-  'DelhiGone_Wild',
-  'KochiNSFW',
-  'MalayaliGoneWild', // kept as provided
-  'IndianHornyPeople', // normalized case
-  'mumbaiGWild',
-  'bengali_gone_wild', // kept as provided
-  'desiSlimnStacked', // normalized from desi slimnstacked
-  'TamilGW', // normalized case
-  'PuneGW',
-  'BangaloreGWild', // corrected from BangalorGWild
-  'DesiWhoreWife',
-  'DesiExhibitionistGW',
-  'ExhibitionistHotWife',
-  'ExhibitionistFun',
-  'HotwifeIndia',
-  'indian_exhibitionism',
-  'blouseless_saree',
-];
+
 
 export default function Home() {
   const [auth, setAuth] = React.useState<MeResponse>({ authenticated: false });
@@ -59,9 +31,7 @@ export default function Home() {
   const [mediaFiles, setMediaFiles] = React.useState<File[]>([]);
   const [mediaMode, setMediaMode] = React.useState<'file' | 'url'>('file');
   const [flairs, setFlairs] = React.useState<Record<string, string | undefined>>({});
-  const [customSubs, setCustomSubs] = React.useState<string[]>([]);
-  const [newSub, setNewSub] = React.useState('');
-  const [source, setSource] = React.useState<'curated' | 'all'>('curated');
+
 
   React.useEffect(() => {
     const load = async () => {
@@ -77,20 +47,9 @@ export default function Home() {
     load();
   }, []);
 
-  const options = React.useMemo(() => {
-    // Preserve curated order first, then append custom, then Reddit subs not in curated/custom
-    const base = source === 'curated' ? CURATED_SUBS : CURATED_SUBS;
-    const custom = customSubs.filter(s => !base.includes(s));
-    const rest = (auth.subs || []).filter(s => !base.includes(s) && !custom.includes(s));
-    return [...base, ...custom, ...(source === 'all' ? rest : [])];
-  }, [auth.subs, customSubs, source]);
 
-  const addCustomSub = () => {
-    const name = newSub.trim().replace(/^r\//i, '');
-    if (!name) return;
-    setCustomSubs((prev) => prev.includes(name) ? prev : [...prev, name]);
-    setNewSub('');
-  };
+
+
 
   const login = () => { window.location.href = '/api/auth/login'; };
   const logout = async () => { await axios.post('/api/auth/logout'); location.reload(); };
@@ -99,18 +58,25 @@ export default function Home() {
     const allItems: QueueItem[] = [];
     
     if (mediaFiles.length > 0) {
-      // File uploads - create separate posts for each file to each subreddit
-      mediaFiles.forEach((file) => {
-        const kind: 'image' | 'video' = file.type.startsWith('video/') ? 'video' : 'image';
-        selectedSubs.forEach((sr) => {
-          allItems.push({
-            subreddit: sr,
-            flairId: flairs[sr],
-            kind,
-            file,
-            url: undefined,
-            text: undefined,
-          });
+      // File uploads - create one post per subreddit with all files
+      selectedSubs.forEach((sr) => {
+        // Determine post type based on number of files and file type
+        let kind: 'image' | 'video' | 'gallery';
+        if (mediaFiles.length > 1) {
+          // Multiple files = gallery post
+          kind = 'gallery';
+        } else {
+          // Single file = image or video
+          kind = mediaFiles[0].type.startsWith('video/') ? 'video' : 'image';
+        }
+        
+        allItems.push({
+          subreddit: sr,
+          flairId: flairs[sr],
+          kind,
+          files: mediaFiles, // Use files array for all cases
+          url: undefined,
+          text: undefined,
         });
       });
     } else if (mediaUrl) {
@@ -142,20 +108,6 @@ export default function Home() {
     return allItems;
   }, [selectedSubs, flairs, mediaUrl, mediaFiles, caption]);
 
-  if (loading) {
-    return (
-      <>
-        <Head>
-          <title>Reddit Multi-Poster</title>
-          <meta name="description" content="Post to multiple Reddit communities at once with smart scheduling" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <link rel="icon" href="/favicon.ico" />
-        </Head>
-        <AppLoader />
-      </>
-    );
-  }
-
   return (
     <>
       <Head>
@@ -164,11 +116,14 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <div className="min-h-screen">
-        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container mx-auto px-4 py-4">
+      {loading ? (
+        <AppLoader />
+      ) : (
+        <div className="min-h-screen">
+        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+          <div className="container mx-auto px-4 sm:px-6 py-4">
             <div className="flex items-center justify-between">
-              <h1 className="text-xl font-semibold">Reddit Multi-Poster</h1>
+              <h1 className="text-lg sm:text-xl font-semibold">Reddit Multi-Poster</h1>
               {auth.authenticated ? (
                 <DropdownMenu
                   trigger={
@@ -179,12 +134,18 @@ export default function Home() {
                         fallback={auth.me?.name || 'U'}
                         size="sm"
                       />
-                      <span className="text-sm text-muted-foreground">u/{auth.me?.name}</span>
+                      <span className="text-sm text-muted-foreground hidden sm:inline">u/{auth.me?.name}</span>
                     </div>
                   }
                 >
+                  <div className="px-4 py-2 border-b sm:hidden">
+                    <p className="text-sm font-medium">u/{auth.me?.name}</p>
+                  </div>
                   <DropdownMenuItem onClick={() => window.open(`https://reddit.com/user/${auth.me?.name}`, '_blank')}>
                     View Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => window.location.href = '/settings'}>
+                    Settings
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={logout} className="text-red-600">
                     Logout
@@ -197,11 +158,11 @@ export default function Home() {
           </div>
         </header>
 
-      <main className="container mx-auto px-4 py-8 space-y-8">
+      <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-4 sm:space-y-8 max-w-4xl">
         {/* Media */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+        <Card className="border-0 sm:border shadow-sm sm:shadow-md">
+          <CardHeader className="pb-3 px-4 sm:px-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <CardTitle>Media</CardTitle>
               <div className="flex rounded-lg border">
                 <Button
@@ -223,78 +184,55 @@ export default function Home() {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0 px-4 sm:px-6">
                             <MediaUpload onUrl={setMediaUrl} onFile={setMediaFiles} mode={mediaMode} />
           </CardContent>
         </Card>
 
         {/* Subreddits + Flair */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Subreddits & Flairs</CardTitle>
-              <div className="flex rounded-lg border">
-                <Button
-                  variant={source === 'curated' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setSource('curated')}
-                  className="rounded-r-none"
-                >
-                  My List
-                </Button>
-                <Button
-                  variant={source === 'all' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setSource('all')}
-                  className="rounded-l-none border-l"
-                >
-                  All (+ Reddit)
-                </Button>
-              </div>
-            </div>
+        <Card className="border-0 sm:border shadow-sm sm:shadow-md">
+          <CardHeader className="pb-3 px-4 sm:px-6">
+            <CardTitle>Subreddits & Flairs</CardTitle>
           </CardHeader>
-          <CardContent>
-            <SubredditFlairPicker
-              options={options}
-              selected={selectedSubs}
-              onSelectedChange={setSelectedSubs}
-              flairValue={flairs}
-              onFlairChange={setFlairs}
-              newSub={newSub}
-              setNewSub={setNewSub}
-              addCustomSub={addCustomSub}
-            />
+          <CardContent className="pt-0 px-4 sm:px-6">
+                            <SubredditFlairPicker
+                  selected={selectedSubs}
+                  onSelectedChange={setSelectedSubs}
+                  flairValue={flairs}
+                  onFlairChange={setFlairs}
+                />
           </CardContent>
         </Card>
 
         {/* Caption */}
-        <Card>
-          <CardHeader>
+        <Card className="border-0 sm:border shadow-sm sm:shadow-md">
+          <CardHeader className="pb-3 px-4 sm:px-6">
             <CardTitle>Caption</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0 px-4 sm:px-6">
             <PostComposer value={caption} onChange={setCaption} prefixes={prefixes} onPrefixesChange={setPrefixes} />
           </CardContent>
         </Card>
 
         {/* Queue */}
-        <Card>
-          <CardHeader>
+        <Card className="border-0 sm:border shadow-sm sm:shadow-md">
+          <CardHeader className="pb-3 px-4 sm:px-6">
             <CardTitle>Queue</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0 px-4 sm:px-6">
             <PostingQueue items={items} caption={caption} prefixes={prefixes} />
             <p className="text-sm text-muted-foreground mt-4">Posts will be submitted immediately.</p>
           </CardContent>
         </Card>
       </main>
 
-      <footer className="border-t py-8">
-        <div className="container mx-auto px-4 text-center">
+      <footer className="border-t py-6 sm:py-8 mt-auto">
+        <div className="container mx-auto px-4 sm:px-6 text-center">
           <p className="text-sm text-muted-foreground">Built with ❤️ by developers who love automation</p>
         </div>
       </footer>
-      </div>
+        </div>
+      )}
     </>
   );
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import axios from 'axios';
+import { useSubredditCache } from '../hooks/useSubredditCache';
 
 interface Props {
   subreddits: string[];
@@ -8,13 +9,28 @@ interface Props {
 }
 
 export default function FlairManager({ subreddits, value, onChange }: Props) {
+  const { getCachedData, fetchAndCache } = useSubredditCache();
   const [options, setOptions] = React.useState<Record<string, { id: string; text: string }[]>>({});
   const [open, setOpen] = React.useState<Record<string, boolean>>({});
 
   const loadFlairs = async (sr: string) => {
     if (options[sr]) return;
-    const { data } = await axios.get('/api/flairs', { params: { subreddit: sr } });
-    setOptions((prev) => ({ ...prev, [sr]: data.flairs || [] }));
+    
+    // Try to get cached data first
+    const cached = getCachedData(sr);
+    if (cached) {
+      setOptions((prev) => ({ ...prev, [sr]: cached.flairs }));
+      return;
+    }
+    
+    // Fallback to API call and cache the result
+    try {
+      const cachedData = await fetchAndCache(sr);
+      setOptions((prev) => ({ ...prev, [sr]: cachedData.flairs }));
+    } catch (error) {
+      console.error(`Failed to load flairs for ${sr}:`, error);
+      setOptions((prev) => ({ ...prev, [sr]: [] }));
+    }
   };
 
   const toggle = async (sr: string) => {

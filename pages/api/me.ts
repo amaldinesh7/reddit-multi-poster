@@ -19,7 +19,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       if (!client) return res.status(401).json({ authenticated: false });
       const me = await getIdentity(client);
-      const subs = await listMySubreddits(client);
+      
+      // Only fetch subreddits if explicitly requested (for settings page, etc.)
+      const fetchSubs = req.query.include_subs === 'true';
+      const subs = fetchSubs ? await listMySubreddits(client) : [];
+      
       return res.status(200).json({ authenticated: true, me, subs });
     } catch (e: unknown) {
       if (refresh) {
@@ -28,7 +32,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.setHeader('Set-Cookie', serialize('reddit_access', token, { path: '/', httpOnly: true, sameSite: 'lax', maxAge: t.expires_in - 10 }));
         const client2 = redditClient(token);
         const me = await getIdentity(client2);
-        const subs = await listMySubreddits(client2);
+        
+        // Only fetch subreddits if explicitly requested
+        const fetchSubs = req.query.include_subs === 'true';
+        const subs = fetchSubs ? await listMySubreddits(client2) : [];
+        
         return res.status(200).json({ authenticated: true, me, subs });
       }
       throw e;

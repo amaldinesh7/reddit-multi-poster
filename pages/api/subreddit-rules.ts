@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getFlairs, redditClient, refreshAccessToken } from '../../utils/reddit';
+import { getSubredditRules, redditClient, refreshAccessToken } from '../../utils/reddit';
 import { serialize } from 'cookie';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -7,10 +7,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   
   const { subreddit, force } = req.query as { subreddit?: string; force?: string };
   if (!subreddit) return res.status(400).json({ error: 'Missing subreddit' });
-  
-  // If not forcing a refresh, try to return cached data from client-side
-  // The actual caching logic will be handled on the client side
-  // This API will always fetch fresh data from Reddit
   
   let access = req.cookies['reddit_access'];
   const refresh = req.cookies['reddit_refresh'];
@@ -30,11 +26,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!access) return res.status(401).json({ error: 'Unauthorized' });
     
     const client = redditClient(access);
-    const { flairs, required } = await getFlairs(client, subreddit);
+    const rules = await getSubredditRules(client, subreddit);
     
-    res.status(200).json({ 
-      flairs, 
-      required,
+    res.status(200).json({
+      ...rules,
       subreddit: subreddit.toLowerCase(),
       fetchedAt: Date.now()
     });

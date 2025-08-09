@@ -21,6 +21,14 @@ export interface FlairOption {
   richtext?: Array<{ e: string; t?: string }>;
 }
 
+export interface SubredditRules {
+  requiresGenderTag: boolean;
+  requiresContentTag: boolean;
+  genderTags: string[];
+  contentTags: string[];
+  rules: string[];
+}
+
 export const REDDIT_OAUTH_AUTHORIZE = 'https://www.reddit.com/api/v1/authorize';
 export const REDDIT_OAUTH_TOKEN = 'https://www.reddit.com/api/v1/access_token';
 export const REDDIT_API = 'https://oauth.reddit.com';
@@ -112,16 +120,34 @@ export async function getIdentity(client: AxiosInstance): Promise<RedditUser> {
   return data;
 }
 
-export async function listMySubreddits(client: AxiosInstance): Promise<string[]> {
+export async function listMySubreddits(client: AxiosInstance, maxPages: number = 10): Promise<string[]> {
   const subs: string[] = [];
   let after: string | undefined = undefined;
+  let pageCount = 0;
+  
   do {
-    const resp = await client.get<any>('/subreddits/mine/subscriber', { params: { limit: 100, after } });
+    const resp = await client.get<any>('/subreddits/mine/subscriber', { 
+      params: { limit: 100, after } 
+    });
     const data: any = resp.data;
     const children: any[] = data?.data?.children || [];
-    for (const c of children) subs.push(c?.data?.display_name);
+    
+    for (const c of children) {
+      if (c?.data?.display_name) {
+        subs.push(c.data.display_name);
+      }
+    }
+    
     after = data?.data?.after || undefined;
+    pageCount++;
+    
+    // Limit to prevent infinite loops and improve performance
+    if (pageCount >= maxPages) {
+      console.log(`Fetched ${subs.length} subreddits (stopped at ${maxPages} pages)`);
+      break;
+    }
   } while (after);
+  
   return subs.sort((a, b) => a.localeCompare(b));
 }
 
@@ -207,10 +233,88 @@ export async function uploadMedia(client: AxiosInstance, file: File, subreddit: 
   return leaseData.asset.asset_id;
 }
 
+export async function uploadMultipleMedia(client: AxiosInstance, files: File[], subreddit: string): Promise<string[]> {
+  const assetIds: string[] = [];
+  
+  // Upload each file sequentially to avoid overwhelming Reddit's API
+  for (const file of files) {
+    console.log(`Uploading file ${assetIds.length + 1}/${files.length}: ${file.name}`);
+    const assetId = await uploadMedia(client, file, subreddit);
+    assetIds.push(assetId);
+    
+    // Small delay between uploads to be respectful to Reddit's servers
+    if (assetIds.length < files.length) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+  
+  return assetIds;
+}
+
+export async function getSubredditRules(client: AxiosInstance, subreddit: string): Promise<SubredditRules> {
+  try {
+    const [rulesResp, aboutResp] = await Promise.all([
+      client.get(`/r/${subreddit}/about/rules`, { params: { raw_json: 1 } }),
+      client.get(`/r/${subreddit}/about`, { params: { raw_json: 1 } })
+    ]);
+    
+    const rules = rulesResp.data?.rules || [];
+    const description = aboutResp.data?.data?.description || '';
+    const publicDescription = aboutResp.data?.data?.public_description || '';
+    
+    // Combine all text to analyze
+    const allText = [
+      description,
+      publicDescription,
+      ...rules.map((r: any) => `${r.short_name} ${r.description}`)
+    ].join(' ').toLowerCase();
+    
+    // Check for gender tag requirements - look for actual REQUIREMENTS, not just mentions
+    const requiresGenderTag = 
+      /title.*must.*include.*\(f\)|title.*must.*include.*\(m\)|title.*must.*include.*gender/.test(allText) ||
+      /posts.*must.*include.*\(f\)|posts.*must.*include.*\(m\)|posts.*must.*include.*gender/.test(allText) ||
+      /must.*tag.*\(f\)|must.*tag.*\(m\)|required.*\(f\)|required.*\(m\)/.test(allText) ||
+      /use.*\(f\).*in.*title|use.*\(m\).*in.*title|add.*\(f\).*to.*title|add.*\(m\).*to.*title/.test(allText);
+    
+    // Check for content tag requirements - look for actual REQUIREMENTS, not just mentions
+    const requiresContentTag =
+      /title.*must.*include.*\(c\)|posts.*must.*include.*\(c\)|must.*tag.*\(c\)|required.*\(c\)/.test(allText) ||
+      /use.*\(c\).*in.*title|add.*\(c\).*to.*title/.test(allText);
+    
+    // Extract common gender tags
+    const genderTags = [];
+    if (/\(f\)|\[f\]|female/i.test(allText)) genderTags.push('f');
+    if (/\(m\)|\[m\]|male/i.test(allText)) genderTags.push('m');
+    if (/\(c\)|\[c\]|couple/i.test(allText)) genderTags.push('c');
+    
+    // Extract common content tags
+    const contentTags = [];
+    if (/\(oc\)|\[oc\]|original.*content/i.test(allText)) contentTags.push('oc');
+    if (/\(c\)|\[c\]|couple/i.test(allText)) contentTags.push('c');
+    
+    return {
+      requiresGenderTag,
+      requiresContentTag,
+      genderTags,
+      contentTags,
+      rules: rules.map((r: any) => r.short_name)
+    };
+  } catch (error) {
+    // Fallback - assume no special requirements
+    return {
+      requiresGenderTag: false,
+      requiresContentTag: false,
+      genderTags: [],
+      contentTags: [],
+      rules: []
+    };
+  }
+}
+
 export interface SubmitParams {
   subreddit: string;
   title: string;
-  kind: 'self' | 'link' | 'image' | 'video';
+  kind: 'self' | 'link' | 'image' | 'video' | 'gallery';
   text?: string;
   url?: string;
   flair_id?: string;
@@ -218,17 +322,32 @@ export interface SubmitParams {
   spoiler?: boolean;
   // For file uploads
   file?: File;
+  files?: File[]; // For gallery posts (multiple images)
   media_asset?: string; // Reddit media asset ID
+  media_assets?: string[]; // For gallery posts
 }
 
 export async function submitPost(client: AxiosInstance, params: SubmitParams): Promise<{ url: string; id: string }>
 {
   let mediaAssetId = params.media_asset;
+  let mediaAssetIds = params.media_assets;
   
-  // If file is provided, upload it first
-  if (params.file && !mediaAssetId) {
+  // Handle multiple files for gallery posts
+  if (params.files && params.files.length > 1 && !mediaAssetIds) {
+    console.log(`Uploading ${params.files.length} files for gallery post...`);
+    mediaAssetIds = await uploadMultipleMedia(client, params.files, params.subreddit);
+    console.log('Gallery files uploaded, asset IDs:', mediaAssetIds);
+  }
+  // Handle single file
+  else if (params.file && !mediaAssetId) {
     console.log('Uploading file to Reddit...', params.file.name);
     mediaAssetId = await uploadMedia(client, params.file, params.subreddit);
+    console.log('File uploaded, asset ID:', mediaAssetId);
+  }
+  // Handle single file from files array
+  else if (params.files && params.files.length === 1 && !mediaAssetId) {
+    console.log('Uploading single file from files array...', params.files[0].name);
+    mediaAssetId = await uploadMedia(client, params.files[0], params.subreddit);
     console.log('File uploaded, asset ID:', mediaAssetId);
   }
   
@@ -246,6 +365,24 @@ export async function submitPost(client: AxiosInstance, params: SubmitParams): P
   } else if (params.kind === 'link' && params.url) {
     form.set('kind', 'link');
     form.set('url', params.url);
+  } else if (params.kind === 'gallery' && mediaAssetIds && mediaAssetIds.length > 1) {
+    // Gallery post with multiple images
+    form.set('kind', 'image');
+    form.set('submit_type', 'gallery');
+    
+    // Add gallery data - Reddit expects this format for galleries
+    const galleryData = {
+      items: mediaAssetIds.map((assetId, index) => ({
+        media_id: assetId,
+        id: index,
+        caption: '' // You can add captions per image if needed
+      }))
+    };
+    
+    form.set('gallery_data', JSON.stringify(galleryData));
+    
+    // Use the first image as the main URL (Reddit requirement)
+    form.set('url', `https://reddit-uploaded-media.s3-accelerate.amazonaws.com/${mediaAssetIds[0]}`);
   } else if ((params.kind === 'image' || params.kind === 'video') && mediaAssetId) {
     form.set('kind', 'image');
     form.set('url', `https://reddit-uploaded-media.s3-accelerate.amazonaws.com/${mediaAssetId}`);
@@ -317,10 +454,33 @@ export async function submitPost(client: AxiosInstance, params: SubmitParams): P
   return { url: url || '', id: id || '' };
 }
 
-export function addPrefixesToTitle(title: string, opts: { f?: boolean; c?: boolean; oc?: boolean }): string {
+export function addPrefixesToTitle(title: string, opts: { f?: boolean; c?: boolean }): string {
   const parts: string[] = [];
   if (opts.f) parts.push('(f)');
   if (opts.c) parts.push('(c)');
-  if (opts.oc) parts.push('[OC]');
+  return [parts.join(' '), title].filter(Boolean).join(' ').trim().replace(/\s+/g, ' ');
+}
+
+export function addSmartPrefixesToTitle(
+  title: string, 
+  subreddit: string, 
+  globalPrefixes: { f?: boolean; c?: boolean }, 
+  subredditRules?: SubredditRules
+): string {
+  const parts: string[] = [];
+  
+  // Only add prefixes if the subreddit requires them OR if globally enabled
+  if (globalPrefixes.f && (subredditRules?.requiresGenderTag || subredditRules?.genderTags.includes('f'))) {
+    parts.push('(f)');
+  }
+  
+  if (globalPrefixes.c && (subredditRules?.requiresContentTag || subredditRules?.genderTags.includes('c'))) {
+    parts.push('(c)');
+  }
+  
+  // Fallback: if no rules detected but user wants prefixes globally, apply them
+  if (!subredditRules && globalPrefixes.f) parts.push('(f)');
+  if (!subredditRules && globalPrefixes.c) parts.push('(c)');
+  
   return [parts.join(' '), title].filter(Boolean).join(' ').trim().replace(/\s+/g, ' ');
 } 
