@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+// Removed Card import as we're using custom div structure
 import { Send, Loader2, CheckCircle, XCircle, X } from 'lucide-react';
 
 interface Item {
@@ -137,27 +137,27 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
         <Button
           onClick={completed ? () => { setCompleted(false); setLogs([]); } : start}
           disabled={(running && !abortController) || items.length === 0}
-          className={`h-11 px-8 font-medium w-full sm:w-auto ${completed ? 'bg-green-600 hover:bg-green-700' : ''}`}
+          className={`h-12 px-8 font-medium w-full sm:w-auto rounded-full ${completed ? 'bg-success hover:bg-success/90 text-white' : ''}`}
           size="default"
         >
           {completed ? (
             <>
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Completed! Click to Reset
+              <CheckCircle className="h-5 w-5 mr-2" />
+              All Done! Click to Reset
             </>
           ) : cancelled ? (
             <>
-              <XCircle className="h-4 w-4 mr-2" />
+              <XCircle className="h-5 w-5 mr-2" />
               Cancelled - Click to Retry
             </>
           ) : running ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Posting to {items.length} subreddits...
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              Posting to {items.length} communities...
             </>
           ) : (
             <>
-              <Send className="h-4 w-4 mr-2" />
+              <Send className="h-5 w-5 mr-2" />
               Post to {items.length} Subreddit{items.length !== 1 ? 's' : ''}
             </>
           )}
@@ -167,32 +167,38 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
           <Button
             onClick={cancel}
             variant="outline"
-            className="h-11 px-6"
+            className="h-12 px-6 rounded-full border-destructive text-destructive hover:bg-destructive hover:text-white"
             size="default"
           >
-            <X className="h-4 w-4 mr-2" />
-            Cancel
+            <X className="h-5 w-5 mr-2" />
+            Stop
           </Button>
         )}
       </div>
 
-      <Card>
-        <CardContent className="p-4 max-h-64 overflow-y-auto">
-          {logs.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Progress will appear here when posting starts
-            </p>
-          )}
+      {(running || logs.length > 0 || completed || cancelled) && (
+        <div className="border rounded-lg bg-card">
+          <div className="px-4 py-3 border-b bg-muted/30 rounded-t-lg">
+            <div className="text-sm font-medium">Progress Log</div>
+          </div>
+          <div className="p-4 max-h-64 overflow-y-auto">
+            {logs.length === 0 && running && (
+              <div className="text-center py-6">
+                <div className="text-muted-foreground text-sm">
+                  Starting to post...
+                </div>
+              </div>
+            )}
           {logs.map((l, idx) => {
             const entry = l as { subreddit?: string; status?: string; url?: string; error?: string; delaySeconds?: number };
             
             // Skip delay messages, show them inline with status
             if (entry.status === 'waiting') {
               return (
-                <div key={idx} className="text-sm py-2 border-b last:border-b-0">
-                  <div className="flex items-center gap-2 text-blue-600">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                    <span>⏳ Waiting {entry.delaySeconds}s before next post...</span>
+                <div key={idx} className="py-2 border-b last:border-b-0">
+                  <div className="flex items-center gap-3 text-info">
+                    <div className="w-2 h-2 bg-info rounded-full animate-pulse" />
+                    <span className="text-sm font-medium">Waiting {entry.delaySeconds}s before next post...</span>
                   </div>
                 </div>
               );
@@ -234,8 +240,9 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
               </div>
             );
           })}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+      )}
       
       {completed && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">

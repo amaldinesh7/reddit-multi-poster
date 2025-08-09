@@ -1,11 +1,12 @@
 import React from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { ArrowLeft, Plus, Trash2, GripVertical, Edit2, Save, X, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, GripVertical, Edit2, Save, X, Loader2, Search, Users, ExternalLink } from 'lucide-react';
 import { useSubredditCache } from '../hooks/useSubredditCache';
 
 interface SubredditItem {
@@ -26,30 +27,24 @@ interface SubredditData {
 }
 
 const DEFAULT_DATA: SubredditData = {
-  categories: [
-    {
-      id: 'indian',
-      name: 'Indian',
-      subreddits: [
-        { id: 'indianhotwife', name: 'IndianHotwife' },
-        { id: 'keralagw', name: 'KeralaGW' },
-        { id: 'desigw', name: 'Desi_GW' },
-        { id: 'bengalisgonewild', name: 'BengalisGoneWild' },
-        { id: 'blouselesssaree', name: 'BlouselessSaree' },
-        { id: 'malayaligonewild', name: 'Malayali_GoneWild' },
-      ]
-    }
-  ]
+  categories: []
 };
 
 export default function Settings() {
   const router = useRouter();
   const [data, setData] = React.useState<SubredditData>(DEFAULT_DATA);
+  const [isLoaded, setIsLoaded] = React.useState(false);
   const [editingCategory, setEditingCategory] = React.useState<string | null>(null);
   const [editingSubreddit, setEditingSubreddit] = React.useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = React.useState('');
   const [newSubredditName, setNewSubredditName] = React.useState('');
   const [draggedItem, setDraggedItem] = React.useState<{ type: 'category' | 'subreddit'; id: string; categoryId?: string } | null>(null);
+  
+  // Search functionality
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchResults, setSearchResults] = React.useState<any[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [showSearchResults, setShowSearchResults] = React.useState(false);
   
   // Cache management
   const { fetchAndCache, removeFromCache, loading, errors } = useSubredditCache();
@@ -57,20 +52,28 @@ export default function Settings() {
   // Load data from localStorage on mount
   React.useEffect(() => {
     const stored = localStorage.getItem('reddit-multi-poster-subreddits');
+    console.log('Settings: Loading from localStorage:', stored);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
+        console.log('Settings: Parsed data:', parsed);
         setData(parsed);
       } catch (e) {
         console.error('Failed to parse stored subreddit data:', e);
       }
+    } else {
+      console.log('Settings: No stored data found, using default:', DEFAULT_DATA);
     }
+    setIsLoaded(true);
   }, []);
 
-  // Save data to localStorage whenever it changes
+  // Save data to localStorage whenever it changes (but only after initial load)
   React.useEffect(() => {
-    localStorage.setItem('reddit-multi-poster-subreddits', JSON.stringify(data));
-  }, [data]);
+    if (isLoaded) {
+      console.log('Settings: Saving to localStorage:', data);
+      localStorage.setItem('reddit-multi-poster-subreddits', JSON.stringify(data));
+    }
+  }, [data, isLoaded]);
 
   const addCategory = () => {
     if (!newCategoryName.trim()) return;
@@ -227,6 +230,71 @@ export default function Settings() {
     }));
   };
 
+  // Search subreddits on Reddit
+  const searchSubreddits = async () => {
+    if (!searchQuery.trim() || searchQuery.length < 2) return;
+    
+    setIsSearching(true);
+    try {
+      const response = await axios.get('/api/search-subreddits', {
+        params: { q: searchQuery.trim(), limit: 4 }
+      });
+      setSearchResults(response.data.subreddits || []);
+      setShowSearchResults(true);
+    } catch (error) {
+      console.error('Search failed:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Add subreddit from search results
+  const addSubredditFromSearch = async (categoryId: string, subredditName: string) => {
+    const newSubreddit: SubredditItem = {
+      id: Date.now().toString(),
+      name: subredditName
+    };
+    
+    // Add to state first
+    setData(prev => ({
+      categories: prev.categories.map(cat =>
+        cat.id === categoryId
+          ? { ...cat, subreddits: [...cat.subreddits, newSubreddit] }
+          : cat
+      )
+    }));
+    
+    // Fetch and cache subreddit data in the background
+    try {
+      await fetchAndCache(subredditName);
+      console.log(`Cached data for r/${subredditName}`);
+    } catch (error) {
+      console.error(`Failed to cache data for r/${subredditName}:`, error);
+    }
+  };
+
+  // Debounced search
+  React.useEffect(() => {
+    if (!searchQuery.trim()) {
+      setShowSearchResults(false);
+      return;
+    }
+    
+    const timeoutId = setTimeout(() => {
+      searchSubreddits();
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // Format subscriber count
+  const formatSubscribers = (count: number) => {
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+    return count.toString();
+  };
+
   return (
     <>
       <Head>
@@ -242,10 +310,9 @@ export default function Settings() {
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push('/')}
-                className="flex items-center gap-2"
+                className="p-2"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back
               </Button>
               <h1 className="text-lg sm:text-xl font-semibold">Settings</h1>
             </div>
@@ -262,6 +329,109 @@ export default function Settings() {
               </p>
             </CardHeader>
             <CardContent className="pt-0 px-4 sm:px-6 space-y-6">
+              
+              {/* Search Subreddits */}
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search Reddit for subreddits..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                    {isSearching && (
+                      <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+                    )}
+                  </div>
+                </div>
+                
+                {/* Search Results */}
+                {showSearchResults && (
+                  <Card className="border border-border">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium">Search Results</h4>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowSearchResults(false)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0 max-h-64 overflow-y-auto">
+                      {searchResults.length > 0 ? (
+                        <div className="space-y-2">
+                          {searchResults.map((subreddit) => (
+                            <div
+                              key={subreddit.name}
+                              className="flex items-center justify-between p-3 border border-border rounded bg-muted/30"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">r/{subreddit.name}</span>
+                                  {subreddit.over18 && (
+                                    <span className="text-xs bg-red-100 text-red-700 px-1 rounded">18+</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                  <div className="flex items-center gap-1">
+                                    <Users className="w-3 h-3" />
+                                    {formatSubscribers(subreddit.subscribers)}
+                                  </div>
+                                  <a
+                                    href={subreddit.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 hover:text-primary"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                    View
+                                  </a>
+                                </div>
+                                {subreddit.description && (
+                                  <p className="text-xs text-muted-foreground mt-1 truncate">
+                                    {subreddit.description}
+                                  </p>
+                                )}
+                              </div>
+                              
+                              {/* Add to Category Dropdown */}
+                              {data.categories.length > 0 && (
+                                <div className="ml-3">
+                                  <select
+                                    className="text-xs px-2 py-1 border border-border rounded bg-background"
+                                    onChange={(e) => {
+                                      if (e.target.value) {
+                                        addSubredditFromSearch(e.target.value, subreddit.name);
+                                        e.target.value = '';
+                                      }
+                                    }}
+                                  >
+                                    <option value="">Add to...</option>
+                                    {data.categories.map((category) => (
+                                      <option key={category.id} value={category.id}>
+                                        {category.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-center text-muted-foreground py-4">
+                          {searchQuery ? 'No subreddits found' : 'Enter a search term'}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
               
               {/* Add New Category */}
               <div className="flex gap-2">

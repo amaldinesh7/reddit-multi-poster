@@ -14,7 +14,20 @@ module.exports = {
   			sm: 'calc(var(--radius) - 4px)'
   		},
   		colors: {
-  			background: 'hsl(var(--background))',
+  			// Reddit color palette
+  			primary: '#5296DD',      // Reddit Blue
+  			accent: '#FF6314',       // Reddit Orange
+  			background: '#FFFFFF',   // White
+  			surface: '#FFFFFF',      // White
+  			text: '#000000',         // Black
+  			muted: '#D7D7D7',        // Light Gray
+  			border: '#D7D7D7',       // Light Gray
+  			success: '#5296DD',      // Reddit Blue
+  			warning: '#FF6314',      // Reddit Orange
+  			error: '#FF6314',        // Reddit Orange
+  			info: '#92BDDF',         // Light Reddit Blue
+  			
+  			// Maintain shadcn/ui compatibility
   			foreground: 'hsl(var(--foreground))',
   			card: {
   				DEFAULT: 'hsl(var(--card))',
@@ -24,27 +37,14 @@ module.exports = {
   				DEFAULT: 'hsl(var(--popover))',
   				foreground: 'hsl(var(--popover-foreground))'
   			},
-  			primary: {
-  				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
-  			},
   			secondary: {
   				DEFAULT: 'hsl(var(--secondary))',
   				foreground: 'hsl(var(--secondary-foreground))'
-  			},
-  			muted: {
-  				DEFAULT: 'hsl(var(--muted))',
-  				foreground: 'hsl(var(--muted-foreground))'
-  			},
-  			accent: {
-  				DEFAULT: 'hsl(var(--accent))',
-  				foreground: 'hsl(var(--accent-foreground))'
   			},
   			destructive: {
   				DEFAULT: 'hsl(var(--destructive))',
   				foreground: 'hsl(var(--destructive-foreground))'
   			},
-  			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',
   			chart: {

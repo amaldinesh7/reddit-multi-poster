@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLoader } from '@/components/ui/loader';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Info, ChevronDown } from 'lucide-react';
 import { QueueItem } from '@/types';
 
 interface MeResponse {
@@ -111,30 +112,55 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Reddit Multi-Poster</title>
-        <meta name="description" content="Post to multiple Reddit communities at once with smart scheduling" />
+        <title>Reddit Multi Poster</title>
+        <meta name="description" content="Post to multiple Reddit communities at once with smart scheduling and flair management" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
+        
+        {/* Open Graph Meta Tags */}
+        <meta property="og:title" content="Reddit Multi Poster" />
+        <meta property="og:description" content="Post to multiple Reddit communities at once with smart scheduling and flair management" />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content="/android-chrome-512x512.png" />
+        
+        {/* Twitter Card Meta Tags */}
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="Reddit Multi Poster" />
+        <meta name="twitter:description" content="Post to multiple Reddit communities at once with smart scheduling and flair management" />
+        <meta name="twitter:image" content="/android-chrome-512x512.png" />
+        
+        {/* Additional Meta Tags */}
+        <meta name="keywords" content="reddit, multi-poster, social media, automation, scheduling, communities" />
+        <meta name="author" content="Reddit Multi Poster" />
       </Head>
       {loading ? (
         <AppLoader />
       ) : (
-        <div className="min-h-screen">
-        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-          <div className="container mx-auto px-4 sm:px-6 py-4">
+        <div className="min-h-screen bg-background">
+        <header className="border-b bg-card/95 backdrop-blur sticky top-0 z-50 shadow-sm">
+          <div className="container mx-auto px-4 sm:px-6 py-3">
             <div className="flex items-center justify-between">
-              <h1 className="text-lg sm:text-xl font-semibold">Reddit Multi-Poster</h1>
+              <div className="flex items-center gap-3">
+                <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10" fill="#FF4500"/>
+                  <circle cx="12" cy="12" r="8" fill="#FFFFFF"/>
+                  <circle cx="9" cy="10" r="1.5" fill="#FF4500"/>
+                  <circle cx="15" cy="10" r="1.5" fill="#FF4500"/>
+                  <path d="M8 14c0 2.21 1.79 4 4 4s4-1.79 4-4" stroke="#FF4500" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                <h1 className="text-lg sm:text-xl font-medium">Multi Poster</h1>
+              </div>
               {auth.authenticated ? (
                 <DropdownMenu
                   trigger={
-                    <div className="flex items-center gap-2 cursor-pointer hover:bg-accent/50 rounded-md p-1 transition-colors">
+                    <div className="flex items-center gap-2 cursor-pointer hover:bg-muted rounded-full px-3 py-1.5 transition-colors">
                       <Avatar
                         src={auth.me?.icon_img}
                         alt={auth.me?.name || 'User'}
                         fallback={auth.me?.name || 'U'}
                         size="sm"
                       />
-                      <span className="text-sm text-muted-foreground hidden sm:inline">u/{auth.me?.name}</span>
+                      <span className="text-sm font-medium hidden sm:inline">u/{auth.me?.name}</span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground hidden sm:inline" />
                     </div>
                   }
                 >
@@ -142,17 +168,17 @@ export default function Home() {
                     <p className="text-sm font-medium">u/{auth.me?.name}</p>
                   </div>
                   <DropdownMenuItem onClick={() => window.open(`https://reddit.com/user/${auth.me?.name}`, '_blank')}>
-                    View Profile
+                    👤 View Profile
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => window.location.href = '/settings'}>
-                    Settings
+                    ⚙️ Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={logout} className="text-red-600">
-                    Logout
+                  <DropdownMenuItem onClick={logout} className="text-destructive">
+                    🚪 Logout
                   </DropdownMenuItem>
                 </DropdownMenu>
               ) : (
-                <Button onClick={login}>Login with Reddit</Button>
+                <Button onClick={login} className="rounded-full">Login with Reddit</Button>
               )}
             </div>
           </div>
@@ -160,16 +186,16 @@ export default function Home() {
 
       <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-4 sm:space-y-8 max-w-4xl">
         {/* Media */}
-        <Card className="border-0 sm:border shadow-sm sm:shadow-md">
-          <CardHeader className="pb-3 px-4 sm:px-6">
+        <Card className="rounded-lg border bg-card hover:shadow-md transition-shadow">
+          <CardHeader className="pb-4 px-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <CardTitle>Media</CardTitle>
-              <div className="flex rounded-lg border">
+              <CardTitle className="text-lg font-medium">📎 Media</CardTitle>
+              <div className="flex rounded-full border bg-muted p-1">
                 <Button
                   variant={mediaMode === 'file' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setMediaMode('file')}
-                  className="rounded-r-none text-xs px-3 py-1 h-8"
+                  className={`rounded-full text-xs px-4 py-1.5 h-7 ${mediaMode === 'file' ? 'bg-primary hover:bg-primary/90' : 'hover:bg-secondary hover:text-secondary-foreground'}`}
                 >
                   Upload File
                 </Button>
@@ -177,62 +203,80 @@ export default function Home() {
                   variant={mediaMode === 'url' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setMediaMode('url')}
-                  className="rounded-l-none border-l text-xs px-3 py-1 h-8"
+                  className={`rounded-full text-xs px-4 py-1.5 h-7 ${mediaMode === 'url' ? 'bg-primary hover:bg-primary/90' : 'hover:bg-secondary hover:text-secondary-foreground'}`}
                 >
                   URL Link
                 </Button>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-0 px-4 sm:px-6">
-                            <MediaUpload onUrl={setMediaUrl} onFile={setMediaFiles} mode={mediaMode} />
-          </CardContent>
+          {/* <CardContent className="px-6 pb-6"> */}
+          {/* <div className="px-6 pb-6"> */}
+          <MediaUpload onUrl={setMediaUrl} onFile={setMediaFiles} mode={mediaMode} />
+          {/* </div> */}
+            
+          {/* </CardContent> */}
         </Card>
 
         {/* Subreddits + Flair */}
-        <Card className="border-0 sm:border shadow-sm sm:shadow-md">
-          <CardHeader className="pb-3 px-4 sm:px-6">
-            <CardTitle>Subreddits & Flairs</CardTitle>
+        <Card className="rounded-lg border bg-card hover:shadow-md transition-shadow">
+          <CardHeader className="pb-4 px-6">
+            <CardTitle className="text-lg font-medium">🎯 Communities & Flairs</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0 px-4 sm:px-6">
-                            <SubredditFlairPicker
-                  selected={selectedSubs}
-                  onSelectedChange={setSelectedSubs}
-                  flairValue={flairs}
-                  onFlairChange={setFlairs}
-                />
+          <CardContent className="px-6 pb-6">
+            <SubredditFlairPicker
+              selected={selectedSubs}
+              onSelectedChange={setSelectedSubs}
+              flairValue={flairs}
+              onFlairChange={setFlairs}
+            />
           </CardContent>
         </Card>
 
         {/* Caption */}
-        <Card className="border-0 sm:border shadow-sm sm:shadow-md">
-          <CardHeader className="pb-3 px-4 sm:px-6">
-            <CardTitle>Caption</CardTitle>
+        <Card className="rounded-lg border bg-card hover:shadow-md transition-shadow">
+          <CardHeader className="pb-4 px-6">
+            <CardTitle className="text-lg font-medium">✏️ Post Content</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0 px-4 sm:px-6">
+          <CardContent className="px-6 pb-6">
             <PostComposer value={caption} onChange={setCaption} prefixes={prefixes} onPrefixesChange={setPrefixes} />
           </CardContent>
         </Card>
 
         {/* Queue */}
-        <Card className="border-0 sm:border shadow-sm sm:shadow-md">
-          <CardHeader className="pb-3 px-4 sm:px-6">
-            <CardTitle>Queue</CardTitle>
+        <Card className="rounded-lg border bg-card hover:shadow-md transition-shadow">
+          <CardHeader className="pb-4 px-6">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg font-medium">🚀 Posting Queue</CardTitle>
+              <div className="relative group">
+                <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-popover text-popover-foreground text-sm rounded-lg border shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                  Posts will be submitted with random delays between 1-10 seconds
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-popover"></div>
+                </div>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="pt-0 px-4 sm:px-6">
+          <CardContent className="px-6 pb-6">
             <PostingQueue items={items} caption={caption} prefixes={prefixes} />
-            <p className="text-sm text-muted-foreground mt-4">Posts will be submitted immediately.</p>
           </CardContent>
         </Card>
-      </main>
+              </main>
 
-      <footer className="border-t py-6 sm:py-8 mt-auto">
-        <div className="container mx-auto px-4 sm:px-6 text-center">
-          <p className="text-sm text-muted-foreground">Built with ❤️ by developers who love automation</p>
-        </div>
-      </footer>
-        </div>
-      )}
+        <footer className="py-6 mt-8">
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-muted/20 rounded-full text-xs text-muted-foreground">
+              <span>🤖</span>
+              <span className="font-medium">AI-Powered</span>
+              <span className="w-1 h-1 bg-muted-foreground/40 rounded-full"></span>
+              <span className="text-red-500">♥</span>
+              <span className="font-medium">Human-Guided</span>
+            </div>
+          </div>
+        </footer>
+        
+          </div>
+        )}
     </>
   );
 }

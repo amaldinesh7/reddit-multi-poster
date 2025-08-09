@@ -18,42 +18,7 @@ export interface SubredditData {
 }
 
 const DEFAULT_DATA: SubredditData = {
-  categories: [
-    {
-      id: 'indian',
-      name: 'Indian',
-      subreddits: [
-        { id: 'indianhotwife', name: 'IndianHotwife' },
-        { id: 'indiansgetlaid', name: 'indiansgetlaid' },
-        { id: 'desinsfwsubs', name: 'DesiNSFWSubs' },
-        { id: 'bangaloresluts', name: 'Bangaloresluts' },
-        { id: 'desistree', name: 'DesiStree' },
-        { id: 'desislutgw', name: 'DesiSlutGW' },
-        { id: 'desigw', name: 'DesiGW' },
-        { id: 'keralagw', name: 'KeralaGW' },
-        { id: 'bangalorecouples', name: 'Bangalorecouples' },
-        { id: 'delhigone_wild', name: 'DelhiGone_Wild' },
-        { id: 'kochinsfw', name: 'KochiNSFW' },
-        { id: 'malayaligonewild', name: 'MalayaliGoneWild' },
-        { id: 'indianhornypeople', name: 'IndianHornyPeople' },
-        { id: 'mumbaigwild', name: 'mumbaiGWild' },
-        { id: 'bengali_gone_wild', name: 'bengali_gone_wild' },
-        { id: 'desislimnstacked', name: 'desiSlimnStacked' },
-        { id: 'tamilgw', name: 'TamilGW' },
-        { id: 'punegw', name: 'PuneGW' },
-        { id: 'bangaloregwild', name: 'BangaloreGWild' },
-        { id: 'desiwhorewife', name: 'DesiWhoreWife' },
-        { id: 'desiexhibitionistgw', name: 'DesiExhibitionistGW' },
-        { id: 'exhibitionisthotwife', name: 'ExhibitionistHotWife' },
-        { id: 'exhibitionistfun', name: 'ExhibitionistFun' },
-        { id: 'hotwifeindia', name: 'HotwifeIndia' },
-        { id: 'indian_exhibitionism', name: 'indian_exhibitionism' },
-        { id: 'blouseless_saree', name: 'blouseless_saree' },
-        { id: 'bengalisgonewild', name: 'BengalisGoneWild' },
-        { id: 'blouselesssaree', name: 'BlouselessSaree' },
-      ]
-    }
-  ]
+  categories: []
 };
 
 export function useSubreddits() {
@@ -63,16 +28,28 @@ export function useSubreddits() {
   // Load data from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem('reddit-multi-poster-subreddits');
+    console.log('useSubreddits: Loading from localStorage:', stored);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
+        console.log('useSubreddits: Parsed data:', parsed);
         setData(parsed);
       } catch (e) {
         console.error('Failed to parse stored subreddit data:', e);
       }
+    } else {
+      console.log('useSubreddits: No stored data found, using default:', DEFAULT_DATA);
     }
     setIsLoaded(true);
   }, []);
+
+  // Save data to localStorage whenever data changes (but only after initial load)
+  useEffect(() => {
+    if (isLoaded) {
+      console.log('useSubreddits: Saving to localStorage:', data);
+      localStorage.setItem('reddit-multi-poster-subreddits', JSON.stringify(data));
+    }
+  }, [data, isLoaded]);
 
   // Get flattened list of all subreddits in order
   const getAllSubreddits = (): string[] => {
@@ -93,10 +70,15 @@ export function useSubreddits() {
     }));
   };
 
+  const updateData = (newData: SubredditData) => {
+    setData(newData);
+  };
+
   return {
     data,
     isLoaded,
     getAllSubreddits,
-    getSubredditsByCategory
+    getSubredditsByCategory,
+    updateData
   };
 } 

@@ -192,25 +192,25 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
                   )}
                   {!cacheLoading[name.toLowerCase()] && isSelected && flairRequired[name] && (
                     <>
-                      <Badge variant="destructive" className="text-xs hidden sm:inline-flex">
+                      <Badge variant="destructive" className="text-xs hidden sm:inline-flex px-1.5 py-0 text-xs scale-90">
                         Required
                       </Badge>
                       <span className="text-red-600 text-sm font-bold sm:hidden">*</span>
                     </>
                   )}
                   {!cacheLoading[name.toLowerCase()] && isSelected && flairRequired[name] === false && (
-                    <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
+                    <Badge variant="secondary" className="text-xs hidden sm:inline-flex px-1.5 py-0 scale-90">
                       Optional
                     </Badge>
                   )}
                   {!cacheLoading[name.toLowerCase()] && isSelected && subredditRules[name]?.requiresGenderTag && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs px-1.5 py-0 scale-90">
                       <span className="hidden sm:inline">Needs (f)/(c)</span>
                       <span className="sm:hidden">⚤</span>
                     </Badge>
                   )}
                   {!cacheLoading[name.toLowerCase()] && isSelected && subredditRules[name]?.requiresContentTag && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs px-1.5 py-0 scale-90">
                       <span className="hidden sm:inline">Needs (c)</span>
                       <span className="sm:hidden">©</span>
                     </Badge>
@@ -282,28 +282,28 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
                 )}
                 {!cacheLoading[name.toLowerCase()] && isSelected && flairRequired[name] && (
                             <>
-                              <Badge variant="destructive" className="text-xs hidden sm:inline-flex">
-                                Required
-                              </Badge>
+                                                    <Badge variant="destructive" className="text-xs hidden sm:inline-flex px-1.5 py-0 scale-90">
+                        Required
+                      </Badge>
                               <span className="text-red-600 text-sm font-bold sm:hidden">*</span>
                             </>
                           )}
                                           {!cacheLoading[name.toLowerCase()] && isSelected && flairRequired[name] === false && (
-                  <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
-                    Optional
-                  </Badge>
+                                      <Badge variant="secondary" className="text-xs hidden sm:inline-flex px-1.5 py-0 scale-90">
+                      Optional
+                    </Badge>
                 )}
                 {!cacheLoading[name.toLowerCase()] && isSelected && subredditRules[name]?.requiresGenderTag && (
-                  <Badge variant="outline" className="text-xs">
-                    <span className="hidden sm:inline">Needs (f)/(c)</span>
-                    <span className="sm:hidden">⚤</span>
-                  </Badge>
+                                      <Badge variant="outline" className="text-xs px-1.5 py-0 scale-90">
+                      <span className="hidden sm:inline">Needs (f)/(c)</span>
+                      <span className="sm:hidden">⚤</span>
+                    </Badge>
                 )}
                 {!cacheLoading[name.toLowerCase()] && isSelected && subredditRules[name]?.requiresContentTag && (
-                  <Badge variant="outline" className="text-xs">
-                    <span className="hidden sm:inline">Needs (c)</span>
-                    <span className="sm:hidden">©</span>
-                  </Badge>
+                                      <Badge variant="outline" className="text-xs px-1.5 py-0 scale-90">
+                      <span className="hidden sm:inline">Needs (c)</span>
+                      <span className="sm:hidden">©</span>
+                    </Badge>
                 )}
                         </div>
                         <div className="w-48">

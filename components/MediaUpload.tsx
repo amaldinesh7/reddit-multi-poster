@@ -98,8 +98,8 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
 
       {mode === 'file' ? (
         /* File Upload */
-        <Card>
-          <CardContent className="p-6">
+        <Card className='p-6 border-none pt-2'>
+         
             <div
               {...getRootProps()}
               className={`
@@ -195,12 +195,10 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
                 </div>
               )}
             </div>
-          </CardContent>
         </Card>
       ) : (
         /* URL Input */
-        <Card>
-          <CardContent className="p-6 space-y-4">
+        <Card className='p-6 pt-2 border-none'>
             <div className="space-y-2">
               <Label htmlFor="url-input">Media URL</Label>
               <div className="flex gap-2">
@@ -241,7 +239,6 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
                 </p>
               </div>
             )}
-          </CardContent>
         </Card>
       )}
 

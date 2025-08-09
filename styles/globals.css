@@ -4,58 +4,84 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    /* Reddit Color Palette */
+    --background: 0 0% 100%;         /* #FFFFFF - White background */
+    --foreground: 0 0% 0%;           /* Black text */
+    --card: 0 0% 100%;               /* #FFFFFF - White cards */
+    --card-foreground: 0 0% 0%;      /* Black text on cards */
+    --popover: 0 0% 100%;            /* #FFFFFF - White popover */
+    --popover-foreground: 0 0% 0%;   /* Black text on popover */
+    
+    /* Reddit Blue as Primary */
+    --primary: 213 61% 59%;          /* #5296DD - Reddit Blue */
+    --primary-foreground: 0 0% 100%; /* White text on primary */
+    --secondary: 213 36% 72%;        /* #92BDDF - Light Reddit Blue */
+    --secondary-foreground: 0 0% 0%; /* Black text on secondary */
+    
+    /* Reddit Orange as Accent */
+    --accent: 14 100% 54%;           /* #FF6314 - Reddit Orange */
+    --accent-foreground: 0 0% 100%;  /* White text on accent */
+    --muted: 0 0% 84%;               /* #D7D7D7 - Light Gray */
+    --muted-foreground: 0 0% 40%;    /* Darker gray for muted text */
+    
+    /* States using Reddit colors */
+    --destructive: 14 100% 54%;      /* #FF6314 - Reddit Orange for destructive */
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 84%;              /* #D7D7D7 - Light Gray borders */
+    --input: 0 0% 84%;               /* #D7D7D7 - Light Gray input */
+    --ring: 213 61% 59%;             /* #5296DD - Reddit Blue ring */
+    
+    /* Additional colors using Reddit palette */
+    --success: 213 61% 59%;          /* #5296DD - Reddit Blue for success */
+    --warning: 14 100% 54%;          /* #FF6314 - Reddit Orange for warning */
+    --info: 213 36% 72%;             /* #92BDDF - Light Reddit Blue for info */
+    
+    --chart-1: 213 61% 59%;          /* #5296DD */
+    --chart-2: 14 100% 54%;          /* #FF6314 */
+    --chart-3: 213 36% 72%;          /* #92BDDF */
+    --chart-4: 0 0% 84%;             /* #D7D7D7 */
+    --chart-5: 0 0% 100%;            /* #FFFFFF */
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    /* Reddit Dark Mode */
+    --background: 0 0% 8%;           /* Dark background */
+    --foreground: 0 0% 90%;          /* Light text */
+    --card: 0 0% 10%;                /* Dark card */
+    --card-foreground: 0 0% 90%;     /* Light text on dark card */
+    --popover: 0 0% 10%;             /* Dark popover */
+    --popover-foreground: 0 0% 90%;  /* Light text on dark popover */
+    
+    /* Reddit Blue (brighter for dark mode) */
+    --primary: 213 61% 65%;          /* Brighter #5296DD */
+    --primary-foreground: 0 0% 8%;   /* Dark text on primary */
+    --secondary: 0 0% 15%;           /* Dark secondary */
+    --secondary-foreground: 0 0% 90%; /* Light text */
+    
+    /* Reddit Orange (brighter for dark mode) */
+    --accent: 14 100% 60%;           /* Brighter #FF6314 */
+    --accent-foreground: 0 0% 8%;    /* Dark text on accent */
+    --muted: 0 0% 15%;               /* Dark muted */
+    --muted-foreground: 0 0% 60%;    /* Lighter muted text */
+    
+    /* States for dark mode */
+    --destructive: 14 100% 60%;      /* Brighter Reddit Orange */
+    --destructive-foreground: 0 0% 90%;
+    --border: 0 0% 18%;              /* Dark border */
+    --input: 0 0% 18%;               /* Dark input */
+    --ring: 213 61% 65%;             /* Brighter Reddit Blue ring */
+    
+    /* Additional colors for dark mode */
+    --success: 213 61% 65%;          /* Brighter Reddit Blue */
+    --warning: 14 100% 60%;          /* Brighter Reddit Orange */
+    --info: 213 36% 75%;             /* Brighter Light Reddit Blue */
+    
+    --chart-1: 213 61% 65%;          /* Brighter #5296DD */
+    --chart-2: 14 100% 60%;          /* Brighter #FF6314 */
+    --chart-3: 213 36% 75%;          /* Brighter #92BDDF */
+    --chart-4: 0 0% 25%;             /* Darker gray for dark mode */
+    --chart-5: 0 0% 15%;             /* Dark surface */
   }
 }
 
