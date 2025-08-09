@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://reddit-multi-poster.vercel.app/sitemap.xml
+
+# Block access to API routes for crawlers
+Disallow: /api/
+
+# Allow important pages
+Allow: /
+Allow: /settings
+
+# Crawl delay (optional)
+Crawl-delay: 1 

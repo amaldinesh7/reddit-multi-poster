@@ -112,25 +112,81 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Reddit Multi Poster</title>
-        <meta name="description" content="Post to multiple Reddit communities at once with smart scheduling and flair management" />
+        <title>Reddit Multi Poster - Post to Multiple Subreddits Simultaneously | Content Creator Tool</title>
+        <meta name="description" content="Streamline your Reddit marketing with our powerful multi-posting tool. Post to multiple subreddits simultaneously with custom flairs, smart scheduling, and rule compliance. Perfect for content creators, marketers, and Reddit power users." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         
+        {/* SEO Keywords */}
+        <meta name="keywords" content="reddit multi poster, post to multiple subreddits, reddit automation, reddit marketing tool, subreddit posting, reddit content creator, reddit bulk posting, reddit scheduler, reddit flair management, reddit communities, social media automation, reddit growth tool, content distribution, reddit cross-posting, subreddit manager" />
+        <meta name="author" content="Reddit Multi Poster Team" />
+        <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+        <meta name="language" content="English" />
+        <meta name="revisit-after" content="7 days" />
+        
+        {/* Canonical URL */}
+        <link rel="canonical" href="https://reddit-multi-poster.vercel.app/" />
+        
         {/* Open Graph Meta Tags */}
-        <meta property="og:title" content="Reddit Multi Poster" />
-        <meta property="og:description" content="Post to multiple Reddit communities at once with smart scheduling and flair management" />
+        <meta property="og:title" content="Reddit Multi Poster - Post to Multiple Subreddits Simultaneously" />
+        <meta property="og:description" content="Streamline your Reddit marketing with our powerful multi-posting tool. Post to multiple subreddits with custom flairs, smart scheduling, and automatic rule compliance." />
         <meta property="og:type" content="website" />
-        <meta property="og:image" content="/android-chrome-512x512.png" />
+        <meta property="og:url" content="https://reddit-multi-poster.vercel.app/" />
+        <meta property="og:image" content="https://reddit-multi-poster.vercel.app/android-chrome-512x512.png" />
+        <meta property="og:image:alt" content="Reddit Multi Poster - Bulk posting tool for Reddit communities" />
+        <meta property="og:site_name" content="Reddit Multi Poster" />
+        <meta property="og:locale" content="en_US" />
         
         {/* Twitter Card Meta Tags */}
-        <meta name="twitter:card" content="summary" />
-        <meta name="twitter:title" content="Reddit Multi Poster" />
-        <meta name="twitter:description" content="Post to multiple Reddit communities at once with smart scheduling and flair management" />
-        <meta name="twitter:image" content="/android-chrome-512x512.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Reddit Multi Poster - Post to Multiple Subreddits Simultaneously" />
+        <meta name="twitter:description" content="Streamline your Reddit marketing with smart multi-posting, custom flairs, and rule compliance. Perfect for content creators and marketers." />
+        <meta name="twitter:image" content="https://reddit-multi-poster.vercel.app/android-chrome-512x512.png" />
+        <meta name="twitter:image:alt" content="Reddit Multi Poster tool interface" />
+        <meta name="twitter:creator" content="@reddit_multi_poster" />
+        <meta name="twitter:site" content="@reddit_multi_poster" />
         
-        {/* Additional Meta Tags */}
-        <meta name="keywords" content="reddit, multi-poster, social media, automation, scheduling, communities" />
-        <meta name="author" content="Reddit Multi Poster" />
+        {/* Additional SEO Meta Tags */}
+        <meta name="application-name" content="Reddit Multi Poster" />
+        <meta name="apple-mobile-web-app-title" content="Reddit Multi Poster" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="msapplication-TileColor" content="#FF4500" />
+        <meta name="msapplication-config" content="/browserconfig.xml" />
+        
+        {/* Schema.org JSON-LD */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "SoftwareApplication",
+              "name": "Reddit Multi Poster",
+              "description": "A powerful tool for content creators to post to multiple Reddit communities simultaneously with smart scheduling and flair management.",
+              "url": "https://reddit-multi-poster.vercel.app/",
+              "applicationCategory": "Social Media Management",
+              "operatingSystem": "Web Browser",
+              "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+              },
+              "creator": {
+                "@type": "Organization",
+                "name": "Reddit Multi Poster Team"
+              },
+              "featureList": [
+                "Multi-subreddit posting",
+                "Custom flair management",
+                "Smart scheduling",
+                "Rule compliance checking",
+                "Bulk content distribution",
+                "Reddit OAuth integration"
+              ],
+              "screenshot": "https://reddit-multi-poster.vercel.app/android-chrome-512x512.png"
+            })
+          }}
+        />
       </Head>
       {loading ? (
         <AppLoader />

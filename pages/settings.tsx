@@ -298,7 +298,15 @@ export default function Settings() {
   return (
     <>
       <Head>
-        <title>Settings - Reddit Multi-Poster</title>
+        <title>Settings - Reddit Multi Poster | Manage Subreddit Categories & Communities</title>
+        <meta name="description" content="Customize your Reddit Multi Poster experience. Add, organize, and manage subreddit categories. Search and discover new communities for your content distribution strategy." />
+        <meta name="keywords" content="reddit settings, subreddit management, reddit categories, community organization, subreddit search, reddit content strategy" />
+        <meta name="robots" content="noindex, nofollow" />
+        
+        {/* Open Graph */}
+        <meta property="og:title" content="Settings - Reddit Multi Poster" />
+        <meta property="og:description" content="Customize your Reddit Multi Poster settings and manage subreddit categories." />
+        <meta property="og:url" content="https://reddit-multi-poster.vercel.app/settings" />
       </Head>
       
       <div className="min-h-screen bg-background">
