@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label';
 interface Props {
   value: string;
   onChange: (v: string) => void;
-  prefixes: { f: boolean; c: boolean; oc: boolean };
-  onPrefixesChange: (p: { f: boolean; c: boolean; oc: boolean }) => void;
+  prefixes: { f: boolean; c: boolean };
+  onPrefixesChange: (p: { f: boolean; c: boolean }) => void;
 }
 
 export default function PostComposer({ value, onChange, prefixes, onPrefixesChange }: Props) {
@@ -54,14 +54,6 @@ export default function PostComposer({ value, onChange, prefixes, onPrefixesChan
             onCheckedChange={(checked) => onPrefixesChange({ ...prefixes, c: !!checked })}
           />
           <Label htmlFor="prefix-c" className="text-sm font-normal cursor-pointer">(c)</Label>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="prefix-oc"
-            checked={prefixes.oc}
-            onCheckedChange={(checked) => onPrefixesChange({ ...prefixes, oc: !!checked })}
-          />
-          <Label htmlFor="prefix-oc" className="text-sm font-normal cursor-pointer">[OC]</Label>
         </div>
       </div>
     </div>

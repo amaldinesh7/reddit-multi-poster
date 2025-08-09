@@ -1,42 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# Reddit Multi-Poster
 
-## Getting Started
+A web application that lets you post the same content to multiple Reddit communities at once, with automatic scheduling to respect Reddit's posting limits.
 
-First, run the development server:
+## What It Does
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Upload Once, Post Everywhere**: Upload an image or paste a URL and post it to up to 30 different subreddits with a single click
+- **Smart Scheduling**: Automatically spaces out your posts with 15-minute delays between each subreddit to avoid spam detection
+- **Flair Management**: Automatically selects appropriate flairs for each subreddit, or lets you customize them
+- **Queue System**: Shows you the status of all your posts in real-time as they're being submitted
+- **Reddit OAuth**: Securely connects to your Reddit account - no password storage required
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## How To Use
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+1. **Login**: Click "Login with Reddit" and authorize the app
+2. **Upload Content**: Either upload an image file or paste a URL to content you want to share
+3. **Choose Subreddits**: Select which communities you want to post to (the app comes pre-configured with popular subreddits)
+4. **Write Your Post**: Add a title/caption for your post (100 character limit)
+5. **Configure Options**: 
+   - Add prefixes like [F], [C], or [OC] to your title
+   - Set custom flairs for specific subreddits
+6. **Start Posting**: Hit "Start Posting" and watch as your content gets submitted to each subreddit automatically
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+## Features
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+- **Bulk Posting**: Post to multiple subreddits simultaneously
+- **Rate Limiting**: Built-in delays prevent you from hitting Reddit's spam filters
+- **Flair Detection**: Automatically finds and applies appropriate flairs for each subreddit
+- **Progress Tracking**: Real-time status updates for each post in your queue
+- **Error Handling**: Shows you which posts succeeded and which failed, with reasons
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Quick Setup
 
-## Learn More
+1. Get Reddit API credentials (takes 2 minutes - see SETUP.md for details)
+2. Create a `.env.local` file with your credentials
+3. Run `npm install` and `npm run dev`
+4. Open http://localhost:3000 and start posting!
 
-To learn more about Next.js, take a look at the following resources:
+## Perfect For
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+- Content creators who want to share across multiple communities
+- Anyone tired of manually posting the same content to different subreddits
+- Users who want to maximize their content's reach while respecting Reddit's rules
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
-# reddit-multi-poster
-# reddit-multi-poster
+**Note**: This tool respects Reddit's API terms of service and includes built-in rate limiting to prevent spam. Always follow individual subreddit rules and Reddit's content policy.

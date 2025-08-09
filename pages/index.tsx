@@ -1,4 +1,5 @@
 import React from 'react';
+import Head from 'next/head';
 import axios from 'axios';
 import MediaUpload from '../components/MediaUpload';
 import SubredditFlairPicker from '../components/SubredditFlairPicker';
@@ -7,11 +8,14 @@ import PostingQueue from '../components/PostingQueue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AppLoader } from '@/components/ui/loader';
+import { Avatar } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { QueueItem } from '@/types';
 
 interface MeResponse {
   authenticated: boolean;
-  me?: { name: string };
+  me?: { name: string; icon_img?: string };
   subs?: string[];
 }
 
@@ -50,7 +54,7 @@ export default function Home() {
   const [loading, setLoading] = React.useState(true);
   const [selectedSubs, setSelectedSubs] = React.useState<string[]>([]);
   const [caption, setCaption] = React.useState('');
-  const [prefixes, setPrefixes] = React.useState({ f: false, c: false, oc: false });
+  const [prefixes, setPrefixes] = React.useState({ f: false, c: false });
   const [mediaUrl, setMediaUrl] = React.useState<string>('');
   const [mediaFiles, setMediaFiles] = React.useState<File[]>([]);
   const [mediaMode, setMediaMode] = React.useState<'file' | 'url'>('file');
@@ -138,28 +142,60 @@ export default function Home() {
     return allItems;
   }, [selectedSubs, flairs, mediaUrl, mediaFiles, caption]);
 
+  if (loading) {
+    return (
+      <>
+        <Head>
+          <title>Reddit Multi-Poster</title>
+          <meta name="description" content="Post to multiple Reddit communities at once with smart scheduling" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <link rel="icon" href="/favicon.ico" />
+        </Head>
+        <AppLoader />
+      </>
+    );
+  }
+
   return (
-    <div className="min-h-screen">
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Reddit Multi-Poster</h1>
-              <p className="text-muted-foreground">Professional workflow for multi-subreddit posting</p>
+    <>
+      <Head>
+        <title>Reddit Multi-Poster</title>
+        <meta name="description" content="Post to multiple Reddit communities at once with smart scheduling" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
+      <div className="min-h-screen">
+        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-semibold">Reddit Multi-Poster</h1>
+              {auth.authenticated ? (
+                <DropdownMenu
+                  trigger={
+                    <div className="flex items-center gap-2 cursor-pointer hover:bg-accent/50 rounded-md p-1 transition-colors">
+                      <Avatar
+                        src={auth.me?.icon_img}
+                        alt={auth.me?.name || 'User'}
+                        fallback={auth.me?.name || 'U'}
+                        size="sm"
+                      />
+                      <span className="text-sm text-muted-foreground">u/{auth.me?.name}</span>
+                    </div>
+                  }
+                >
+                  <DropdownMenuItem onClick={() => window.open(`https://reddit.com/user/${auth.me?.name}`, '_blank')}>
+                    View Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={logout} className="text-red-600">
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenu>
+              ) : (
+                <Button onClick={login}>Login with Reddit</Button>
+              )}
             </div>
-            {loading ? (
-              <span className="text-muted-foreground">Loading…</span>
-            ) : auth.authenticated ? (
-              <div className="flex items-center gap-3">
-                <span className="text-sm">{auth.me?.name}</span>
-                <Button variant="outline" onClick={logout}>Logout</Button>
-              </div>
-            ) : (
-              <Button onClick={login}>Login with Reddit</Button>
-            )}
           </div>
-        </div>
-      </header>
+        </header>
 
       <main className="container mx-auto px-4 py-8 space-y-8">
         {/* Media */}
@@ -255,9 +291,10 @@ export default function Home() {
 
       <footer className="border-t py-8">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-sm text-muted-foreground">Built with shadcn/ui • Modern • Professional</p>
+          <p className="text-sm text-muted-foreground">Built with ❤️ by developers who love automation</p>
         </div>
       </footer>
-    </div>
+      </div>
+    </>
   );
 }

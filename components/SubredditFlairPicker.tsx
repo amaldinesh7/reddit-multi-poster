@@ -131,18 +131,20 @@ export default function SubredditFlairPicker({ options, selected, onSelectedChan
                   </Badge>
                 )}
               </div>
-              {isSelected && (flairOptions[name] || []).length > 0 && (
-                <select
-                  className="flex h-8 w-32 rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={flairValue[name] || ''}
-                  onChange={(e) => handleFlairChange(name, e.target.value)}
-                >
-                  <option value="">{flairRequired[name] ? 'Select flair...' : 'No flair'}</option>
-                  {(flairOptions[name] || []).map((f) => (
-                    <option key={f.id} value={f.id}>{f.text || '—'}</option>
-                  ))}
-                </select>
-              )}
+              <div className="w-48">
+                {isSelected && (flairOptions[name] || []).length > 0 && (
+                  <select
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    value={flairValue[name] || ''}
+                    onChange={(e) => handleFlairChange(name, e.target.value)}
+                  >
+                    <option value="">{flairRequired[name] ? 'Select flair...' : 'No flair'}</option>
+                    {(flairOptions[name] || []).map((f) => (
+                      <option key={f.id} value={f.id}>{f.text || '—'}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
             </div>
           );
         })}

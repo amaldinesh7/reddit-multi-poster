@@ -15,7 +15,7 @@ interface Item {
 interface Props {
   items: Item[];
   caption: string;
-  prefixes: { f?: boolean; c?: boolean; oc?: boolean };
+  prefixes: { f?: boolean; c?: boolean };
 }
 
 export default function PostingQueue({ items, caption, prefixes }: Props) {
