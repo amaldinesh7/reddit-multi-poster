@@ -95,3 +95,21 @@
     min-height: 100vh;
   }
 }
+
+/* Drag and Drop Styles */
+@layer utilities {
+  .dragging {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+  
+  [draggable="true"] {
+    cursor: grab;
+  }
+  
+  [draggable="true"]:active {
+    cursor: grabbing;
+  }
+}
