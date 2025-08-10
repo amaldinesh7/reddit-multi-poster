@@ -12,7 +12,7 @@ import { AppLoader } from '@/components/ui/loader';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Info, ChevronDown, User, Settings, LogOut } from 'lucide-react';
-import { Cursor, OpenAI, Anthropic } from '@lobehub/icons';
+
 import { QueueItem } from '@/types';
 
 interface MeResponse {
@@ -338,21 +338,33 @@ export default function Home() {
               <span className="w-1 h-1 bg-muted-foreground/40 rounded-full animate-pulse"></span>
               
               <span className="text-muted-foreground/60">Built using</span>
-              <div className="inline-flex items-center gap-2 ml-1">
-                {/* Cursor Logo - LobeHub Icon */}
-                <div className="w-4 h-4 hover:scale-110 transition-transform duration-200" title="Cursor">
-                  <Cursor className="w-full h-full" />
-                </div>
-                
-                {/* ChatGPT Logo - LobeHub OpenAI Icon */}
-                <div className="w-4 h-4 hover:scale-110 transition-transform duration-200" title="ChatGPT">
-                  <OpenAI className="w-full h-full" />
-                </div>
-                
-                {/* Claude Logo - LobeHub Anthropic Icon */}
-                <div className="w-4 h-4 hover:scale-110 transition-transform duration-200" title="Claude">
-                  <Anthropic className="w-full h-full" />
-                </div>
+              <div className="inline-flex items-center gap-1 ml-1 text-xs">
+                <a 
+                  href="https://cursor.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-700 hover:underline transition-colors duration-200"
+                >
+                  Cursor
+                </a>
+                <span className="text-muted-foreground/40">+</span>
+                <a 
+                  href="https://openai.com/chatgpt" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-green-600 hover:text-green-700 hover:underline transition-colors duration-200"
+                >
+                  ChatGPT
+                </a>
+                <span className="text-muted-foreground/40">+</span>
+                <a 
+                  href="https://claude.ai" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-orange-600 hover:text-orange-700 hover:underline transition-colors duration-200"
+                >
+                  Claude
+                </a>
               </div>
             </div>
           </div>
