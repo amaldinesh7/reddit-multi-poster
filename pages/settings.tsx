@@ -190,14 +190,14 @@ function CategoryCard({
 
   return (
     <Card
-      className={`border-2 transition-all duration-200 ${
+      className={`border transition-all duration-200 ${
         isDragging 
           ? 'opacity-50 border-dashed border-muted-foreground dragging' 
           : 'border-border'
       }`}
     >
-      <CardHeader className="pb-2">
-        <div className="flex items-center gap-3">
+      <CardHeader className="pb-2 px-3 pt-3">
+        <div className="flex items-center gap-2">
           <GripVertical 
             {...dragHandleProps}
             className={`w-4 h-4 cursor-grab hover:text-foreground transition-colors ${
@@ -216,60 +216,70 @@ function CategoryCard({
                 }}
                 onBlur={(e) => updateCategoryName(category.id, e.target.value)}
                 autoFocus
-                className="text-lg font-semibold"
+                className="text-sm sm:text-base font-medium h-8"
               />
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => setEditingCategory(null)}
+                className="h-8 w-8 p-0 shrink-0"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3 h-3" />
               </Button>
             </div>
           ) : (
             <>
               <h3
-                className="text-lg font-semibold flex-1 cursor-pointer"
+                className="text-sm sm:text-base font-medium flex-1 cursor-pointer min-w-0"
                 onClick={() => toggleCategory(category.id)}
               >
-                {category.name} ({category.subreddits.length})
+                <span className="truncate block">
+                  {category.name} <span className="text-muted-foreground">({category.subreddits.length})</span>
+                </span>
               </h3>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setEditingCategory(category.id)}
-              >
-                <Edit2 className="w-4 h-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => deleteCategory(category.id)}
-                className="text-red-600 hover:text-red-700"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setEditingCategory(category.id)}
+                  className="h-7 w-7 p-0"
+                  title="Edit category"
+                >
+                  <Edit2 className="w-3 h-3" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => deleteCategory(category.id)}
+                  className="text-red-600 hover:text-red-700 h-7 w-7 p-0"
+                  title="Delete category"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
             </>
           )}
         </div>
       </CardHeader>
 
       {!category.collapsed && (
-        <CardContent className="pt-0">
+        <CardContent className="pt-0 px-3 pb-3">
           {/* Add Subreddit */}
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-2 mb-3">
             <Input
-              placeholder="Subreddit name (e.g., IndianHotwife)"
+              placeholder="Add subreddit..."
               value={newSubredditName}
               onChange={(e) => setNewSubredditName(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && addSubreddit(category.id)}
+              className="text-xs sm:text-sm h-8"
             />
             <Button
               size="sm"
               onClick={() => addSubreddit(category.id)}
               disabled={!newSubredditName.trim()}
+              className="h-8 px-3 shrink-0 font-normal"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="size-3" />
             </Button>
           </div>
 
@@ -278,7 +288,7 @@ function CategoryCard({
             items={category.subreddits.map(s => s.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {category.subreddits.map((subreddit) => (
                 <SortableSubreddit
                   key={subreddit.id}
@@ -289,7 +299,7 @@ function CategoryCard({
               ))}
               
               {category.subreddits.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
+                <p className="text-xs text-muted-foreground text-center py-2">
                   No subreddits in this category yet. Add one above.
                 </p>
               )}
@@ -351,7 +361,7 @@ function SubredditItem({
 
   return (
     <div
-      className={`flex items-center gap-3 p-2 border-2 rounded bg-muted/30 transition-all duration-200 ${
+      className={`flex items-center gap-2 px-2 py-1.5 border rounded bg-muted/30 transition-all duration-200 ${
         isDragging 
           ? 'opacity-50 border-dashed border-muted-foreground dragging' 
           : 'border-border'
@@ -359,37 +369,38 @@ function SubredditItem({
     >
       <GripVertical 
         {...dragHandleProps}
-        className={`w-4 h-4 cursor-grab hover:text-foreground transition-colors ${
+        className={`w-3 h-3 cursor-grab hover:text-foreground transition-colors ${
           isDragging ? 'text-primary' : 'text-muted-foreground'
         }`}
       />
       
       {editingSubreddit === subreddit.id ? (
-        <div className="flex items-center gap-2 flex-1">
-          <span className="text-sm text-muted-foreground">r/</span>
-          <Input
-            defaultValue={subreddit.name}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                updateSubredditName(category.id, subreddit.id, (e.target as HTMLInputElement).value);
-              }
-            }}
-            onBlur={(e) => updateSubredditName(category.id, subreddit.id, e.target.value)}
-            autoFocus
-            className="text-sm"
-          />
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setEditingSubreddit(null)}
-          >
-            <X className="w-4 h-4" />
-          </Button>
+                  <div className="flex items-center gap-2 flex-1">
+            <span className="text-xs text-muted-foreground">r/</span>
+            <Input
+              defaultValue={subreddit.name}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  updateSubredditName(category.id, subreddit.id, (e.target as HTMLInputElement).value);
+                }
+              }}
+              onBlur={(e) => updateSubredditName(category.id, subreddit.id, e.target.value)}
+              autoFocus
+              className="text-xs h-7"
+            />
+                      <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setEditingSubreddit(null)}
+              className="h-7 w-7 p-0"
+            >
+              <X className="w-3 h-3" />
+            </Button>
         </div>
       ) : (
         <>
           <div className="flex items-center gap-2 flex-1">
-            <span className="text-sm">r/{subreddit.name}</span>
+            <span className="text-xs">r/{subreddit.name}</span>
             {isLoading && (
               <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
             )}
@@ -403,6 +414,7 @@ function SubredditItem({
             size="sm"
             variant="ghost"
             onClick={() => setEditingSubreddit(subreddit.id)}
+            className="h-6 w-6 p-0"
           >
             <Edit2 className="w-3 h-3" />
           </Button>
@@ -410,7 +422,7 @@ function SubredditItem({
             size="sm"
             variant="ghost"
             onClick={() => deleteSubreddit(category.id, subreddit.id)}
-            className="text-red-600 hover:text-red-700"
+            className="text-red-600 hover:text-red-700 h-6 w-6 p-0"
           >
             <Trash2 className="w-3 h-3" />
           </Button>
@@ -433,7 +445,7 @@ export default function Settings() {
   const router = useRouter();
   const [data, setData] = React.useState<SubredditData>(DEFAULT_DATA);
   const [isLoaded, setIsLoaded] = React.useState(false);
-  const [newCategoryName, setNewCategoryName] = React.useState('');
+
   const [activeId, setActiveId] = React.useState<string | null>(null);
   
   // Search functionality
@@ -484,18 +496,24 @@ export default function Settings() {
   }, [data, isLoaded]);
 
   const addCategory = () => {
-    if (!newCategoryName.trim()) return;
+    // Generate a sample category name
+    const categoryNames = ['General', 'Entertainment', 'Technology', 'Sports', 'News', 'Lifestyle', 'Gaming', 'Science', 'Art', 'Music'];
+    const existingNames = data.categories.map(cat => cat.name.toLowerCase());
+    const availableNames = categoryNames.filter(name => !existingNames.includes(name.toLowerCase()));
+    
+    const categoryName = availableNames.length > 0 
+      ? availableNames[0] 
+      : `Category ${data.categories.length + 1}`;
     
     const newCategory: Category = {
       id: Date.now().toString(),
-      name: newCategoryName.trim(),
+      name: categoryName,
       subreddits: []
     };
     
     setData(prev => ({
       categories: [...prev.categories, newCategory]
     }));
-    setNewCategoryName('');
   };
 
   // Handle drag start
@@ -650,45 +668,54 @@ export default function Settings() {
         <div className="min-h-screen bg-background">
           {/* Header */}
           <header className="sticky top-0 z-50 bg-background border-b border-border">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
-              <div className="flex items-center gap-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push('/')}
-                  className="p-2"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-                <h1 className="text-lg sm:text-xl font-semibold">Settings</h1>
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3">
+                              <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.push('/')}
+                    className="p-2"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                  <h1 className="text-lg sm:text-xl font-semibold">Settings</h1>
               </div>
             </div>
           </header>
 
           {/* Main Content */}
-          <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-            <Card className="border-0 sm:border shadow-sm sm:shadow-md">
-              <CardHeader className="pb-3 px-4 sm:px-6">
-                <CardTitle>Manage Subreddits</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Organize your subreddits into categories and reorder them by dragging.
-                </p>
-              </CardHeader>
-              <CardContent className="pt-0 px-4 sm:px-6 space-y-6">
+          <main className="max-w-4xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
+            <div className="mb-3 sm:mb-4">
+              <div className="flex items-center justify-between gap-3 mb-1">
+                <h2 className="text-base sm:text-lg font-semibold">Manage Subreddits</h2>
+                <Button 
+                  onClick={addCategory} 
+                  size="sm"
+                  className="h-7 sm:h-8 px-2 sm:px-3 shrink-0 font-normal"
+                >
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                  <span className="text-xs sm:text-sm">Add Category</span>
+                </Button>
+              </div>
+              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
+                Organize your subreddits into categories and reorder them by dragging.
+              </p>
+            </div>
+            <div className="space-y-3 sm:space-y-4">
                 
                 {/* Search Subreddits */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="flex gap-2">
                     <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Search className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
                       <Input
-                        placeholder="Search Reddit for subreddits..."
+                        placeholder="Search and add subreddits"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
+                        className="pl-8 sm:pl-10 text-xs sm:text-sm h-8 sm:h-10"
                       />
                       {isSearching && (
-                        <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+                        <Loader2 className="absolute right-2.5 sm:right-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 animate-spin text-muted-foreground" />
                       )}
                     </div>
                   </div>
@@ -696,60 +723,61 @@ export default function Settings() {
                   {/* Search Results */}
                   {showSearchResults && (
                     <Card className="border border-border">
-                      <CardHeader className="pb-2">
+                      <CardHeader className="pb-2 px-3 pt-3">
                         <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-medium">Search Results</h4>
+                          <h4 className="text-xs sm:text-sm font-medium">Search Results</h4>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setShowSearchResults(false)}
+                            className="h-6 w-6 p-0"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-3 h-3" />
                           </Button>
                         </div>
                       </CardHeader>
-                      <CardContent className="pt-0 max-h-64 overflow-y-auto">
+                      <CardContent className="pt-0 px-3 pb-3 max-h-48 sm:max-h-56 overflow-y-auto">
                         {searchResults.length > 0 ? (
-                          <div className="space-y-2">
-                            {searchResults.map((subreddit) => (
-                              <div
-                                key={subreddit.name}
-                                className="flex items-center justify-between p-3 border border-border rounded bg-muted/30"
-                              >
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">r/{subreddit.name}</span>
-                                    {subreddit.over18 && (
-                                      <span className="text-xs bg-red-100 text-red-700 px-1 rounded">18+</span>
+                                                      <div className="space-y-2">
+                              {searchResults.map((subreddit) => (
+                                                                <div
+                                  key={subreddit.name}
+                                  className="flex items-center justify-between p-2 border border-border rounded bg-muted/30"
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-xs sm:text-sm">r/{subreddit.name}</span>
+                                      {subreddit.over18 && (
+                                        <span className="text-xs bg-red-100 text-red-700 px-1 rounded">18+</span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs text-muted-foreground">
+                                      <div className="flex items-center gap-1">
+                                        <Users className="w-3 h-3" />
+                                        {formatSubscribers(subreddit.subscribers)}
+                                      </div>
+                                      <a
+                                        href={subreddit.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-1 hover:text-primary hidden sm:flex"
+                                      >
+                                        <ExternalLink className="w-3 h-3" />
+                                        View
+                                      </a>
+                                    </div>
+                                    {subreddit.description && (
+                                      <p className="text-xs text-muted-foreground mt-1 truncate hidden sm:block">
+                                        {subreddit.description}
+                                      </p>
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                                    <div className="flex items-center gap-1">
-                                      <Users className="w-3 h-3" />
-                                      {formatSubscribers(subreddit.subscribers)}
-                                    </div>
-                                    <a
-                                      href={subreddit.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex items-center gap-1 hover:text-primary"
-                                    >
-                                      <ExternalLink className="w-3 h-3" />
-                                      View
-                                    </a>
-                                  </div>
-                                  {subreddit.description && (
-                                    <p className="text-xs text-muted-foreground mt-1 truncate">
-                                      {subreddit.description}
-                                    </p>
-                                  )}
-                                </div>
-                                
-                                {/* Add to Category Dropdown */}
-                                {data.categories.length > 0 && (
-                                  <div className="ml-3">
-                                    <select
-                                      className="text-xs px-2 py-1 border border-border rounded bg-background"
+                                  
+                                  {/* Add to Category Dropdown */}
+                                  {data.categories.length > 0 && (
+                                    <div className="ml-2 shrink-0">
+                                      <select
+                                        className="text-xs px-1.5 sm:px-2 py-1 border border-border rounded bg-background"
                                       onChange={(e) => {
                                         if (e.target.value) {
                                           addSubredditFromSearch(e.target.value, subreddit.name);
@@ -770,7 +798,7 @@ export default function Settings() {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-center text-muted-foreground py-4">
+                          <p className="text-center text-muted-foreground py-3">
                             {searchQuery ? 'No subreddits found' : 'Enter a search term'}
                           </p>
                         )}
@@ -779,20 +807,6 @@ export default function Settings() {
                   )}
                 </div>
                 
-                {/* Add New Category */}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Category name (e.g., Indian, Asian, etc.)"
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && addCategory()}
-                  />
-                  <Button onClick={addCategory} disabled={!newCategoryName.trim()}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Category
-                  </Button>
-                </div>
-
                 {/* Drag and Drop Context */}
                 <DndContext
                   sensors={sensors}
@@ -805,7 +819,7 @@ export default function Settings() {
                     items={data.categories.map(c => c.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       {data.categories.map((category) => (
                         <SortableCategory
                           key={category.id}
@@ -814,8 +828,8 @@ export default function Settings() {
                         />
                       ))}
                       
-                      {data.categories.length === 0 && (
-                        <p className="text-center text-muted-foreground py-8">
+                                             {data.categories.length === 0 && (
+                        <p className="text-center text-muted-foreground py-6">
                           No categories yet. Create your first category above.
                         </p>
                       )}
@@ -834,8 +848,7 @@ export default function Settings() {
                     ) : null}
                   </DragOverlay>
                 </DndContext>
-              </CardContent>
-            </Card>
+            </div>
           </main>
         </div>
       </>

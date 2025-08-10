@@ -137,7 +137,7 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
         <Button
           onClick={completed ? () => { setCompleted(false); setLogs([]); } : start}
           disabled={(running && !abortController) || items.length === 0}
-          className={`h-12 px-8 font-medium w-full sm:w-auto rounded-full ${completed ? 'bg-success hover:bg-success/90 text-white' : ''}`}
+          className={`h-12 px-8 font-medium w-full sm:w-auto rounded-lg ${completed ? 'bg-success hover:bg-success/90 text-white' : ''}`}
           size="default"
         >
           {completed ? (
@@ -167,7 +167,7 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
           <Button
             onClick={cancel}
             variant="outline"
-            className="h-12 px-6 rounded-full border-destructive text-destructive hover:bg-destructive hover:text-white"
+            className="h-12 px-6 rounded-lg border-destructive text-destructive hover:bg-destructive hover:text-white"
             size="default"
           >
             <X className="h-5 w-5 mr-2" />
