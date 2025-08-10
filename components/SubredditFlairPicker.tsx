@@ -15,9 +15,10 @@ interface Props {
   flairValue: Record<string, string | undefined>;
   onFlairChange: (v: Record<string, string | undefined>) => void;
   onValidationChange?: (hasErrors: boolean, missingFlairs: string[]) => void;
+  showValidationErrors?: boolean;
 }
 
-export default function SubredditFlairPicker({ selected, onSelectedChange, flairValue, onFlairChange, onValidationChange }: Props) {
+export default function SubredditFlairPicker({ selected, onSelectedChange, flairValue, onFlairChange, onValidationChange, showValidationErrors }: Props) {
   const { getSubredditsByCategory, getAllSubreddits, isLoaded } = useSubreddits();
   const { getCachedData, fetchAndCache, loading: cacheLoading } = useSubredditCache();
   
@@ -160,6 +161,11 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
     return isSelected && isRequired && !hasFlairSelected;
   };
 
+  // Check if a category has any subreddits with missing flairs
+  const categoryHasErrors = (subreddits: string[]) => {
+    return showValidationErrors && subreddits.some(subreddit => hasMissingFlair(subreddit));
+  };
+
   // Validation effect to notify parent of errors
   React.useEffect(() => {
     if (onValidationChange) {
@@ -196,7 +202,7 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
         <div className="divide-y rounded-lg border">
           {filtered.map((name) => {
             const isSelected = selected.includes(name);
-            const hasError = hasMissingFlair(name);
+            const hasError = showValidationErrors && hasMissingFlair(name);
             
             return (
               <div key={name} className={`flex items-center gap-3 px-3 py-3 ${hasError ? 'bg-red-50 border-l-2 border-red-500' : ''}`}>
@@ -268,13 +274,21 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
       ) : (
         // Category view
         <div className="rounded-lg border">
-          {categorizedSubreddits.map(({ categoryName, subreddits }) => (
-            <div key={categoryName} className="border-b last:border-b-0">
-              <button
-                onClick={() => toggleCategory(categoryName)}
-                className="w-full px-4 py-3 bg-muted/20 border-b border-border flex items-center justify-between hover:bg-muted/30"
-              >
-                <span className="font-medium text-sm">{categoryName} ({subreddits.length})</span>
+          {categorizedSubreddits.map(({ categoryName, subreddits }) => {
+            const hasErrors = categoryHasErrors(subreddits);
+            
+            return (
+              <div key={categoryName} className="border-b last:border-b-0">
+                <button
+                  onClick={() => toggleCategory(categoryName)}
+                  className="w-full px-4 py-3 bg-muted/20 border-b border-border flex items-center justify-between hover:bg-muted/30"
+                >
+                  <div className="flex items-center gap-2">
+                    {hasErrors && (
+                      <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                    )}
+                    <span className="font-medium text-sm">{categoryName} ({subreddits.length})</span>
+                  </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={(e) => {
@@ -295,7 +309,7 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
                 <div className="divide-y">
                   {subreddits.map((name) => {
                     const isSelected = selected.includes(name);
-                    const hasError = hasMissingFlair(name);
+                    const hasError = showValidationErrors && hasMissingFlair(name);
                     
                     return (
                       <div key={name} className={`flex items-center gap-3 px-3 py-3 ${hasError ? 'bg-red-50 border-l-2 border-red-500' : ''}`}>
@@ -363,7 +377,8 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
           
           {categorizedSubreddits.length === 0 && (
             <div className="px-3 py-6 text-center text-muted-foreground">

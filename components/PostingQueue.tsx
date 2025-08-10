@@ -19,9 +19,10 @@ interface Props {
   prefixes: { f?: boolean; c?: boolean };
   hasFlairErrors?: boolean;
   missingFlairs?: string[];
+  onPostAttempt?: () => void;
 }
 
-export default function PostingQueue({ items, caption, prefixes, hasFlairErrors, missingFlairs }: Props) {
+export default function PostingQueue({ items, caption, prefixes, hasFlairErrors, missingFlairs, onPostAttempt }: Props) {
   const [logs, setLogs] = React.useState<Record<string, unknown>[]>([]);
   const [running, setRunning] = React.useState(false);
   const [completed, setCompleted] = React.useState(false);
@@ -29,6 +30,16 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
   const [abortController, setAbortController] = React.useState<AbortController | null>(null);
 
   const start = async () => {
+    // Trigger validation check
+    if (onPostAttempt) {
+      onPostAttempt();
+    }
+    
+    // Check for validation errors after triggering validation
+    if (hasFlairErrors) {
+      return; // Don't proceed if there are flair errors
+    }
+    
     if (items.length === 0) {
       return;
     }

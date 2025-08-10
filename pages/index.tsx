@@ -35,10 +35,15 @@ export default function Home() {
   const [flairs, setFlairs] = React.useState<Record<string, string | undefined>>({});
   const [hasFlairErrors, setHasFlairErrors] = React.useState(false);
   const [missingFlairs, setMissingFlairs] = React.useState<string[]>([]);
+  const [showValidationErrors, setShowValidationErrors] = React.useState(false);
 
   const handleValidationChange = (hasErrors: boolean, missingFlairsList: string[]) => {
     setHasFlairErrors(hasErrors);
     setMissingFlairs(missingFlairsList);
+  };
+
+  const handlePostAttempt = () => {
+    setShowValidationErrors(true);
   };
 
 
@@ -303,6 +308,7 @@ export default function Home() {
               flairValue={flairs}
               onFlairChange={setFlairs}
               onValidationChange={handleValidationChange}
+              showValidationErrors={showValidationErrors}
             />
           </CardContent>
         </Card>
@@ -338,6 +344,7 @@ export default function Home() {
               prefixes={prefixes}
               hasFlairErrors={hasFlairErrors}
               missingFlairs={missingFlairs}
+              onPostAttempt={handlePostAttempt}
             />
           </CardContent>
         </Card>
