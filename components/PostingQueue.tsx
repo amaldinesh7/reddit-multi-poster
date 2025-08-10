@@ -100,9 +100,31 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
         try {
           const json = JSON.parse(line);
           console.log('Received streaming data:', json); // Debug log
-          // Only add to logs if it's not a system message
-          if (json.status !== 'started' && json.status !== 'completed') {
+          // Handle different types of messages
+          if (json.status === 'started') {
+            // Initialize logs with all items in 'posting' state
+            const initialLogs = items.map((item, index) => ({
+              index,
+              status: 'queued',
+              subreddit: item.subreddit,
+              url: undefined,
+              error: undefined
+            }));
+            setLogs(initialLogs);
+          } else if (json.status === 'completed') {
+            // Don't add to logs, just let it complete
+          } else if (json.status === 'waiting') {
+            // Add waiting message as a separate entry
             setLogs((prev) => [...prev, json]);
+          } else if (typeof json.index === 'number' && json.subreddit) {
+            // Update existing log entry in-place
+            setLogs((prev) => prev.map(log => {
+              const logEntry = log as any;
+              if (logEntry.index === json.index && logEntry.subreddit === json.subreddit) {
+                return { ...logEntry, ...json };
+              }
+              return log;
+            }));
           }
         } catch (e) {
           console.error('Failed to parse streaming JSON:', line, e);
@@ -197,14 +219,14 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
           {logs.map((l, idx) => {
             const entry = l as { subreddit?: string; status?: string; url?: string; error?: string; delaySeconds?: number };
             
-            // Skip delay messages, show them inline with status
+            // Handle waiting messages separately
             if (entry.status === 'waiting') {
               return (
-                <div key={idx} className="py-2 border-b last:border-b-0">
+                <div key={`waiting-${idx}`} className="py-2 border-b last:border-b-0 bg-blue-50">
                   <div className="flex items-center gap-2 sm:gap-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse flex-shrink-0" />
                     <span className="text-xs sm:text-sm font-medium text-blue-600">
-                      Waiting {entry.delaySeconds}s...
+                      Waiting {entry.delaySeconds}s before next post...
                     </span>
                   </div>
                 </div>
@@ -221,7 +243,8 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                     entry.status === 'success' ? 'bg-green-500' : 
                     entry.status === 'error' ? 'bg-red-500' : 
-                    entry.status === 'posting' ? 'bg-blue-500 animate-pulse' : 'bg-gray-500'
+                    entry.status === 'posting' ? 'bg-blue-500 animate-pulse' : 
+                    entry.status === 'queued' ? 'bg-gray-400' : 'bg-gray-500'
                   }`} />
                   
                   {/* Subreddit name */}
@@ -233,11 +256,13 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
                   <div className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
                     entry.status === 'success' ? 'bg-green-100 text-green-700' : 
                     entry.status === 'error' ? 'bg-red-100 text-red-700' : 
-                    entry.status === 'posting' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                    entry.status === 'posting' ? 'bg-blue-100 text-blue-700' : 
+                    entry.status === 'queued' ? 'bg-gray-100 text-gray-600' : 'bg-gray-100 text-gray-700'
                   }`}>
                     {entry.status === 'success' ? '✓' : 
                      entry.status === 'error' ? '✗' : 
-                     entry.status === 'posting' ? '⏳' : '?'}
+                     entry.status === 'posting' ? '⏳' : 
+                     entry.status === 'queued' ? '⏸' : '?'}
                   </div>
                   
                   {/* Actions */}
@@ -249,9 +274,12 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
                           <Info className="h-3 w-3 text-red-500" />
                         </button>
                         {/* Tooltip */}
-                        <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 max-w-xs">
-                          {entry.error}
-                          <div className="absolute top-full right-4 border-4 border-transparent border-t-red-200"></div>
+                        <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-white border border-red-300 text-red-800 text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 max-w-72 w-max min-w-40">
+                          <div className="break-words whitespace-normal leading-relaxed">
+                            {entry.error}
+                          </div>
+                          <div className="absolute top-full right-4 border-4 border-transparent border-t-white"></div>
+                          <div className="absolute top-full right-4 mt-px border-4 border-transparent border-t-red-300"></div>
                         </div>
                       </div>
                     )}
@@ -276,11 +304,13 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
                   <span className={`text-xs ${
                     entry.status === 'success' ? 'text-green-600' : 
                     entry.status === 'error' ? 'text-red-600' : 
-                    entry.status === 'posting' ? 'text-blue-600' : 'text-muted-foreground'
+                    entry.status === 'posting' ? 'text-blue-600' : 
+                    entry.status === 'queued' ? 'text-gray-600' : 'text-muted-foreground'
                   }`}>
                     {entry.status === 'success' ? 'Posted successfully' : 
                      entry.status === 'error' ? 'Failed to post' : 
-                     entry.status === 'posting' ? 'Posting...' : entry.status}
+                     entry.status === 'posting' ? 'Posting...' : 
+                     entry.status === 'queued' ? 'Queued' : entry.status}
                   </span>
                 </div>
               </div>
