@@ -328,32 +328,43 @@ export default function Home() {
         </Card>
               </main>
 
-        <footer className="py-6 space-y-3">
+        <footer className="py-6">
           <div className="text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-muted/20 rounded-full text-xs text-muted-foreground hover:bg-muted/30 transition-all duration-300 hover:scale-105 group">
+            <div className="inline-flex items-center gap-3 px-6 py-3 bg-muted/20 rounded-full text-xs text-muted-foreground hover:bg-muted/30 transition-all duration-300 hover:scale-105 group">
               <span className="animate-pulse">🤖</span>
               <span className="font-medium group-hover:text-blue-600 transition-colors duration-300">AI-Powered</span>
+              
               <span className="w-1 h-1 bg-muted-foreground/40 rounded-full animate-pulse"></span>
+              
               <span className="text-red-500 animate-pulse" style={{animationDuration: '2s'}}>♥</span>
               <span className="font-medium group-hover:text-red-600 transition-colors duration-300">Human-Guided</span>
-            </div>
-          </div>
-          
-          <div className="text-center">
-            <div className="inline-flex items-center gap-1 text-xs text-muted-foreground/60">
-              <span>Built with</span>
-              <div className="inline-flex items-center gap-1 mx-1">
-                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md font-medium hover:bg-blue-100 transition-colors duration-200 cursor-default">
-                  Cursor
-                </span>
-                <span className="text-muted-foreground/40">+</span>
-                <span className="px-2 py-0.5 bg-green-50 text-green-600 rounded-md font-medium hover:bg-green-100 transition-colors duration-200 cursor-default">
-                  ChatGPT
-                </span>
-                <span className="text-muted-foreground/40">+</span>
-                <span className="px-2 py-0.5 bg-orange-50 text-orange-600 rounded-md font-medium hover:bg-orange-100 transition-colors duration-200 cursor-default">
-                  Claude
-                </span>
+              
+              <span className="w-1 h-1 bg-muted-foreground/40 rounded-full"></span>
+              
+              <span className="text-muted-foreground/60">Built with</span>
+              <div className="inline-flex items-center gap-2 ml-1">
+                {/* Cursor Logo */}
+                <div className="w-4 h-4 hover:scale-110 transition-transform duration-200" title="Cursor">
+                  <svg viewBox="0 0 24 24" fill="none" className="w-full h-full">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" fillOpacity="0.8"/>
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" fill="none"/>
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" fill="none"/>
+                  </svg>
+                </div>
+                
+                {/* ChatGPT Logo */}
+                <div className="w-4 h-4 hover:scale-110 transition-transform duration-200" title="ChatGPT">
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+                    <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142-.0852 4.783-2.7582a.7712.7712 0 0 0 .7806 0l5.8428 3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zm-2.4569-11.0532a4.4708 4.4708 0 0 1 2.3445-1.9728V9.046a.7712.7712 0 0 0 .3927.6813l5.8428 3.3685-2.02 1.1686a.0804.0804 0 0 1-.071 0L2.4569 11.2928a4.504 4.504 0 0 1-1.6464-6.1408z"/>
+                  </svg>
+                </div>
+                
+                {/* Claude Logo */}
+                <div className="w-4 h-4 hover:scale-110 transition-transform duration-200" title="Claude">
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+                    <path d="M3 12a9 9 0 1 1 18 0 9 9 0 0 1-18 0zm9-7.5a7.5 7.5 0 1 0 0 15 7.5 7.5 0 0 0 0-15zm0 2a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zm0 2a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"/>
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
