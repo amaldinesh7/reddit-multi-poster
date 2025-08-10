@@ -674,7 +674,7 @@ export default function Settings() {
                     variant="ghost"
                     size="sm"
                     onClick={() => router.push('/')}
-                    className="p-2"
+                    className="p-2 hover:bg-orange-50 hover:text-orange-700"
                   >
                     <ArrowLeft className="w-4 h-4" />
                   </Button>

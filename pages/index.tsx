@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLoader } from '@/components/ui/loader';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Info, ChevronDown } from 'lucide-react';
+import { Info, ChevronDown, User, Settings, LogOut } from 'lucide-react';
 import { QueueItem } from '@/types';
 
 interface MeResponse {
@@ -223,14 +223,23 @@ export default function Home() {
                   <div className="px-4 py-2 border-b sm:hidden">
                     <p className="text-sm font-medium">u/{auth.me?.name}</p>
                   </div>
-                  <DropdownMenuItem onClick={() => window.open(`https://reddit.com/user/${auth.me?.name}`, '_blank')}>
-                    👤 View Profile
+                  <DropdownMenuItem onClick={() => window.open(`https://reddit.com/user/${auth.me?.name}`, '_blank')} className="hover:bg-orange-50 hover:text-orange-700">
+                    <div className="flex items-center">
+                      <User className="h-4 w-4 mr-2" />
+                      View Profile
+                    </div>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => window.location.href = '/settings'}>
-                    ⚙️ Settings
+                  <DropdownMenuItem onClick={() => window.location.href = '/settings'} className="hover:bg-orange-50 hover:text-orange-700">
+                    <div className="flex items-center">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Settings
+                    </div>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={logout} className="text-destructive">
-                    🚪 Logout
+                  <DropdownMenuItem onClick={logout} className="text-destructive hover:bg-red-50 hover:text-red-700">
+                    <div className="flex items-center">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </div>
                   </DropdownMenuItem>
                 </DropdownMenu>
               ) : (
@@ -292,7 +301,7 @@ export default function Home() {
         {/* Caption */}
         <Card className="rounded-lg border bg-card hover:shadow-md transition-shadow">
           <CardHeader className="pb-4 px-6">
-            <CardTitle className="text-lg font-medium">✏️ Post Content</CardTitle>
+            <CardTitle className="text-lg font-medium">✏️ Caption</CardTitle>
           </CardHeader>
           <CardContent className="px-6 pb-6">
             <PostComposer value={caption} onChange={setCaption} prefixes={prefixes} onPrefixesChange={setPrefixes} />

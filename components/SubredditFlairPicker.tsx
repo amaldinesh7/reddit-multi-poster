@@ -253,7 +253,7 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
                       e.stopPropagation();
                       selectAllInCategory(subreddits);
                     }}
-                    className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:opacity-80"
+                    className="text-xs text-primary hover:text-primary/80 underline underline-offset-2 hover:no-underline font-medium"
                   >
                     Select All
                   </button>
