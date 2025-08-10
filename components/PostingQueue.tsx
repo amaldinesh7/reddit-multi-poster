@@ -40,7 +40,7 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
     setAbortController(controller);
     
     // Check if any items have files
-    const hasFiles = items.some(item => item.file);
+    const hasFiles = items.some(item => item.file || (item.files && item.files.length > 0));
     
     let res: Response;
     if (hasFiles) {
