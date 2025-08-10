@@ -328,14 +328,33 @@ export default function Home() {
         </Card>
               </main>
 
-        <footer className="py-6">
+        <footer className="py-6 space-y-3">
           <div className="text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-muted/20 rounded-full text-xs text-muted-foreground hover:bg-muted/30 transition-all duration-300 hover:scale-105 group">
               <span className="animate-pulse">🤖</span>
               <span className="font-medium group-hover:text-blue-600 transition-colors duration-300">AI-Powered</span>
               <span className="w-1 h-1 bg-muted-foreground/40 rounded-full animate-pulse"></span>
-              <span className="text-red-500 animate-bounce" style={{animationDuration: '2s'}}>♥</span>
+              <span className="text-red-500 animate-pulse" style={{animationDuration: '2s'}}>♥</span>
               <span className="font-medium group-hover:text-red-600 transition-colors duration-300">Human-Guided</span>
+            </div>
+          </div>
+          
+          <div className="text-center">
+            <div className="inline-flex items-center gap-1 text-xs text-muted-foreground/60">
+              <span>Built with</span>
+              <div className="inline-flex items-center gap-1 mx-1">
+                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md font-medium hover:bg-blue-100 transition-colors duration-200 cursor-default">
+                  Cursor
+                </span>
+                <span className="text-muted-foreground/40">+</span>
+                <span className="px-2 py-0.5 bg-green-50 text-green-600 rounded-md font-medium hover:bg-green-100 transition-colors duration-200 cursor-default">
+                  ChatGPT
+                </span>
+                <span className="text-muted-foreground/40">+</span>
+                <span className="px-2 py-0.5 bg-orange-50 text-orange-600 rounded-md font-medium hover:bg-orange-100 transition-colors duration-200 cursor-default">
+                  Claude
+                </span>
+              </div>
             </div>
           </div>
         </footer>
