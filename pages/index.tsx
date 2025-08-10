@@ -332,8 +332,10 @@ export default function Home() {
         <footer className="py-6">
           <div className="text-center">
             <div className="inline-flex items-center gap-3 px-6 py-3 bg-muted/20 rounded-full text-xs text-muted-foreground hover:bg-muted/30 transition-all duration-300 hover:scale-105 group">
-              <span className="text-red-500 animate-pulse" style={{animationDuration: '2s'}}>♥</span>
-              <span className="font-medium group-hover:text-red-600 transition-colors duration-300">Crafted with Love</span>
+
+                             <span className="font-medium group-hover:text-red-600 transition-colors duration-300">
+                 Crafted with <span className="text-red-500 animate-pulse" style={{animationDuration: '2s'}}>♥</span>
+               </span>
               
               <span className="w-1 h-1 bg-muted-foreground/40 rounded-full animate-pulse"></span>
               
