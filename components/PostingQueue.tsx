@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 // Removed Card import as we're using custom div structure
 import { Send, Loader2, CheckCircle, XCircle, X, Info, ExternalLink } from 'lucide-react';
+import { Reddit } from '@lobehub/icons';
 
 interface Item {
   subreddit: string;
@@ -182,9 +183,15 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
             </>
           ) : (
             <>
-              <Send className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              <span className="hidden sm:inline">Post to {items.length} Subreddit{items.length !== 1 ? 's' : ''}</span>
-              <span className="sm:hidden">Post to {items.length}</span>
+              <Reddit className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              {items.length > 0 ? (
+                <>
+                  <span className="hidden sm:inline">Post to {items.length} Subreddit{items.length !== 1 ? 's' : ''}</span>
+                  <span className="sm:hidden">Post to {items.length}</span>
+                </>
+              ) : (
+                <span>Post</span>
+              )}
             </>
           )}
         </Button>

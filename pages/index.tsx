@@ -12,6 +12,7 @@ import { AppLoader } from '@/components/ui/loader';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Info, ChevronDown, User, Settings, LogOut } from 'lucide-react';
+import { Cursor, OpenAI, Anthropic } from '@lobehub/icons';
 import { QueueItem } from '@/types';
 
 interface MeResponse {
@@ -338,29 +339,19 @@ export default function Home() {
               
               <span className="text-muted-foreground/60">Built using</span>
               <div className="inline-flex items-center gap-2 ml-1">
-                {/* Cursor Logo - Official from LobeHub */}
+                {/* Cursor Logo - LobeHub Icon */}
                 <div className="w-4 h-4 hover:scale-110 transition-transform duration-200" title="Cursor">
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-                    <path d="M12 1.5L3 6.75L12 12L21 6.75L12 1.5Z" fill="#007ACC"/>
-                    <path d="M3 17.25L12 22.5L21 17.25" stroke="#007ACC" strokeWidth="1.5" fill="none"/>
-                    <path d="M3 12L12 17.25L21 12" stroke="#007ACC" strokeWidth="1.5" fill="none"/>
-                  </svg>
+                  <Cursor className="w-full h-full" />
                 </div>
                 
-                {/* ChatGPT Logo - Official OpenAI */}
+                {/* ChatGPT Logo - LobeHub OpenAI Icon */}
                 <div className="w-4 h-4 hover:scale-110 transition-transform duration-200" title="ChatGPT">
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-                    <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142-.0852 4.783-2.7582a.7712.7712 0 0 0 .7806 0l5.8428 3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zm-2.4569-11.0532a4.4708 4.4708 0 0 1 2.3445-1.9728V9.046a.7712.7712 0 0 0 .3927.6813l5.8428 3.3685-2.02 1.1686a.0804.0804 0 0 1-.071 0L2.4569 11.2928a4.504 4.504 0 0 1-1.6464-6.1408z" fill="#10A37F"/>
-                  </svg>
+                  <OpenAI className="w-full h-full" />
                 </div>
                 
-                {/* Claude Logo - Anthropic */}
+                {/* Claude Logo - LobeHub Anthropic Icon */}
                 <div className="w-4 h-4 hover:scale-110 transition-transform duration-200" title="Claude">
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="#CC785C"/>
-                    <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" fill="#CC785C"/>
-                    <path d="M12 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" fill="#CC785C"/>
-                  </svg>
+                  <Anthropic className="w-full h-full" />
                 </div>
               </div>
             </div>
