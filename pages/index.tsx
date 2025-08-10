@@ -343,7 +343,6 @@ export default function Home() {
               caption={caption} 
               prefixes={prefixes}
               hasFlairErrors={hasFlairErrors}
-              missingFlairs={missingFlairs}
               onPostAttempt={handlePostAttempt}
             />
           </CardContent>

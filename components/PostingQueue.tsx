@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 // Removed Card import as we're using custom div structure
-import { Send, Loader2, CheckCircle, XCircle, X, Info, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Send, Loader2, CheckCircle, XCircle, X, Info, ExternalLink } from 'lucide-react';
 
 interface Item {
   subreddit: string;
@@ -18,11 +18,10 @@ interface Props {
   caption: string;
   prefixes: { f?: boolean; c?: boolean };
   hasFlairErrors?: boolean;
-  missingFlairs?: string[];
   onPostAttempt?: () => void;
 }
 
-export default function PostingQueue({ items, caption, prefixes, hasFlairErrors, missingFlairs, onPostAttempt }: Props) {
+export default function PostingQueue({ items, caption, prefixes, hasFlairErrors, onPostAttempt }: Props) {
   const [logs, setLogs] = React.useState<Record<string, unknown>[]>([]);
   const [running, setRunning] = React.useState(false);
   const [completed, setCompleted] = React.useState(false);
@@ -221,20 +220,6 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
           </Button>
         )}
       </div>
-
-      {hasFlairErrors && missingFlairs && missingFlairs.length > 0 && (
-        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <div className="font-medium text-red-800 mb-1">Missing Required Flairs</div>
-              <div className="text-red-700">
-                Please select flairs for: {missingFlairs.map(sr => `r/${sr}`).join(', ')}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {(running || logs.length > 0 || completed || cancelled) && (
         <div className="border rounded-lg bg-card">
