@@ -12,11 +12,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const contentType = req.headers['content-type'] || '';
   let items: any[], caption: string, prefixes: any;
   let files: any = {};
+  let fields: any = {};
   
   if (contentType.includes('multipart/form-data')) {
     // Parse form data (including files)
     const form = formidable({ multiples: true });
-    const [fields, uploadedFiles] = await form.parse(req);
+    const [parsedFields, uploadedFiles] = await form.parse(req);
+    fields = parsedFields;
     
     console.log('Received form fields:', Object.keys(fields));
     console.log('Received files:', Object.keys(uploadedFiles));
@@ -124,9 +126,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         // Check if there's a fileCount for this item (multiple files)
         const fileCountKey = `fileCount_${i}`;
-        const fileCount = files[fileCountKey] ? parseInt(files[fileCountKey] as string) : 1;
+        const fileCountField = Array.isArray(fields[fileCountKey]) ? fields[fileCountKey][0] : fields[fileCountKey];
+        const fileCount = fileCountField ? parseInt(fileCountField as string) : 1;
         
-        console.log(`Item ${i}: Looking for fileCount at key '${fileCountKey}', found:`, files[fileCountKey]);
+        console.log(`Item ${i}: Looking for fileCount at key '${fileCountKey}', found:`, fileCountField);
         console.log(`Item ${i}: Expected file count: ${fileCount}`);
         
         // Collect all files for this item
