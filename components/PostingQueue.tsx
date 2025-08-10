@@ -159,8 +159,8 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
         <Button
           onClick={completed ? () => { setCompleted(false); setLogs([]); } : start}
           disabled={(running && !abortController) || items.length === 0}
-          className={`h-11 px-6 font-medium w-full sm:w-auto rounded-lg text-sm ${completed ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
-          size="default"
+          className={`px-6 w-full sm:w-auto rounded-lg ${completed ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+          size="lg"
         >
           {completed ? (
             <>
@@ -211,7 +211,7 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
 
       {(running || logs.length > 0 || completed || cancelled) && (
         <div className="border rounded-lg bg-card">
-          <div className="px-3 sm:px-4 py-3 border-b bg-muted/30 rounded-t-lg">
+          <div className="px-3 sm:px-4 py-3 border-b bg-muted/20 rounded-t-lg">
             <div className="text-sm font-medium">Progress Log</div>
           </div>
           <div className="p-3 sm:p-4 max-h-64 overflow-y-auto">

@@ -244,7 +244,7 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
             <div key={categoryName} className="border-b last:border-b-0">
               <button
                 onClick={() => toggleCategory(categoryName)}
-                className="w-full px-4 py-3 bg-muted/30 border-b border-border flex items-center justify-between hover:bg-muted/50"
+                className="w-full px-4 py-3 bg-muted/20 border-b border-border flex items-center justify-between hover:bg-muted/30"
               >
                 <span className="font-medium text-sm">{categoryName} ({subreddits.length})</span>
                 <div className="flex items-center gap-2">

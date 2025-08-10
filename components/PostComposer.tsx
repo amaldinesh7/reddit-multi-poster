@@ -40,7 +40,7 @@ export default function PostComposer({ value, onChange, prefixes, onPrefixesChan
         </div>
       </div>
 
-      <div className="bg-muted/30 rounded-lg p-4">
+      <div className="bg-muted/20 rounded-lg p-4">
         <div className="text-sm font-medium mb-3 text-foreground">🏷️ Title Tags</div>
         <div className="flex items-center gap-4">
           <label className="flex items-center space-x-2 cursor-pointer hover:bg-muted/50 rounded-full px-3 py-1.5 transition-colors">

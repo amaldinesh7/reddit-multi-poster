@@ -256,7 +256,7 @@ export default function Home() {
           <CardHeader className="pb-4 px-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <CardTitle className="text-lg font-medium">📎 Media</CardTitle>
-              <div className="flex rounded-lg border bg-muted p-1 w-full sm:w-auto">
+              <div className="flex rounded-lg  bg-muted/50 p-1 w-full sm:w-auto">
                 <Button
                   variant={mediaMode === 'file' ? 'default' : 'ghost'}
                   size="sm"
@@ -331,7 +331,7 @@ export default function Home() {
 
         <footer className="py-6">
           <div className="text-center">
-            <div className="inline-flex items-center gap-3 px-6 py-3 bg-muted/20 rounded-full text-xs text-muted-foreground hover:bg-muted/30 transition-all duration-300 hover:scale-105 group">
+            <div className="inline-flex items-center gap-3 px-6 py-3 bg-muted/20 rounded-full text-xs text-muted-foreground hover:bg-muted/20 transition-all duration-300 hover:scale-105 group">
               <span className="font-medium group-hover:text-red-600 transition-colors duration-300">
                 Crafted with <span className="text-red-500 animate-pulse" style={{animationDuration: '2s'}}>♥</span>
               </span>

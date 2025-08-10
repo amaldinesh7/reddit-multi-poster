@@ -361,7 +361,7 @@ function SubredditItem({
 
   return (
     <div
-      className={`flex items-center gap-2 px-2 py-1.5 border rounded bg-muted/30 transition-all duration-200 ${
+      className={`flex items-center gap-2 px-2 py-1.5 border rounded bg-muted/20 transition-all duration-200 ${
         isDragging 
           ? 'opacity-50 border-dashed border-muted-foreground dragging' 
           : 'border-border'
@@ -742,7 +742,7 @@ export default function Settings() {
                               {searchResults.map((subreddit) => (
                                                                 <div
                                   key={subreddit.name}
-                                  className="flex items-center justify-between p-2 border border-border rounded bg-muted/30"
+                                  className="flex items-center justify-between p-2 border border-border rounded bg-muted/20"
                                 >
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
