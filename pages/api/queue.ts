@@ -18,6 +18,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const form = formidable({ multiples: true });
     const [fields, uploadedFiles] = await form.parse(req);
     
+    console.log('Received form fields:', Object.keys(fields));
+    console.log('Received files:', Object.keys(uploadedFiles));
+    
     const itemsJson = Array.isArray(fields.items) ? fields.items[0] : fields.items;
     const captionJson = Array.isArray(fields.caption) ? fields.caption[0] : fields.caption;
     const prefixesJson = Array.isArray(fields.prefixes) ? fields.prefixes[0] : fields.prefixes;
@@ -28,6 +31,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     caption = captionJson as string || '';
     prefixes = prefixesJson ? JSON.parse(prefixesJson as string) : {};
     files = uploadedFiles;
+    
+    console.log('Parsed items count:', items.length);
+    console.log('Items structure:', items.map((item, i) => ({ 
+      index: i, 
+      subreddit: item.subreddit, 
+      kind: item.kind 
+    })));
   } else {
     // Parse JSON body (fallback for URL-only posts)
     console.log('Raw req.body:', req.body);
@@ -116,9 +126,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const fileCountKey = `fileCount_${i}`;
         const fileCount = files[fileCountKey] ? parseInt(files[fileCountKey] as string) : 1;
         
+        console.log(`Item ${i}: Looking for fileCount at key '${fileCountKey}', found:`, files[fileCountKey]);
+        console.log(`Item ${i}: Expected file count: ${fileCount}`);
+        
         // Collect all files for this item
         for (let fileIndex = 0; fileIndex < fileCount; fileIndex++) {
           const fileKey = `file_${i}_${fileIndex}`;
+          console.log(`Item ${i}: Looking for file at key '${fileKey}', exists:`, !!files[fileKey]);
           if (files[fileKey]) {
             const uploadedFile = Array.isArray(files[fileKey]) ? files[fileKey][0] : files[fileKey];
             if (uploadedFile) {
