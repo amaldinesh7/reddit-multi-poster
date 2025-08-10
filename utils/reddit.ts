@@ -334,7 +334,8 @@ export async function submitPost(client: AxiosInstance, params: SubmitParams): P
   
   // Handle multiple files for gallery posts
   if (params.files && params.files.length > 1 && !mediaAssetIds) {
-    console.log(`Uploading ${params.files.length} files for gallery post...`);
+    console.log(`Uploading ${params.files.length} files for gallery post to r/${params.subreddit}...`);
+    console.log('File details:', params.files.map(f => ({ name: f.name, size: f.size, type: f.type })));
     mediaAssetIds = await uploadMultipleMedia(client, params.files, params.subreddit);
     console.log('Gallery files uploaded, asset IDs:', mediaAssetIds);
   }
@@ -367,6 +368,7 @@ export async function submitPost(client: AxiosInstance, params: SubmitParams): P
     form.set('url', params.url);
   } else if (params.kind === 'gallery' && mediaAssetIds && mediaAssetIds.length > 1) {
     // Gallery post with multiple images
+    console.log(`Creating gallery post with ${mediaAssetIds.length} images`);
     form.set('kind', 'image');
     form.set('submit_type', 'gallery');
     
@@ -379,10 +381,13 @@ export async function submitPost(client: AxiosInstance, params: SubmitParams): P
       }))
     };
     
+    console.log('Gallery data:', galleryData);
     form.set('gallery_data', JSON.stringify(galleryData));
     
     // Use the first image as the main URL (Reddit requirement)
-    form.set('url', `https://reddit-uploaded-media.s3-accelerate.amazonaws.com/${mediaAssetIds[0]}`);
+    const mainUrl = `https://reddit-uploaded-media.s3-accelerate.amazonaws.com/${mediaAssetIds[0]}`;
+    console.log('Main URL for gallery:', mainUrl);
+    form.set('url', mainUrl);
   } else if ((params.kind === 'image' || params.kind === 'video') && mediaAssetId) {
     form.set('kind', 'image');
     form.set('url', `https://reddit-uploaded-media.s3-accelerate.amazonaws.com/${mediaAssetId}`);

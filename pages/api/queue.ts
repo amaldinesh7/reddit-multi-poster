@@ -153,6 +153,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           postKind = 'gallery';
         }
         
+        console.log(`Processing item ${i} for r/${item.subreddit}:`, {
+          originalKind: item.kind,
+          finalKind: postKind,
+          filesCount: itemFiles.length,
+          fileNames: itemFiles.map(f => f.name),
+        });
+        
         const result = await submitPost(client, {
           subreddit: item.subreddit,
           title,
