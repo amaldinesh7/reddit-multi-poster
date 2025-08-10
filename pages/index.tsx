@@ -337,13 +337,13 @@ export default function Home() {
               
               <span className="w-1 h-1 bg-muted-foreground/40 rounded-full animate-pulse"></span>
               
-              <span className="text-muted-foreground/60">Built using</span>
+              <span className="text-muted-foreground font-medium">Built using</span>
               <div className="inline-flex items-center gap-1 ml-1 text-xs">
                 <a 
                   href="https://cursor.com" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-foreground hover:underline transition-colors duration-200"
+                  className="text-muted-foreground underline hover:text-foreground transition-colors duration-200"
                 >
                   Cursor
                 </a>
@@ -352,7 +352,7 @@ export default function Home() {
                   href="https://openai.com/chatgpt" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-foreground hover:underline transition-colors duration-200"
+                  className="text-muted-foreground underline hover:text-foreground transition-colors duration-200"
                 >
                   ChatGPT
                 </a>
@@ -361,7 +361,7 @@ export default function Home() {
                   href="https://claude.ai" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-foreground hover:underline transition-colors duration-200"
+                  className="text-muted-foreground underline hover:text-foreground transition-colors duration-200"
                 >
                   Claude
                 </a>
