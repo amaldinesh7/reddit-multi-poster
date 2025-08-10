@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 // Removed Card import as we're using custom div structure
-import { Send, Loader2, CheckCircle, XCircle, X, Info, ExternalLink } from 'lucide-react';
+import { Send, Loader2, CheckCircle, XCircle, X, Info, ExternalLink, AlertTriangle } from 'lucide-react';
 
 interface Item {
   subreddit: string;
@@ -17,9 +17,11 @@ interface Props {
   items: Item[];
   caption: string;
   prefixes: { f?: boolean; c?: boolean };
+  hasFlairErrors?: boolean;
+  missingFlairs?: string[];
 }
 
-export default function PostingQueue({ items, caption, prefixes }: Props) {
+export default function PostingQueue({ items, caption, prefixes, hasFlairErrors, missingFlairs }: Props) {
   const [logs, setLogs] = React.useState<Record<string, unknown>[]>([]);
   const [running, setRunning] = React.useState(false);
   const [completed, setCompleted] = React.useState(false);
@@ -158,7 +160,7 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
       <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
         <Button
           onClick={completed ? () => { setCompleted(false); setLogs([]); } : start}
-          disabled={(running && !abortController) || items.length === 0}
+          disabled={(running && !abortController) || items.length === 0 || hasFlairErrors}
           className={`px-6 w-full sm:w-auto rounded-lg ${completed ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
           size="lg"
         >
@@ -208,6 +210,20 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
           </Button>
         )}
       </div>
+
+      {hasFlairErrors && missingFlairs && missingFlairs.length > 0 && (
+        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <div className="font-medium text-red-800 mb-1">Missing Required Flairs</div>
+              <div className="text-red-700">
+                Please select flairs for: {missingFlairs.map(sr => `r/${sr}`).join(', ')}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {(running || logs.length > 0 || completed || cancelled) && (
         <div className="border rounded-lg bg-card">

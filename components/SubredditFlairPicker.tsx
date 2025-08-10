@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { AlertTriangle } from 'lucide-react';
 import { useSubreddits } from '../hooks/useSubreddits';
 import { useSubredditCache } from '../hooks/useSubredditCache';
 
@@ -13,9 +14,10 @@ interface Props {
   onSelectedChange: (next: string[]) => void;
   flairValue: Record<string, string | undefined>;
   onFlairChange: (v: Record<string, string | undefined>) => void;
+  onValidationChange?: (hasErrors: boolean, missingFlairs: string[]) => void;
 }
 
-export default function SubredditFlairPicker({ selected, onSelectedChange, flairValue, onFlairChange }: Props) {
+export default function SubredditFlairPicker({ selected, onSelectedChange, flairValue, onFlairChange, onValidationChange }: Props) {
   const { getSubredditsByCategory, getAllSubreddits, isLoaded } = useSubreddits();
   const { getCachedData, fetchAndCache, loading: cacheLoading } = useSubredditCache();
   
@@ -150,6 +152,23 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
     onFlairChange({ ...flairValue, [sr]: id || undefined });
   };
 
+  // Check if a subreddit has a missing required flair
+  const hasMissingFlair = (subreddit: string) => {
+    const isSelected = selected.includes(subreddit);
+    const isRequired = flairRequired[subreddit];
+    const hasFlairSelected = flairValue[subreddit];
+    return isSelected && isRequired && !hasFlairSelected;
+  };
+
+  // Validation effect to notify parent of errors
+  React.useEffect(() => {
+    if (onValidationChange) {
+      const missingFlairs = selected.filter(subreddit => hasMissingFlair(subreddit));
+      const hasErrors = missingFlairs.length > 0;
+      onValidationChange(hasErrors, missingFlairs);
+    }
+  }, [selected, flairRequired, flairValue, onValidationChange]);
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
@@ -177,14 +196,19 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
         <div className="divide-y rounded-lg border">
           {filtered.map((name) => {
             const isSelected = selected.includes(name);
+            const hasError = hasMissingFlair(name);
+            
             return (
-              <div key={name} className="flex items-center gap-3 px-3 py-3">
+              <div key={name} className={`flex items-center gap-3 px-3 py-3 ${hasError ? 'bg-red-50 border-l-2 border-red-500' : ''}`}>
                 <Checkbox
                   checked={isSelected}
                   onCheckedChange={() => toggle(name)}
                 />
                 <div className="flex-1 flex items-center gap-2">
-                  <Label className="text-sm truncate cursor-pointer" onClick={() => toggle(name)}>
+                  {hasError && (
+                    <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                  )}
+                  <Label className={`text-sm truncate cursor-pointer ${hasError ? 'text-red-700' : ''}`} onClick={() => toggle(name)}>
                     r/{name}
                   </Label>
                   {cacheLoading[name.toLowerCase()] && (
@@ -219,7 +243,11 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
                 <div className="w-48">
                   {isSelected && (flairOptions[name] || []).length > 0 && (
                     <select
-                      className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      className={`flex h-8 w-full rounded-md border px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                        hasError 
+                          ? 'border-red-500 bg-red-50 text-red-700 focus-visible:ring-red-500' 
+                          : 'border-input bg-background'
+                      }`}
                       value={flairValue[name] || ''}
                       onChange={(e) => handleFlairChange(name, e.target.value)}
                     >
@@ -267,14 +295,19 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
                 <div className="divide-y">
                   {subreddits.map((name) => {
                     const isSelected = selected.includes(name);
+                    const hasError = hasMissingFlair(name);
+                    
                     return (
-                      <div key={name} className="flex items-center gap-3 px-3 py-3">
+                      <div key={name} className={`flex items-center gap-3 px-3 py-3 ${hasError ? 'bg-red-50 border-l-2 border-red-500' : ''}`}>
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={() => toggle(name)}
                         />
                         <div className="flex-1 flex items-center gap-2">
-                          <Label className="text-sm truncate cursor-pointer" onClick={() => toggle(name)}>
+                          {hasError && (
+                            <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                          )}
+                          <Label className={`text-sm truncate cursor-pointer ${hasError ? 'text-red-700' : ''}`} onClick={() => toggle(name)}>
                             r/{name}
                           </Label>
                                           {cacheLoading[name.toLowerCase()] && (
@@ -309,7 +342,11 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
                         <div className="w-48">
                           {isSelected && (flairOptions[name] || []).length > 0 && (
                             <select
-                              className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              className={`flex h-8 w-full rounded-md border px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                                hasError 
+                                  ? 'border-red-500 bg-red-50 text-red-700 focus-visible:ring-red-500' 
+                                  : 'border-input bg-background'
+                              }`}
                               value={flairValue[name] || ''}
                               onChange={(e) => handleFlairChange(name, e.target.value)}
                             >

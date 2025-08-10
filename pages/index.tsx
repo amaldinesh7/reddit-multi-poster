@@ -33,6 +33,13 @@ export default function Home() {
   const [mediaFiles, setMediaFiles] = React.useState<File[]>([]);
   const [mediaMode, setMediaMode] = React.useState<'file' | 'url'>('file');
   const [flairs, setFlairs] = React.useState<Record<string, string | undefined>>({});
+  const [hasFlairErrors, setHasFlairErrors] = React.useState(false);
+  const [missingFlairs, setMissingFlairs] = React.useState<string[]>([]);
+
+  const handleValidationChange = (hasErrors: boolean, missingFlairsList: string[]) => {
+    setHasFlairErrors(hasErrors);
+    setMissingFlairs(missingFlairsList);
+  };
 
 
   React.useEffect(() => {
@@ -295,6 +302,7 @@ export default function Home() {
               onSelectedChange={setSelectedSubs}
               flairValue={flairs}
               onFlairChange={setFlairs}
+              onValidationChange={handleValidationChange}
             />
           </CardContent>
         </Card>
@@ -324,7 +332,13 @@ export default function Home() {
             </div>
           </CardHeader>
           <CardContent className="px-6 pb-6">
-            <PostingQueue items={items} caption={caption} prefixes={prefixes} />
+            <PostingQueue 
+              items={items} 
+              caption={caption} 
+              prefixes={prefixes}
+              hasFlairErrors={hasFlairErrors}
+              missingFlairs={missingFlairs}
+            />
           </CardContent>
         </Card>
               </main>
