@@ -255,12 +255,12 @@ export default function Home() {
           <CardHeader className="pb-4 px-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <CardTitle className="text-lg font-medium">📎 Media</CardTitle>
-              <div className="flex rounded-lg border bg-muted p-1">
+              <div className="flex rounded-lg border bg-muted p-1 w-full sm:w-auto">
                 <Button
                   variant={mediaMode === 'file' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setMediaMode('file')}
-                  className={`rounded-md text-xs px-4 py-1.5 h-7 ${mediaMode === 'file' ? 'bg-primary hover:bg-primary/90' : 'hover:bg-secondary hover:text-secondary-foreground'}`}
+                  className={`rounded-md text-xs px-3 sm:px-4 py-1.5 h-7 flex-1 sm:flex-none ${mediaMode === 'file' ? 'bg-primary hover:bg-primary/90' : 'hover:bg-secondary hover:text-secondary-foreground'}`}
                 >
                   Upload File
                 </Button>
@@ -268,7 +268,7 @@ export default function Home() {
                   variant={mediaMode === 'url' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setMediaMode('url')}
-                  className={`rounded-md text-xs px-4 py-1.5 h-7 ${mediaMode === 'url' ? 'bg-primary hover:bg-primary/90' : 'hover:bg-secondary hover:text-secondary-foreground'}`}
+                  className={`rounded-md text-xs px-3 sm:px-4 py-1.5 h-7 flex-1 sm:flex-none ${mediaMode === 'url' ? 'bg-primary hover:bg-primary/90' : 'hover:bg-secondary hover:text-secondary-foreground'}`}
                 >
                   URL Link
                 </Button>
