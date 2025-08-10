@@ -408,6 +408,14 @@ export async function submitPost(client: AxiosInstance, params: SubmitParams): P
   // Log the response for debugging
   console.log('Reddit API response:', JSON.stringify(data, null, 2));
   
+  // Special handling for gallery posts that might have different response format
+  if (params.kind === 'gallery' && data?.json?.data?.user_submitted_page && !data?.json?.data?.url) {
+    console.log('Gallery post detected with user_submitted_page response');
+    // Try to extract post ID from the submitted page URL or websocket URL
+    const submittedPage = data.json.data.user_submitted_page as string;
+    console.log('Submitted page URL:', submittedPage);
+  }
+  
   // Handle different response formats
   let json = data?.json;
   
@@ -435,6 +443,29 @@ export async function submitPost(client: AxiosInstance, params: SubmitParams): P
   // Try different possible response structures
   let url = json?.data?.url as string;
   let id = json?.data?.id as string;
+  
+  // Special handling for gallery posts that return user_submitted_page
+  if (params.kind === 'gallery' && json?.data?.user_submitted_page && !url) {
+    console.log('Gallery post: trying to extract post info from user_submitted_page');
+    
+    // Try to extract post ID from websocket URL (format: wss://.../{asset_id}?m=...)
+    // The asset ID in websocket URL should match one of our uploaded assets
+    if (json.data.websocket_url) {
+      const websocketUrl = json.data.websocket_url as string;
+      console.log('Websocket URL:', websocketUrl);
+      
+      // Check if this is a successful post by looking at the user_submitted_page
+      // This URL format indicates the post was created
+      if (json.data.user_submitted_page.includes('/submitted/')) {
+        console.log('Gallery post created successfully');
+        
+        // For gallery posts, Reddit sometimes returns the user's submitted page
+        // instead of the direct post URL. We'll indicate success.
+        url = json.data.user_submitted_page as string;
+        id = 'gallery_success';
+      }
+    }
+  }
   
   // Fix protocol-relative URLs (e.g., //reddit-uploaded-media.s3-accelerate.amazonaws.com)
   if (url && url.startsWith('//')) {
