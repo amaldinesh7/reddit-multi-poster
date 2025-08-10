@@ -328,14 +328,14 @@ export default function Home() {
         </Card>
               </main>
 
-        <footer className="py-6 mt-8">
+        <footer className="py-6">
           <div className="text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-muted/20 rounded-full text-xs text-muted-foreground">
-              <span>🤖</span>
-              <span className="font-medium">AI-Powered</span>
-              <span className="w-1 h-1 bg-muted-foreground/40 rounded-full"></span>
-              <span className="text-red-500">♥</span>
-              <span className="font-medium">Human-Guided</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-muted/20 rounded-full text-xs text-muted-foreground hover:bg-muted/30 transition-all duration-300 hover:scale-105 group">
+              <span className="animate-pulse">🤖</span>
+              <span className="font-medium group-hover:text-blue-600 transition-colors duration-300">AI-Powered</span>
+              <span className="w-1 h-1 bg-muted-foreground/40 rounded-full animate-pulse"></span>
+              <span className="text-red-500 animate-bounce" style={{animationDuration: '2s'}}>♥</span>
+              <span className="font-medium group-hover:text-red-600 transition-colors duration-300">Human-Guided</span>
             </div>
           </div>
         </footer>
