@@ -343,7 +343,7 @@ export default function Home() {
                   href="https://cursor.com" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-700 hover:underline transition-colors duration-200"
+                  className="text-muted-foreground hover:text-foreground hover:underline transition-colors duration-200"
                 >
                   Cursor
                 </a>
@@ -352,7 +352,7 @@ export default function Home() {
                   href="https://openai.com/chatgpt" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-green-600 hover:text-green-700 hover:underline transition-colors duration-200"
+                  className="text-muted-foreground hover:text-foreground hover:underline transition-colors duration-200"
                 >
                   ChatGPT
                 </a>
@@ -361,7 +361,7 @@ export default function Home() {
                   href="https://claude.ai" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-orange-600 hover:text-orange-700 hover:underline transition-colors duration-200"
+                  className="text-muted-foreground hover:text-foreground hover:underline transition-colors duration-200"
                 >
                   Claude
                 </a>
