@@ -159,30 +159,30 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
         <Button
           onClick={completed ? () => { setCompleted(false); setLogs([]); } : start}
           disabled={(running && !abortController) || items.length === 0}
-          className={`h-11 sm:h-12 px-6 sm:px-8 font-medium w-full sm:w-auto rounded-lg text-sm sm:text-base ${completed ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+          className={`h-11 px-6 font-medium w-full sm:w-auto rounded-lg text-sm ${completed ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
           size="default"
         >
           {completed ? (
             <>
-              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              <CheckCircle className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">All Done! Click to Reset</span>
               <span className="sm:hidden">Reset</span>
             </>
           ) : cancelled ? (
             <>
-              <XCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              <XCircle className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Cancelled - Click to Retry</span>
               <span className="sm:hidden">Retry</span>
             </>
           ) : running ? (
             <>
-              <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 animate-spin" />
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               <span className="hidden sm:inline">Posting to {items.length} communities...</span>
               <span className="sm:hidden">Posting to {items.length}...</span>
             </>
           ) : (
             <>
-              <Send className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              <Send className="h-4 w-4 mr-2" />
               {items.length > 0 ? (
                 <>
                   <span className="hidden sm:inline">Post to {items.length} Subreddit{items.length !== 1 ? 's' : ''}</span>
