@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 // Removed Card import as we're using custom div structure
-import { Send, Loader2, CheckCircle, XCircle, X } from 'lucide-react';
+import { Send, Loader2, CheckCircle, XCircle, X, Info, ExternalLink } from 'lucide-react';
 
 interface Item {
   subreddit: string;
@@ -133,32 +133,36 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-center gap-3">
+      <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
         <Button
           onClick={completed ? () => { setCompleted(false); setLogs([]); } : start}
           disabled={(running && !abortController) || items.length === 0}
-          className={`h-12 px-8 font-medium w-full sm:w-auto rounded-lg ${completed ? 'bg-success hover:bg-success/90 text-white' : ''}`}
+          className={`h-11 sm:h-12 px-6 sm:px-8 font-medium w-full sm:w-auto rounded-lg text-sm sm:text-base ${completed ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
           size="default"
         >
           {completed ? (
             <>
-              <CheckCircle className="h-5 w-5 mr-2" />
-              All Done! Click to Reset
+              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              <span className="hidden sm:inline">All Done! Click to Reset</span>
+              <span className="sm:hidden">Reset</span>
             </>
           ) : cancelled ? (
             <>
-              <XCircle className="h-5 w-5 mr-2" />
-              Cancelled - Click to Retry
+              <XCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              <span className="hidden sm:inline">Cancelled - Click to Retry</span>
+              <span className="sm:hidden">Retry</span>
             </>
           ) : running ? (
             <>
-              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              Posting to {items.length} communities...
+              <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 animate-spin" />
+              <span className="hidden sm:inline">Posting to {items.length} communities...</span>
+              <span className="sm:hidden">Posting to {items.length}...</span>
             </>
           ) : (
             <>
-              <Send className="h-5 w-5 mr-2" />
-              Post to {items.length} Subreddit{items.length !== 1 ? 's' : ''}
+              <Send className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              <span className="hidden sm:inline">Post to {items.length} Subreddit{items.length !== 1 ? 's' : ''}</span>
+              <span className="sm:hidden">Post to {items.length}</span>
             </>
           )}
         </Button>
@@ -167,21 +171,22 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
           <Button
             onClick={cancel}
             variant="outline"
-            className="h-12 px-6 rounded-lg border-destructive text-destructive hover:bg-destructive hover:text-white"
+            className="h-11 sm:h-12 px-4 sm:px-6 rounded-lg border-red-300 text-red-600 hover:bg-red-600 hover:text-white text-sm sm:text-base w-full sm:w-auto"
             size="default"
           >
-            <X className="h-5 w-5 mr-2" />
-            Stop
+            <X className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+            <span className="hidden sm:inline">Stop</span>
+            <span className="sm:hidden">Stop</span>
           </Button>
         )}
       </div>
 
       {(running || logs.length > 0 || completed || cancelled) && (
         <div className="border rounded-lg bg-card">
-          <div className="px-4 py-3 border-b bg-muted/30 rounded-t-lg">
+          <div className="px-3 sm:px-4 py-3 border-b bg-muted/30 rounded-t-lg">
             <div className="text-sm font-medium">Progress Log</div>
           </div>
-          <div className="p-4 max-h-64 overflow-y-auto">
+          <div className="p-3 sm:p-4 max-h-64 overflow-y-auto">
             {logs.length === 0 && running && (
               <div className="text-center py-6">
                 <div className="text-muted-foreground text-sm">
@@ -196,9 +201,11 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
             if (entry.status === 'waiting') {
               return (
                 <div key={idx} className="py-2 border-b last:border-b-0">
-                  <div className="flex items-center gap-3 text-info">
-                    <div className="w-2 h-2 bg-info rounded-full animate-pulse" />
-                    <span className="text-sm font-medium">Waiting {entry.delaySeconds}s before next post...</span>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse flex-shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium text-blue-600">
+                      Waiting {entry.delaySeconds}s...
+                    </span>
                   </div>
                 </div>
               );
@@ -207,35 +214,74 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
             // Only show subreddit entries
             if (!entry.subreddit) return null;
             
-            const statusColor = entry.status === 'success' ? 'text-green-600' : 
-                               entry.status === 'error' ? 'text-red-600' : 
-                               entry.status === 'posting' ? 'text-blue-600' : 'text-muted-foreground';
-                               
             return (
-              <div key={idx} className="text-sm py-2 border-b last:border-b-0">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${
+              <div key={idx} className="py-2 border-b last:border-b-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  {/* Status indicator */}
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                     entry.status === 'success' ? 'bg-green-500' : 
                     entry.status === 'error' ? 'bg-red-500' : 
                     entry.status === 'posting' ? 'bg-blue-500 animate-pulse' : 'bg-gray-500'
                   }`} />
-                  <span className="font-medium text-foreground">r/{entry.subreddit}</span>
-                  <span className={statusColor}>
-                    {entry.status === 'success' ? '✓ Posted' : 
-                     entry.status === 'error' ? '✗ Failed' : 
-                     entry.status === 'posting' ? '⏳ Posting...' : entry.status}
+                  
+                  {/* Subreddit name */}
+                  <span className="font-medium text-foreground text-xs sm:text-sm truncate">
+                    r/{entry.subreddit}
                   </span>
-                  {entry.url && (
-                    <a 
-                      className="underline ml-auto text-primary hover:text-primary/80 text-xs" 
-                      href={entry.url.startsWith('//') ? `https:${entry.url}` : entry.url} 
-                      target="_blank" 
-                      rel="noreferrer"
-                    >
-                      view
-                    </a>
-                  )}
-                  {entry.error && <span className="ml-auto text-red-600 text-xs truncate max-w-32">{entry.error}</span>}
+                  
+                  {/* Status badge */}
+                  <div className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+                    entry.status === 'success' ? 'bg-green-100 text-green-700' : 
+                    entry.status === 'error' ? 'bg-red-100 text-red-700' : 
+                    entry.status === 'posting' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {entry.status === 'success' ? '✓' : 
+                     entry.status === 'error' ? '✗' : 
+                     entry.status === 'posting' ? '⏳' : '?'}
+                  </div>
+                  
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+                    {/* Error info button */}
+                    {entry.error && (
+                      <div className="relative group">
+                        <button className="p-1 hover:bg-red-50 rounded-full transition-colors">
+                          <Info className="h-3 w-3 text-red-500" />
+                        </button>
+                        {/* Tooltip */}
+                        <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 max-w-xs">
+                          {entry.error}
+                          <div className="absolute top-full right-4 border-4 border-transparent border-t-red-200"></div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* View link */}
+                    {entry.url && (
+                      <a 
+                        className="p-1 hover:bg-green-50 rounded-full transition-colors" 
+                        href={entry.url.startsWith('//') ? `https:${entry.url}` : entry.url} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        title="View post"
+                      >
+                        <ExternalLink className="h-3 w-3 text-green-600" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Mobile-friendly status text */}
+                <div className="mt-1 ml-4 sm:hidden">
+                  <span className={`text-xs ${
+                    entry.status === 'success' ? 'text-green-600' : 
+                    entry.status === 'error' ? 'text-red-600' : 
+                    entry.status === 'posting' ? 'text-blue-600' : 'text-muted-foreground'
+                  }`}>
+                    {entry.status === 'success' ? 'Posted successfully' : 
+                     entry.status === 'error' ? 'Failed to post' : 
+                     entry.status === 'posting' ? 'Posting...' : entry.status}
+                  </span>
                 </div>
               </div>
             );
@@ -245,25 +291,25 @@ export default function PostingQueue({ items, caption, prefixes }: Props) {
       )}
       
       {completed && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
           <div className="flex items-center gap-2 text-green-800">
-            <CheckCircle className="h-5 w-5" />
-            <span className="font-medium">All posts completed successfully!</span>
+            <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+            <span className="font-medium text-sm sm:text-base">All posts completed successfully!</span>
           </div>
-          <p className="text-sm text-green-700 mt-1">
+          <p className="text-xs sm:text-sm text-green-700 mt-1">
             Posted to {items.length} subreddit{items.length !== 1 ? 's' : ''} with your content.
           </p>
         </div>
       )}
       
       {cancelled && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4">
           <div className="flex items-center gap-2 text-yellow-800">
-            <XCircle className="h-5 w-5" />
-            <span className="font-medium">Posting was cancelled</span>
+            <XCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+            <span className="font-medium text-sm sm:text-base">Posting was cancelled</span>
           </div>
-          <p className="text-sm text-yellow-700 mt-1">
-            You can click the button above to retry posting to the remaining subreddits.
+          <p className="text-xs sm:text-sm text-yellow-700 mt-1">
+            Click the retry button to post to the remaining subreddits.
           </p>
         </div>
       )}
