@@ -50,13 +50,14 @@
 				{
 					"listen": "test",
 					"script": {
+						"id": "99d56ca7-5072-443d-990d-692699abbe45",
 						"exec": [
-							"pm.test(\"Successful POST request\", function () {",
-							"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-							"});",
-							""
+							"pm.test(\"Status code name has string\", function () {",
+							"    pm.response.to.have.status(\"Created\");",
+							"});"
 						],
-						"type": "text/javascript"
+						"type": "text/javascript",
+						"packages": {}
 					}
 				}
 			],
