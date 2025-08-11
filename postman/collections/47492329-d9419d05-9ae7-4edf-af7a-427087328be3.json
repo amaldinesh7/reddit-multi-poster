@@ -7,7 +7,7 @@
 	},
 	"item": [
 		{
-			"name": "Get data",
+			"name": "Get data - updated from postman",
 			"event": [
 				{
 					"listen": "test",
