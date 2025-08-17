@@ -19,7 +19,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/todos",
+							"raw": "{{base_url}}/api/todos-updated",
 							"host": [
 								"{{base_url}}"
 							],
