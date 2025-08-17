@@ -249,6 +249,7 @@
 		{
 			"listen": "prerequest",
 			"script": {
+				"id": "0cd4890f-9069-4305-9386-2aabd7d02385",
 				"type": "text/javascript",
 				"exec": [
 					""
@@ -258,6 +259,7 @@
 		{
 			"listen": "test",
 			"script": {
+				"id": "716383cb-94f1-4915-9a1c-adaa3bc68482",
 				"type": "text/javascript",
 				"exec": [
 					""
@@ -267,14 +269,17 @@
 	],
 	"variable": [
 		{
-			"id": "530bbdd9-38d3-441e-92dc-61f171c18dc2",
 			"key": "id",
 			"value": "1"
 		},
 		{
-			"id": "57b5ecc1-1ffd-4eb5-a9a4-fa78c5251c5d",
 			"key": "base_url",
 			"value": "https://postman-rest-api-learner.glitch.me/"
+		},
+		{
+			"key": "hey",
+			"value": "2343",
+			"type": "string"
 		}
 	]
 }
