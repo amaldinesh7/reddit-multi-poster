@@ -249,7 +249,7 @@
 		{
 			"listen": "prerequest",
 			"script": {
-				"id": "6440d55c-5667-494c-b435-d304f5107fd3",
+				"id": "ae4c696a-12fa-4e79-ae81-0edd0c3e63b4",
 				"type": "text/javascript",
 				"exec": [
 					""
@@ -259,7 +259,7 @@
 		{
 			"listen": "test",
 			"script": {
-				"id": "dfd22440-6d89-4f93-969d-a4d1089bf5dd",
+				"id": "03240992-5adf-42ed-a089-34129f5177be",
 				"type": "text/javascript",
 				"exec": [
 					""
@@ -278,7 +278,11 @@
 		},
 		{
 			"key": "hey",
-			"value": "12344",
+			"value": "amal",
+			"type": "string"
+		},
+		{
+			"value": "",
 			"type": "string"
 		}
 	]
