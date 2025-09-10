@@ -1,0 +1,21 @@
+{
+	"info": {
+		"_postman_id": "1157856-a465318b-d2f1-4891-b8c3-dca1a2ebf7f5",
+		"name": "Real time events verify",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "New Request",
+			"id": "1157856-9b4e4253-9322-4646-a931-81f7a51871c8",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		}
+	]
+}
