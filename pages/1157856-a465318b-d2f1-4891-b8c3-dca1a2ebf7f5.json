@@ -6,7 +6,7 @@
 	},
 	"item": [
 		{
-			"name": "New Request",
+			"name": "Add Realtime events",
 			"id": "1157856-9b4e4253-9322-4646-a931-81f7a51871c8",
 			"protocolProfileBehavior": {
 				"disableBodyPruning": true
