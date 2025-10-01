@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { ArrowLeft, Plus, Trash2, GripVertical, Edit2, Save, X, Loader2, Search, Users, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, GripVertical, Edit2, Save, X, Loader2, Search, Users, ExternalLink, Download } from 'lucide-react';
 import { useSubredditCache } from '../hooks/useSubredditCache';
+import { VERIFIED_INDIAN_NSFW_SUBREDDITS, mergeWithExistingSubreddits } from '../constants/subreddits-verified';
 
 // DnD Kit imports
 import {
@@ -516,6 +517,15 @@ export default function Settings() {
     }));
   };
 
+  const loadVerifiedSubreddits = () => {
+    const mergedData = mergeWithExistingSubreddits(data, VERIFIED_INDIAN_NSFW_SUBREDDITS);
+    setData(mergedData);
+    
+    // Show success message
+    console.log('Loaded 20 verified Indian NSFW subreddits');
+    alert('Successfully loaded 20 verified Indian NSFW subreddits!');
+  };
+
   // Handle drag start
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -688,14 +698,25 @@ export default function Settings() {
             <div className="mb-3 sm:mb-4">
               <div className="flex items-center justify-between gap-3 mb-1">
                 <h2 className="text-base sm:text-lg font-semibold">Manage Subreddits</h2>
-                <Button 
-                  onClick={addCategory} 
-                  size="sm"
-                  className="h-7 sm:h-8 px-2 sm:px-3 shrink-0 font-normal"
-                >
-                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-                  <span className="text-xs sm:text-sm">Add Category</span>
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={loadVerifiedSubreddits} 
+                    size="sm"
+                    variant="outline"
+                    className="h-7 sm:h-8 px-2 sm:px-3 shrink-0 font-normal"
+                  >
+                    <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                    <span className="text-xs sm:text-sm">Load Verified</span>
+                  </Button>
+                  <Button 
+                    onClick={addCategory} 
+                    size="sm"
+                    className="h-7 sm:h-8 px-2 sm:px-3 shrink-0 font-normal"
+                  >
+                    <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                    <span className="text-xs sm:text-sm">Add Category</span>
+                  </Button>
+                </div>
               </div>
               <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
                 Organize your subreddits into categories and reorder them by dragging.
