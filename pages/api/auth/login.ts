@@ -17,6 +17,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     secure: isProduction // Secure cookies in production (HTTPS), allow HTTP in development
   }));
   
-  console.log('Login debug - setting state:', state);
+  // console.log('Login debug - setting state:', state); // Debug message removed
   res.redirect(302, redirect);
 } 

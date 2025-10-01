@@ -15,6 +15,7 @@ const SUBREDDITS = [
   'DesiSlutGW',
   'DesiGW',
   'KeralaGW',
+  'KeralaFantasy',
   'Bangalorecouples',
   'DelhiGone_Wild',
   'KochiNSFW',

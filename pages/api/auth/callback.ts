@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const expected = req.cookies['reddit_oauth_state'];
   
   // Debug logging (remove in production)
-  console.log('Callback debug:', { code: !!code, state, expected, cookies: Object.keys(req.cookies) });
+  // console.log('Callback debug:', { code: !!code, state, expected, cookies: Object.keys(req.cookies) });
   
   if (!code) {
     return res.status(400).send('Missing authorization code');
