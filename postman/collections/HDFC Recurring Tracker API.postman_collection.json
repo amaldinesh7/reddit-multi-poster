@@ -1,0 +1,139 @@
+{
+	"info": {
+		"_postman_id": "dc7aa863-92fe-41f4-886d-68d4696c07d7",
+		"name": "HDFC Recurring Tracker API",
+		"description": "API collection for HDFC Recurring Payment Tracker - SMS ingestion, dashboard data, and payment management",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "32577275"
+	},
+	"item": [
+		{
+			"name": "SMS",
+			"item": [
+				{
+					"name": "SMS Ingestion (Minimal)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"rawMessage\": \"HDFC Bank: Rs 1200.00 debited from A/c **1234 on 15-Jan-24 for Netflix subscription. Avl Bal: Rs 45000.00\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/bank-sms",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"bank-sms"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "SMS Ingestion",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"rawMessage\": \"UPDATE: INR 45,000.00 debited from HDFC Bank XX8913 on 01-SEP-25. Info: NEFT Dr-FDRL0001532-AMAL DINESH-SANDOZ - MUM-HDFCN52025090142096383-NET BANKING SI -Expenses FEDERAL. Avl bal:INR 3,01,264.55\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/bank-sms",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"bank-sms"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Dashboard",
+			"item": [
+				{
+					"name": "Get Dashboard Data",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/dashboard?period=2024-09",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"dashboard"
+							],
+							"query": [
+								{
+									"key": "period",
+									"value": "2024-09",
+									"description": "Period key in YYYY-MM format"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Mark Payment Done",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"recurringId\": \"your-recurring-payment-id\",\n  \"periodKey\": \"2024-09\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/mark-done",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"mark-done"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://mm-tracker-web.vercel.app",
+			"description": "Base URL for the HDFC Tracker API"
+		}
+	]
+}

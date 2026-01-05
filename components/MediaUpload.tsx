@@ -176,7 +176,9 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
                   </div>
                   
                   <p className="text-sm text-muted-foreground">
-                    Will upload directly to Reddit. Multiple files will be posted as separate submissions.
+                    {selectedFiles.length > 1 
+                      ? 'Multiple files will be posted as a single gallery post.'
+                      : 'Will upload directly to Reddit.'}
                   </p>
                 </div>
               ) : (

@@ -248,6 +248,11 @@ export async function uploadMultipleMedia(client: AxiosInstance, files: File[], 
     }
   }
   
+  // Wait for Reddit to process all uploaded images before returning
+  // This is critical - images need to be processed before gallery submission
+  console.log('Waiting for Reddit to process uploaded images...');
+  await new Promise(resolve => setTimeout(resolve, 3000));
+  
   return assetIds;
 }
 
@@ -352,6 +357,11 @@ export async function submitPost(client: AxiosInstance, params: SubmitParams): P
     console.log('File uploaded, asset ID:', mediaAssetId);
   }
   
+  // Use Reddit's Gallery API for multiple images (separate endpoint)
+  if (params.kind === 'gallery' && mediaAssetIds && mediaAssetIds.length > 1) {
+    return submitGalleryPost(client, params, mediaAssetIds);
+  }
+  
   const form = new URLSearchParams();
   form.set('api_type', 'json');
   form.set('sr', params.subreddit);
@@ -366,28 +376,6 @@ export async function submitPost(client: AxiosInstance, params: SubmitParams): P
   } else if (params.kind === 'link' && params.url) {
     form.set('kind', 'link');
     form.set('url', params.url);
-  } else if (params.kind === 'gallery' && mediaAssetIds && mediaAssetIds.length > 1) {
-    // Gallery post with multiple images
-    console.log(`Creating gallery post with ${mediaAssetIds.length} images`);
-    form.set('kind', 'image');
-    form.set('submit_type', 'gallery');
-    
-    // Add gallery data - Reddit expects this format for galleries
-    const galleryData = {
-      items: mediaAssetIds.map((assetId, index) => ({
-        media_id: assetId,
-        id: index,
-        caption: '' // You can add captions per image if needed
-      }))
-    };
-    
-    console.log('Gallery data:', galleryData);
-    form.set('gallery_data', JSON.stringify(galleryData));
-    
-    // Use the first image as the main URL (Reddit requirement)
-    const mainUrl = `https://reddit-uploaded-media.s3-accelerate.amazonaws.com/${mediaAssetIds[0]}`;
-    console.log('Main URL for gallery:', mainUrl);
-    form.set('url', mainUrl);
   } else if ((params.kind === 'image' || params.kind === 'video') && mediaAssetId) {
     form.set('kind', 'image');
     form.set('url', `https://reddit-uploaded-media.s3-accelerate.amazonaws.com/${mediaAssetId}`);
@@ -407,14 +395,6 @@ export async function submitPost(client: AxiosInstance, params: SubmitParams): P
   
   // Log the response for debugging
   console.log('Reddit API response:', JSON.stringify(data, null, 2));
-  
-  // Special handling for gallery posts that might have different response format
-  if (params.kind === 'gallery' && data?.json?.data?.user_submitted_page && !data?.json?.data?.url) {
-    console.log('Gallery post detected with user_submitted_page response');
-    // Try to extract post ID from the submitted page URL or websocket URL
-    const submittedPage = data.json.data.user_submitted_page as string;
-    console.log('Submitted page URL:', submittedPage);
-  }
   
   // Handle different response formats
   let json = data?.json;
@@ -444,29 +424,6 @@ export async function submitPost(client: AxiosInstance, params: SubmitParams): P
   let url = json?.data?.url as string;
   let id = json?.data?.id as string;
   
-  // Special handling for gallery posts that return user_submitted_page
-  if (params.kind === 'gallery' && json?.data?.user_submitted_page && !url) {
-    console.log('Gallery post: trying to extract post info from user_submitted_page');
-    
-    // Try to extract post ID from websocket URL (format: wss://.../{asset_id}?m=...)
-    // The asset ID in websocket URL should match one of our uploaded assets
-    if (json.data.websocket_url) {
-      const websocketUrl = json.data.websocket_url as string;
-      console.log('Websocket URL:', websocketUrl);
-      
-      // Check if this is a successful post by looking at the user_submitted_page
-      // This URL format indicates the post was created
-      if (json.data.user_submitted_page.includes('/submitted/')) {
-        console.log('Gallery post created successfully');
-        
-        // For gallery posts, Reddit sometimes returns the user's submitted page
-        // instead of the direct post URL. We'll indicate success.
-        url = json.data.user_submitted_page as string;
-        id = 'gallery_success';
-      }
-    }
-  }
-  
   // Fix protocol-relative URLs (e.g., //reddit-uploaded-media.s3-accelerate.amazonaws.com)
   if (url && url.startsWith('//')) {
     url = `https:${url}`;
@@ -488,6 +445,155 @@ export async function submitPost(client: AxiosInstance, params: SubmitParams): P
   }
   
   return { url: url || '', id: id || '' };
+}
+
+/**
+ * Submit a gallery post using Reddit's API.
+ * This is required for posting multiple images as a single post.
+ */
+async function submitGalleryPost(
+  client: AxiosInstance, 
+  params: SubmitParams, 
+  mediaAssetIds: string[]
+): Promise<{ url: string; id: string }> {
+  console.log(`Creating gallery post with ${mediaAssetIds.length} images to r/${params.subreddit}`);
+  
+  // Try the /api/submit endpoint with gallery_data first (more reliable for some subreddits)
+  const form = new URLSearchParams();
+  form.set('api_type', 'json');
+  form.set('sr', params.subreddit);
+  form.set('title', params.title);
+  form.set('kind', 'self');  // Use 'self' with gallery_data
+  form.set('resubmit', 'true');
+  form.set('sendreplies', 'true');
+  
+  // Gallery data format - items array with media_id for each uploaded image
+  const items = mediaAssetIds.map((mediaId, index) => ({
+    media_id: mediaId,
+    id: index + 1,
+    caption: '',
+  }));
+  
+  form.set('items', JSON.stringify(items));
+  
+  if (params.flair_id) form.set('flair_id', params.flair_id);
+  if (params.nsfw) form.set('nsfw', 'true');
+  if (params.spoiler) form.set('spoiler', 'true');
+  
+  console.log('Gallery form data:', {
+    sr: params.subreddit,
+    title: params.title,
+    items: items,
+    flair_id: params.flair_id
+  });
+  
+  // First try the dedicated gallery endpoint
+  try {
+    const galleryPayload = {
+      api_type: 'json',
+      sr: params.subreddit,
+      title: params.title,
+      items: mediaAssetIds.map((assetId) => ({
+        media_id: assetId,
+        caption: '',
+      })),
+      sendreplies: true,
+      resubmit: true,
+      nsfw: params.nsfw || false,
+      spoiler: params.spoiler || false,
+      flair_id: params.flair_id || undefined,
+      validate_on_submit: false,
+    };
+    
+    console.log('Trying /api/submit_gallery_post.json endpoint...');
+    console.log('Gallery payload:', JSON.stringify(galleryPayload, null, 2));
+    
+    const { data } = await client.post('/api/submit_gallery_post.json', galleryPayload, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    
+    console.log('Gallery API response:', JSON.stringify(data, null, 2));
+    
+    // Handle error responses
+    if (data?.json?.errors?.length) {
+      throw new Error(data.json.errors.map((e: any) => e.join(': ')).join('; '));
+    }
+    
+    // Extract URL and ID from response
+    let url = data?.json?.data?.url as string;
+    let id = data?.json?.data?.id as string;
+    
+    // Fix protocol-relative URLs
+    if (url && url.startsWith('//')) {
+      url = `https:${url}`;
+    }
+    
+    // If URL is not present, construct it from the subreddit and id
+    if (!url && id && params.subreddit) {
+      // Clean up the ID if it has t3_ prefix
+      const cleanId = id.startsWith('t3_') ? id.substring(3) : id;
+      url = `https://www.reddit.com/r/${params.subreddit}/comments/${cleanId}/`;
+    }
+    
+    // Try alternative response structure (name field)
+    if (!url && data?.json?.data?.name) {
+      const name = data.json.data.name as string;
+      if (name.startsWith('t3_')) {
+        const postId = name.substring(3);
+        url = `https://www.reddit.com/r/${params.subreddit}/comments/${postId}/`;
+        id = postId;
+      }
+    }
+    
+    if (url) {
+      return { url, id: id || '' };
+    }
+    
+    throw new Error('No URL in gallery response');
+  } catch (error) {
+    console.log('Gallery endpoint failed, trying alternative /api/submit approach...');
+    console.error('Gallery endpoint error:', error);
+    
+    // Fallback: Try the regular submit endpoint with gallery items
+    const fallbackForm = new URLSearchParams();
+    fallbackForm.set('api_type', 'json');
+    fallbackForm.set('sr', params.subreddit);
+    fallbackForm.set('title', params.title);
+    fallbackForm.set('kind', 'image');
+    fallbackForm.set('resubmit', 'true');
+    fallbackForm.set('sendreplies', 'true');
+    
+    // Use the first image URL as the main media
+    fallbackForm.set('url', `https://reddit-uploaded-media.s3-accelerate.amazonaws.com/${mediaAssetIds[0]}`);
+    
+    if (params.flair_id) fallbackForm.set('flair_id', params.flair_id);
+    if (params.nsfw) fallbackForm.set('nsfw', 'true');
+    if (params.spoiler) fallbackForm.set('spoiler', 'true');
+    
+    const { data: fallbackData } = await client.post('/api/submit', fallbackForm, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
+    
+    console.log('Fallback API response:', JSON.stringify(fallbackData, null, 2));
+    
+    const json = fallbackData?.json;
+    if (json?.errors?.length) {
+      throw new Error(json.errors.map((e: any) => e.join(': ')).join('; '));
+    }
+    
+    let url = json?.data?.url as string;
+    let id = json?.data?.id as string;
+    
+    if (url && url.startsWith('//')) {
+      url = `https:${url}`;
+    }
+    
+    if (!url && id && params.subreddit) {
+      url = `https://www.reddit.com/r/${params.subreddit}/comments/${id}/`;
+    }
+    
+    return { url: url || '', id: id || '' };
+  }
 }
 
 export function addPrefixesToTitle(title: string, opts: { f?: boolean; c?: boolean }): string {
