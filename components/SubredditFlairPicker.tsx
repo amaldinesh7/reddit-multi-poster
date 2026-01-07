@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { useSubreddits } from '../hooks/useSubreddits';
 import { useSubredditCache } from '../hooks/useSubredditCache';
 
@@ -28,6 +28,10 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
   const [subredditRules, setSubredditRules] = React.useState<Record<string, { requiresGenderTag: boolean; requiresContentTag: boolean; genderTags: string[]; contentTags: string[] }>>({});
   const [isInitialLoad, setIsInitialLoad] = React.useState(true);
   const [expandedCategories, setExpandedCategories] = React.useState<string[]>([]);
+  const [searchResults, setSearchResults] = React.useState<Array<{ name: string; title: string; description: string; subscribers: number; over18: boolean; icon: string; url: string }>>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [searchError, setSearchError] = React.useState<string | null>(null);
+  const [isReloading, setIsReloading] = React.useState(false);
   
   const allSubreddits = getAllSubreddits();
   const categorizedSubreddits = getSubredditsByCategory();
@@ -36,6 +40,34 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
     if (!query.trim()) return allSubreddits;
     return allSubreddits.filter(o => o.toLowerCase().includes(query.toLowerCase()));
   }, [allSubreddits, query]);
+  
+  // Search Reddit API when user types (debounced)
+  React.useEffect(() => {
+    if (!query.trim() || query.length < 2) {
+      setSearchResults([]);
+      setSearchError(null);
+      return;
+    }
+    
+    const timeoutId = setTimeout(async () => {
+      setIsSearching(true);
+      setSearchError(null);
+      try {
+        const response = await axios.get('/api/search-subreddits', {
+          params: { q: query.trim(), limit: 10 }
+        });
+        setSearchResults(response.data.subreddits || []);
+      } catch (error: any) {
+        console.error('Search failed:', error);
+        setSearchError(error.response?.data?.error || 'Failed to search Reddit');
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500); // 500ms debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [query]);
 
   const toggle = (name: string) => {
     const exists = selected.includes(name);
@@ -55,6 +87,56 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
     const newSelected = [...new Set([...selected, ...subreddits])];
     if (newSelected.length <= 30) {
       onSelectedChange(newSelected);
+    }
+  };
+
+  // Reload flair data for selected subreddits
+  const reloadSelectedData = async () => {
+    if (selected.length === 0 || isReloading) return;
+    
+    setIsReloading(true);
+    
+    try {
+      const batchSize = 3;
+      for (let i = 0; i < selected.length; i += batchSize) {
+        const batch = selected.slice(i, i + batchSize);
+        
+        const batchPromises = batch.map(async (subreddit) => {
+          try {
+            const cached = await fetchAndCache(subreddit, true); // force=true to bypass cache
+            return { subreddit, cached };
+          } catch (error) {
+            console.error(`Failed to reload data for ${subreddit}:`, error);
+            return null;
+          }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+
+        // Update state with batch results
+        const batchFlairOptions: Record<string, { id: string; text: string }[]> = {};
+        const batchFlairRequired: Record<string, boolean> = {};
+        const batchSubredditRules: Record<string, { requiresGenderTag: boolean; requiresContentTag: boolean; genderTags: string[]; contentTags: string[] }> = {};
+
+        batchResults.forEach((result) => {
+          if (result) {
+            batchFlairOptions[result.subreddit] = result.cached.flairs;
+            batchFlairRequired[result.subreddit] = result.cached.flairRequired;
+            batchSubredditRules[result.subreddit] = result.cached.rules;
+          }
+        });
+
+        setFlairOptions(prev => ({ ...prev, ...batchFlairOptions }));
+        setFlairRequired(prev => ({ ...prev, ...batchFlairRequired }));
+        setSubredditRules(prev => ({ ...prev, ...batchSubredditRules }));
+
+        // Small delay between batches
+        if (i + batchSize < selected.length) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+    } finally {
+      setIsReloading(false);
     }
   };
 
@@ -185,6 +267,18 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
           className="flex-1"
         />
         <span className="text-sm text-muted-foreground whitespace-nowrap">{selected.length}/30</span>
+        {selected.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={reloadSelectedData}
+            disabled={isReloading}
+            className="h-9 px-2.5"
+            title="Reload flair data for selected subreddits"
+          >
+            <RefreshCw className={`h-4 w-4 ${isReloading ? 'animate-spin' : ''}`} />
+          </Button>
+        )}
       </div>
 
       {!isLoaded ? (

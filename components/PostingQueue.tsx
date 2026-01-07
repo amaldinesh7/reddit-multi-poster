@@ -291,13 +291,14 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
                         <button className="p-1 hover:bg-red-50 rounded-full transition-colors">
                           <Info className="h-3 w-3 text-red-500" />
                         </button>
-                        {/* Tooltip */}
-                        <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-white border border-red-300 text-red-800 text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 max-w-72 w-max min-w-40">
+                        {/* Tooltip - positioned to the left of the icon */}
+                        <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 px-3 py-2 bg-white border border-red-300 text-red-800 text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 max-w-72 w-max min-w-40">
                           <div className="break-words whitespace-normal leading-relaxed">
                             {entry.error}
                           </div>
-                          <div className="absolute top-full right-4 border-4 border-transparent border-t-white"></div>
-                          <div className="absolute top-full right-4 mt-px border-4 border-transparent border-t-red-300"></div>
+                          {/* Arrow pointing right */}
+                          <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-white"></div>
+                          <div className="absolute left-full top-1/2 -translate-y-1/2 ml-px border-4 border-transparent border-l-red-300"></div>
                         </div>
                       </div>
                     )}

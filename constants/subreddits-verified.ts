@@ -30,7 +30,12 @@ export const VERIFIED_INDIAN_NSFW_SUBREDDITS: SubredditData = {
         { id: 'ExhibitionistHotWife', name: 'ExhibitionistHotWife' }, // 149,124 subscribers
         { id: 'ExhibitionistFun', name: 'ExhibitionistFun' }, // 892,675 subscribers
         { id: 'HotwifeIndia', name: 'HotwifeIndia' }, // 126,055 subscribers
-        { id: 'indian_exhibitionism', name: 'indian_exhibitionism' } // 160,736 subscribers
+        { id: 'indian_exhibitionism', name: 'indian_exhibitionism' }, // 160,736 subscribers
+        { id: 'BangaloreGWild', name: 'BangaloreGWild' },
+        { id: 'BengalisGoneWild', name: 'BengalisGoneWild' },
+        { id: 'IndianHotWife', name: 'IndianHotWife' },
+        { id: 'WifeWantsToPlay', name: 'WifeWantsToPlay' },
+        { id: 'KeralaFantasy', name: 'KeralaFantasy' }
       ]
     }
   ]
@@ -38,7 +43,7 @@ export const VERIFIED_INDIAN_NSFW_SUBREDDITS: SubredditData = {
 
 /**
  * VERIFIED subreddit names as a simple array for quick access
- * Total: 20 verified subreddits
+ * Total: 25 verified subreddits
  */
 export const VERIFIED_INDIAN_NSFW_SUBREDDIT_NAMES: string[] = [
   'indiansgetlaid',
@@ -60,7 +65,12 @@ export const VERIFIED_INDIAN_NSFW_SUBREDDIT_NAMES: string[] = [
   'ExhibitionistHotWife',
   'ExhibitionistFun',
   'HotwifeIndia',
-  'indian_exhibitionism'
+  'indian_exhibitionism',
+  'BangaloreGWild',
+  'BengalisGoneWild',
+  'IndianHotWife',
+  'WifeWantsToPlay',
+  'KeralaFantasy'
 ];
 
 /**
@@ -71,7 +81,6 @@ export const REMOVED_SUBREDDITS = [
   'DesiGW', // Not found
   'MalayaliGoneWild', // Not found
   'bengali_gone_wild', // HTTP 302 redirect (possibly banned/private)
-  'BangalorGWild', // HTTP 302 redirect (possibly banned/private)
   'blouseless_saree' // HTTP 302 redirect (possibly banned/private)
 ];
 
@@ -79,11 +88,11 @@ export const REMOVED_SUBREDDITS = [
  * Verification metadata
  */
 export const VERIFICATION_INFO = {
-  verifiedOn: '2025-10-01',
-  totalChecked: 25,
-  verified: 20,
-  removed: 5,
-  totalSubscribers: 3291506 // Combined subscribers of all verified subreddits
+  verifiedOn: '2026-01-07',
+  totalChecked: 29,
+  verified: 25,
+  removed: 4,
+  totalSubscribers: 3291506 // Combined subscribers of all verified subreddits (excluding new additions)
 };
 
 /**
