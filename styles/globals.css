@@ -4,84 +4,42 @@
 
 @layer base {
   :root {
-    /* Reddit Color Palette */
-    --background: 0 0% 100%;         /* #FFFFFF - White background */
-    --foreground: 0 0% 0%;           /* Black text */
-    --card: 0 0% 100%;               /* #FFFFFF - White cards */
-    --card-foreground: 0 0% 0%;      /* Black text on cards */
-    --popover: 0 0% 100%;            /* #FFFFFF - White popover */
-    --popover-foreground: 0 0% 0%;   /* Black text on popover */
+    /* Dark Theme - Reddit Inspired */
+    --background: 220 13% 10%;           /* #16181c - Dark background */
+    --foreground: 210 20% 98%;           /* #f8fafc - White text */
     
-    /* Reddit Blue as Primary */
-    --primary: 213 61% 59%;          /* #5296DD - Reddit Blue */
-    --primary-foreground: 0 0% 100%; /* White text on primary */
-    --secondary: 213 36% 72%;        /* #92BDDF - Light Reddit Blue */
-    --secondary-foreground: 0 0% 0%; /* Black text on secondary */
+    --card: 220 13% 14%;                 /* #1e2128 - Card background */
+    --card-foreground: 210 20% 98%;
     
-    /* Reddit Orange as Accent */
-    --accent: 14 100% 54%;           /* #FF6314 - Reddit Orange */
-    --accent-foreground: 0 0% 100%;  /* White text on accent */
-    --muted: 0 0% 84%;               /* #D7D7D7 - Light Gray */
-    --muted-foreground: 0 0% 40%;    /* Darker gray for muted text */
+    --popover: 220 13% 16%;
+    --popover-foreground: 210 20% 98%;
     
-    /* States using Reddit colors */
-    --destructive: 14 100% 54%;      /* #FF6314 - Reddit Orange for destructive */
+    /* Reddit Orange as Primary */
+    --primary: 16 100% 50%;              /* #FF4500 - Reddit Orange */
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary */
+    --secondary: 220 13% 20%;            /* Slightly lighter than card */
+    --secondary-foreground: 210 20% 95%;
+    
+    /* Accent */
+    --accent: 16 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    
+    /* Muted */
+    --muted: 220 13% 22%;
+    --muted-foreground: 215 15% 60%;     /* Readable gray text */
+    
+    /* States */
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 84%;              /* #D7D7D7 - Light Gray borders */
-    --input: 0 0% 84%;               /* #D7D7D7 - Light Gray input */
-    --ring: 213 61% 59%;             /* #5296DD - Reddit Blue ring */
     
-    /* Additional colors using Reddit palette */
-    --success: 213 61% 59%;          /* #5296DD - Reddit Blue for success */
-    --warning: 14 100% 54%;          /* #FF6314 - Reddit Orange for warning */
-    --info: 213 36% 72%;             /* #92BDDF - Light Reddit Blue for info */
+    /* Borders and inputs */
+    --border: 220 13% 25%;               /* Visible borders */
+    --input: 220 13% 18%;                /* Input background */
+    --ring: 16 100% 50%;
     
-    --chart-1: 213 61% 59%;          /* #5296DD */
-    --chart-2: 14 100% 54%;          /* #FF6314 */
-    --chart-3: 213 36% 72%;          /* #92BDDF */
-    --chart-4: 0 0% 84%;             /* #D7D7D7 */
-    --chart-5: 0 0% 100%;            /* #FFFFFF */
     --radius: 0.5rem;
-  }
-
-  .dark {
-    /* Reddit Dark Mode */
-    --background: 0 0% 8%;           /* Dark background */
-    --foreground: 0 0% 90%;          /* Light text */
-    --card: 0 0% 10%;                /* Dark card */
-    --card-foreground: 0 0% 90%;     /* Light text on dark card */
-    --popover: 0 0% 10%;             /* Dark popover */
-    --popover-foreground: 0 0% 90%;  /* Light text on dark popover */
-    
-    /* Reddit Blue (brighter for dark mode) */
-    --primary: 213 61% 65%;          /* Brighter #5296DD */
-    --primary-foreground: 0 0% 8%;   /* Dark text on primary */
-    --secondary: 0 0% 15%;           /* Dark secondary */
-    --secondary-foreground: 0 0% 90%; /* Light text */
-    
-    /* Reddit Orange (brighter for dark mode) */
-    --accent: 14 100% 60%;           /* Brighter #FF6314 */
-    --accent-foreground: 0 0% 8%;    /* Dark text on accent */
-    --muted: 0 0% 15%;               /* Dark muted */
-    --muted-foreground: 0 0% 60%;    /* Lighter muted text */
-    
-    /* States for dark mode */
-    --destructive: 14 100% 60%;      /* Brighter Reddit Orange */
-    --destructive-foreground: 0 0% 90%;
-    --border: 0 0% 18%;              /* Dark border */
-    --input: 0 0% 18%;               /* Dark input */
-    --ring: 213 61% 65%;             /* Brighter Reddit Blue ring */
-    
-    /* Additional colors for dark mode */
-    --success: 213 61% 65%;          /* Brighter Reddit Blue */
-    --warning: 14 100% 60%;          /* Brighter Reddit Orange */
-    --info: 213 36% 75%;             /* Brighter Light Reddit Blue */
-    
-    --chart-1: 213 61% 65%;          /* Brighter #5296DD */
-    --chart-2: 14 100% 60%;          /* Brighter #FF6314 */
-    --chart-3: 213 36% 75%;          /* Brighter #92BDDF */
-    --chart-4: 0 0% 25%;             /* Darker gray for dark mode */
-    --chart-5: 0 0% 15%;             /* Dark surface */
   }
 }
 
@@ -89,9 +47,15 @@
   * {
     @apply border-border;
   }
+  
+  html {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color-scheme: dark;
+  }
+  
   body {
-    @apply bg-background text-foreground;
-    background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--muted)) 100%);
+    background-color: hsl(220 13% 10%);
+    color: hsl(210 20% 98%);
     min-height: 100vh;
   }
 }
@@ -100,9 +64,6 @@
 @layer utilities {
   .dragging {
     user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
   }
   
   [draggable="true"] {

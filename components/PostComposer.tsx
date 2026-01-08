@@ -1,19 +1,17 @@
 import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 
 interface Props {
   value: string;
-  onChange: (v: string) => void;
+  onChange: (value: string) => void;
   prefixes: { f: boolean; c: boolean };
-  onPrefixesChange: (p: { f: boolean; c: boolean }) => void;
+  onPrefixesChange: (prefixes: { f: boolean; c: boolean }) => void;
 }
 
 export default function PostComposer({ value, onChange, prefixes, onPrefixesChange }: Props) {
   const count = value.length;
   const limit = 100;
-  const isOverLimit = count > limit;
 
   const handleChange = (newValue: string) => {
     if (newValue.length <= limit) {
@@ -23,46 +21,43 @@ export default function PostComposer({ value, onChange, prefixes, onPrefixesChan
 
   return (
     <div className="space-y-4">
-      <div className="border rounded-lg bg-card overflow-hidden">
-        <div className="relative">
-          <Textarea
-            placeholder="An interesting title..."
-            value={value}
-            onChange={(e) => handleChange(e.target.value)}
-            className="resize-none border-0 bg-transparent focus:ring-0 focus:outline-none p-4 text-base min-h-[80px]"
-            rows={3}
-          />
-          <div className="absolute bottom-3 right-4 text-xs font-medium">
-            <span className={isOverLimit ? 'text-destructive' : 'text-muted-foreground'}>
-              {count}/{limit}
-            </span>
-          </div>
+      {/* Title Input */}
+      <div>
+        <Textarea
+          placeholder="Write your post title..."
+          value={value}
+          onChange={(e) => handleChange(e.target.value)}
+          className="resize-none min-h-[100px]"
+          rows={3}
+        />
+        <div className="flex justify-end mt-1">
+          <span className={`text-xs ${count > limit * 0.9 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
+            {count}/{limit}
+          </span>
         </div>
       </div>
 
-      <div className="bg-muted/20 rounded-lg p-4">
-        <div className="text-sm font-medium mb-3 text-foreground">🏷️ Title Tags</div>
-        <div className="flex items-center gap-4">
-          <label className="flex items-center space-x-2 cursor-pointer hover:bg-muted/50 rounded-full px-3 py-1.5 transition-colors">
+      {/* Title Tags */}
+      <div className="p-3 rounded-md bg-secondary/50 border border-border">
+        <p className="text-sm font-medium mb-3">Title Tags (optional)</p>
+        <div className="flex flex-wrap gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
             <Checkbox
-              id="prefix-f"
               checked={prefixes.f}
               onCheckedChange={(checked) => onPrefixesChange({ ...prefixes, f: !!checked })}
-              className="rounded"
             />
-            <span className="text-sm font-medium">(f) Female</span>
+            <span className="text-sm">(f) Female</span>
           </label>
-          <label className="flex items-center space-x-2 cursor-pointer hover:bg-muted/50 rounded-full px-3 py-1.5 transition-colors">
+          
+          <label className="flex items-center gap-2 cursor-pointer">
             <Checkbox
-              id="prefix-c"
               checked={prefixes.c}
               onCheckedChange={(checked) => onPrefixesChange({ ...prefixes, c: !!checked })}
-              className="rounded"
             />
-            <span className="text-sm font-medium">(c) Couple</span>
+            <span className="text-sm">(c) Couple</span>
           </label>
         </div>
       </div>
     </div>
   );
-} 
+}

@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, RefreshCw, Info } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Info, ChevronDown, ChevronRight, Search } from 'lucide-react';
 import { useSubreddits } from '../hooks/useSubreddits';
 import { useSubredditCache } from '../hooks/useSubredditCache';
 import { TitleTag } from '../utils/subredditCache';
@@ -67,7 +67,7 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
       } finally {
         setIsSearching(false);
       }
-    }, 500); // 500ms debounce
+    }, 500);
     
     return () => clearTimeout(timeoutId);
   }, [query]);
@@ -106,7 +106,7 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
         
         const batchPromises = batch.map(async (subreddit) => {
           try {
-            const cached = await fetchAndCache(subreddit, true); // force=true to bypass cache
+            const cached = await fetchAndCache(subreddit, true);
             return { subreddit, cached };
           } catch (error) {
             console.error(`Failed to reload data for ${subreddit}:`, error);
@@ -116,7 +116,6 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
 
         const batchResults = await Promise.all(batchPromises);
 
-        // Update state with batch results
         const batchFlairOptions: Record<string, { id: string; text: string }[]> = {};
         const batchFlairRequired: Record<string, boolean> = {};
         const batchSubredditRules: Record<string, { requiresGenderTag: boolean; requiresContentTag: boolean; genderTags: string[]; contentTags: string[] }> = {};
@@ -133,7 +132,6 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
         setFlairRequired(prev => ({ ...prev, ...batchFlairRequired }));
         setSubredditRules(prev => ({ ...prev, ...batchSubredditRules }));
 
-        // Small delay between batches
         if (i + batchSize < selected.length) {
           await new Promise(resolve => setTimeout(resolve, 500));
         }
@@ -152,7 +150,6 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
       const newFlairRequired: Record<string, boolean> = {};
       const newSubredditRules: Record<string, { requiresGenderTag: boolean; requiresContentTag: boolean; genderTags: string[]; contentTags: string[] }> = {};
 
-      // First, load all available cached data
       for (const subreddit of allSubreddits) {
         const cached = getCachedData(subreddit);
         if (cached) {
@@ -162,12 +159,10 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
         }
       }
 
-      // Update state with cached data immediately
       setFlairOptions(prev => ({ ...prev, ...newFlairOptions }));
       setFlairRequired(prev => ({ ...prev, ...newFlairRequired }));
       setSubredditRules(prev => ({ ...prev, ...newSubredditRules }));
 
-      // Find subreddits that need to be fetched
       const needsFetching = allSubreddits.filter(name => !getCachedData(name));
       
       if (needsFetching.length === 0) {
@@ -175,12 +170,10 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
         return;
       }
 
-      // Fetch missing data in background (rate-limited batches)
       const batchSize = 3;
       for (let i = 0; i < needsFetching.length; i += batchSize) {
         const batch = needsFetching.slice(i, i + batchSize);
         
-        // Process batch in parallel
         const batchPromises = batch.map(async (subreddit) => {
           try {
             const cached = await fetchAndCache(subreddit);
@@ -207,7 +200,6 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
 
         const batchResults = await Promise.all(batchPromises);
 
-        // Update state with batch results
         const batchFlairOptions: Record<string, { id: string; text: string }[]> = {};
         const batchFlairRequired: Record<string, boolean> = {};
         const batchSubredditRules: Record<string, { requiresGenderTag: boolean; requiresContentTag: boolean; genderTags: string[]; contentTags: string[] }> = {};
@@ -222,7 +214,6 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
         setFlairRequired(prev => ({ ...prev, ...batchFlairRequired }));
         setSubredditRules(prev => ({ ...prev, ...batchSubredditRules }));
 
-        // Small delay between batches to respect rate limits
         if (i + batchSize < needsFetching.length) {
           await new Promise(resolve => setTimeout(resolve, 500));
         }
@@ -242,7 +233,6 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
     onTitleSuffixChange({ ...titleSuffixValue, [sr]: suffix || undefined });
   };
 
-  // Check if a subreddit has a missing required flair
   const hasMissingFlair = (subreddit: string) => {
     const isSelected = selected.includes(subreddit);
     const isRequired = flairRequired[subreddit];
@@ -250,12 +240,10 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
     return isSelected && isRequired && !hasFlairSelected;
   };
 
-  // Check if a category has any subreddits with missing flairs
   const categoryHasErrors = (subreddits: string[]) => {
     return showValidationErrors && subreddits.some(subreddit => hasMissingFlair(subreddit));
   };
 
-  // Validation effect to notify parent of errors
   React.useEffect(() => {
     if (onValidationChange) {
       const missingFlairs = selected.filter(subreddit => hasMissingFlair(subreddit));
@@ -264,273 +252,263 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
     }
   }, [selected, flairRequired, flairValue, onValidationChange]);
 
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Input
-          placeholder="Filter subreddits"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="flex-1"
+  // Subreddit Row Component
+  const SubredditRow = ({ name, hasError }: { name: string; hasError: boolean }) => {
+    const isSelected = selected.includes(name);
+    const isLoading = cacheLoading[name.toLowerCase()];
+    
+    return (
+      <div 
+        className={`
+          flex items-center gap-3 px-3 sm:px-4 py-3 transition-colors
+          ${hasError ? 'bg-red-500/20 border-l-2 border-red-500' : 'hover:bg-secondary'}
+        `}
+      >
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={() => toggle(name)}
+          className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
         />
-        <span className="text-sm text-muted-foreground whitespace-nowrap">{selected.length}/30</span>
-        {selected.length > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={reloadSelectedData}
-            disabled={isReloading}
-            className="h-9 px-2.5"
-            title="Reload flair data for selected subreddits"
+        
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          {hasError && (
+            <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+          )}
+          <Label 
+            className={`text-sm truncate cursor-pointer ${hasError ? 'text-red-400' : ''}`} 
+            onClick={() => toggle(name)}
           >
-            <RefreshCw className={`h-4 w-4 ${isReloading ? 'animate-spin' : ''}`} />
-          </Button>
-        )}
+            r/{name}
+          </Label>
+          
+          {/* Loading indicator */}
+          {isLoading && (
+            <div className="w-3 h-3 border-2 border-muted border-t-primary rounded-full animate-spin" />
+          )}
+          
+          {/* Badges */}
+          <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+            {!isLoading && isSelected && flairRequired[name] && (
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                Required
+              </Badge>
+            )}
+            {!isLoading && isSelected && flairRequired[name] === false && (flairOptions[name]?.length || 0) > 0 && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                Optional
+              </Badge>
+            )}
+            {!isLoading && isSelected && subredditRules[name]?.requiresGenderTag && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                (f)/(c)
+              </Badge>
+            )}
+          </div>
+          
+          {/* Mobile badges */}
+          <div className="flex sm:hidden items-center gap-1">
+            {!isLoading && isSelected && flairRequired[name] && (
+              <span className="text-red-500 text-xs font-bold">*</span>
+            )}
+          </div>
+        </div>
+        
+        {/* Controls */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Rules Tooltip */}
+          {isSelected && subredditRules[name]?.submitText && (
+            <div className="relative group hidden sm:block">
+              <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
+              <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-popover text-popover-foreground text-xs rounded-lg border border-border shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-64 max-h-40 overflow-y-auto">
+                <div className="font-medium mb-1 text-foreground">Posting Rules:</div>
+                <div className="whitespace-pre-wrap break-words text-muted-foreground">{subredditRules[name].submitText}</div>
+              </div>
+            </div>
+          )}
+          
+          {/* Custom Title Suffix Input */}
+          {isSelected && (
+            <Input
+              className="h-8 w-16 sm:w-20 text-xs px-2"
+              placeholder="Suffix"
+              value={titleSuffixValue[name] || ''}
+              onChange={(e) => handleTitleSuffixChange(name, e.target.value)}
+              title="Custom title suffix (e.g., (f), 25F, [OC])"
+            />
+          )}
+          
+          {/* Flair Dropdown */}
+          {isSelected && (flairOptions[name] || []).length > 0 && (
+            <select
+              className={`
+                h-8 w-24 sm:w-32 rounded-md border px-2 text-xs bg-input text-foreground
+                focus:outline-none focus:ring-2 focus:ring-primary
+                ${hasError 
+                  ? 'border-red-500 bg-red-500/10 text-red-400' 
+                  : 'border-border'
+                }
+              `}
+              value={flairValue[name] || ''}
+              onChange={(e) => handleFlairChange(name, e.target.value)}
+            >
+              <option value="">{flairRequired[name] ? 'Select flair...' : 'No flair'}</option>
+              {(flairOptions[name] || []).map((f) => (
+                <option key={f.id} value={f.id}>{f.text || '—'}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Search Bar */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Filter subreddits..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="pl-10"
+          />
+          {isSearching && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-muted border-t-primary rounded-full animate-spin" />
+          )}
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground whitespace-nowrap tabular-nums">
+            {selected.length}<span className="text-muted-foreground/50">/30</span>
+          </span>
+          
+          {selected.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={reloadSelectedData}
+              disabled={isReloading}
+              className="h-9 w-9 p-0 rounded-lg"
+              title="Reload flair data"
+            >
+              <RefreshCw className={`h-4 w-4 ${isReloading ? 'animate-spin' : ''}`} />
+            </Button>
+          )}
+        </div>
       </div>
 
+      {/* Content */}
       {!isLoaded ? (
-        <div className="divide-y rounded-lg border animate-pulse">
+        <div className="rounded-md border border-border overflow-hidden animate-pulse">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="flex items-center gap-3 px-3 py-3">
-              <div className="w-4 h-4 bg-muted rounded"></div>
-              <div className="flex-1 h-4 bg-muted rounded"></div>
-              <div className="w-48 h-8 bg-muted rounded"></div>
+            <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-border/30 last:border-b-0">
+              <div className="w-4 h-4 bg-secondary rounded" />
+              <div className="flex-1 h-4 bg-secondary rounded" />
+              <div className="w-24 h-8 bg-secondary rounded" />
             </div>
           ))}
         </div>
       ) : query.trim() ? (
         // Search results view
-        <div className="divide-y rounded-lg border">
+        <div className="rounded-md border border-border overflow-hidden divide-y divide-border">
           {filtered.map((name) => {
-            const isSelected = selected.includes(name);
-            const hasError = showValidationErrors && hasMissingFlair(name);
-            
-            return (
-              <div key={name} className={`flex items-center gap-3 px-3 py-3 ${hasError ? 'bg-red-50 border-l-2 border-red-500' : ''}`}>
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={() => toggle(name)}
-                />
-                <div className="flex-1 flex items-center gap-2">
-                  {hasError && (
-                    <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                  )}
-                  <Label className={`text-sm truncate cursor-pointer ${hasError ? 'text-red-700' : ''}`} onClick={() => toggle(name)}>
-                    r/{name}
-                  </Label>
-                  {cacheLoading[name.toLowerCase()] && (
-                    <div className="w-3 h-3 border border-gray-300 border-t-blue-500 rounded-full animate-spin" />
-                  )}
-                  {!cacheLoading[name.toLowerCase()] && isSelected && flairRequired[name] && (
-                    <>
-                      <Badge variant="destructive" className="text-xs hidden sm:inline-flex px-1.5 py-0 text-xs scale-90">
-                        Required
-                      </Badge>
-                      <span className="text-red-600 text-sm font-bold sm:hidden">*</span>
-                    </>
-                  )}
-                  {!cacheLoading[name.toLowerCase()] && isSelected && flairRequired[name] === false && (
-                    <Badge variant="secondary" className="text-xs hidden sm:inline-flex px-1.5 py-0 scale-90">
-                      Optional
-                    </Badge>
-                  )}
-                  {!cacheLoading[name.toLowerCase()] && isSelected && subredditRules[name]?.requiresGenderTag && (
-                    <Badge variant="outline" className="text-xs px-1.5 py-0 scale-90">
-                      <span className="hidden sm:inline">Needs (f)/(c)</span>
-                      <span className="sm:hidden">⚤</span>
-                    </Badge>
-                  )}
-                  {!cacheLoading[name.toLowerCase()] && isSelected && subredditRules[name]?.requiresContentTag && (
-                    <Badge variant="outline" className="text-xs px-1.5 py-0 scale-90">
-                      <span className="hidden sm:inline">Needs (c)</span>
-                      <span className="sm:hidden">©</span>
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex gap-2 items-center">
-                  {/* Rules Tooltip */}
-                  {isSelected && subredditRules[name]?.submitText && (
-                    <div className="relative group">
-                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                      <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-popover text-popover-foreground text-xs rounded-lg border shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-64 max-h-40 overflow-y-auto">
-                        <div className="font-medium mb-1">Posting Rules:</div>
-                        <div className="whitespace-pre-wrap break-words">{subredditRules[name].submitText}</div>
-                      </div>
-                    </div>
-                  )}
-                  {/* Custom Title Suffix Input */}
-                  {isSelected && (
-                    <Input
-                      className="h-8 w-20 text-xs px-2"
-                      placeholder="Suffix"
-                      value={titleSuffixValue[name] || ''}
-                      onChange={(e) => handleTitleSuffixChange(name, e.target.value)}
-                      title="Custom title suffix (e.g., (f), 25F, [OC])"
-                    />
-                  )}
-                  {/* Flair Dropdown */}
-                  {isSelected && (flairOptions[name] || []).length > 0 && (
-                    <select
-                      className={`flex h-8 w-32 rounded-md border px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                        hasError 
-                          ? 'border-red-500 bg-red-50 text-red-700 focus-visible:ring-red-500' 
-                          : 'border-input bg-background'
-                      }`}
-                      value={flairValue[name] || ''}
-                      onChange={(e) => handleFlairChange(name, e.target.value)}
-                    >
-                      <option value="">{flairRequired[name] ? 'Select flair...' : 'No flair'}</option>
-                      {(flairOptions[name] || []).map((f) => (
-                        <option key={f.id} value={f.id}>{f.text || '—'}</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              </div>
-            );
+            const hasError = !!(showValidationErrors && hasMissingFlair(name));
+            return <SubredditRow key={name} name={name} hasError={hasError} />;
           })}
           {filtered.length === 0 && (
-            <div className="px-3 py-6 text-center text-sm text-muted-foreground">No results</div>
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+              No subreddits found matching "{query}"
+            </div>
           )}
         </div>
       ) : (
         // Category view
-        <div className="rounded-lg border">
+        <div className="rounded-md border border-border overflow-hidden">
           {categorizedSubreddits.map(({ categoryName, subreddits }) => {
             const hasErrors = categoryHasErrors(subreddits);
+            const isExpanded = expandedCategories.includes(categoryName);
+            const selectedCount = subreddits.filter(s => selected.includes(s)).length;
             
             return (
-              <div key={categoryName} className="border-b last:border-b-0">
+              <div key={categoryName} className="border-b border-border last:border-b-0">
                 <button
                   onClick={() => toggleCategory(categoryName)}
-                  className="w-full px-4 py-3 bg-muted/20 border-b border-border flex items-center justify-between hover:bg-muted/30"
+                  className="w-full px-4 py-3 bg-secondary flex items-center justify-between hover:bg-secondary/80 transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    {hasErrors && (
-                      <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     )}
-                    <span className="font-medium text-sm">{categoryName} ({subreddits.length})</span>
+                    {hasErrors && (
+                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                    )}
+                    <span className="font-medium text-sm">{categoryName}</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({subreddits.length})
+                    </span>
+                    {selectedCount > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">
+                        {selectedCount} selected
+                      </span>
+                    )}
                   </div>
-                <div className="flex items-center gap-2">
+                  
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       selectAllInCategory(subreddits);
                     }}
-                    className="text-xs text-primary hover:text-primary/80 underline underline-offset-2 hover:no-underline font-medium"
+                    className="text-xs text-primary hover:text-primary/80 font-medium px-2 py-1 rounded-md hover:bg-primary/10 transition-colors"
                   >
                     Select All
                   </button>
-                  <span className="text-xs text-muted-foreground">
-                    {expandedCategories.includes(categoryName) ? '−' : '+'}
-                  </span>
-                </div>
-              </button>
-              
-              {expandedCategories.includes(categoryName) && (
-                <div className="divide-y">
-                  {subreddits.map((name) => {
-                    const isSelected = selected.includes(name);
-                    const hasError = showValidationErrors && hasMissingFlair(name);
-                    
-                    return (
-                      <div key={name} className={`flex items-center gap-3 px-3 py-3 ${hasError ? 'bg-red-50 border-l-2 border-red-500' : ''}`}>
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => toggle(name)}
-                        />
-                        <div className="flex-1 flex items-center gap-2">
-                          {hasError && (
-                            <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                          )}
-                          <Label className={`text-sm truncate cursor-pointer ${hasError ? 'text-red-700' : ''}`} onClick={() => toggle(name)}>
-                            r/{name}
-                          </Label>
-                                          {cacheLoading[name.toLowerCase()] && (
-                  <div className="w-3 h-3 border border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+                </button>
+                
+                {isExpanded && (
+                  <div className="divide-y divide-border">
+                    {subreddits.map((name) => {
+                      const hasError = !!(showValidationErrors && hasMissingFlair(name));
+                      return <SubredditRow key={name} name={name} hasError={hasError} />;
+                    })}
+                  </div>
                 )}
-                {!cacheLoading[name.toLowerCase()] && isSelected && flairRequired[name] && (
-                            <>
-                                                    <Badge variant="destructive" className="text-xs hidden sm:inline-flex px-1.5 py-0 scale-90">
-                        Required
-                      </Badge>
-                              <span className="text-red-600 text-sm font-bold sm:hidden">*</span>
-                            </>
-                          )}
-                                          {!cacheLoading[name.toLowerCase()] && isSelected && flairRequired[name] === false && (
-                                      <Badge variant="secondary" className="text-xs hidden sm:inline-flex px-1.5 py-0 scale-90">
-                      Optional
-                    </Badge>
-                )}
-                {!cacheLoading[name.toLowerCase()] && isSelected && subredditRules[name]?.requiresGenderTag && (
-                                      <Badge variant="outline" className="text-xs px-1.5 py-0 scale-90">
-                      <span className="hidden sm:inline">Needs (f)/(c)</span>
-                      <span className="sm:hidden">⚤</span>
-                    </Badge>
-                )}
-                {!cacheLoading[name.toLowerCase()] && isSelected && subredditRules[name]?.requiresContentTag && (
-                                      <Badge variant="outline" className="text-xs px-1.5 py-0 scale-90">
-                      <span className="hidden sm:inline">Needs (c)</span>
-                      <span className="sm:hidden">©</span>
-                    </Badge>
-                )}
-                        </div>
-                        <div className="flex gap-2 items-center">
-                          {/* Rules Tooltip */}
-                          {isSelected && subredditRules[name]?.submitText && (
-                            <div className="relative group">
-                              <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                              <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-popover text-popover-foreground text-xs rounded-lg border shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-64 max-h-40 overflow-y-auto">
-                                <div className="font-medium mb-1">Posting Rules:</div>
-                                <div className="whitespace-pre-wrap break-words">{subredditRules[name].submitText}</div>
-                              </div>
-                            </div>
-                          )}
-                          {/* Custom Title Suffix Input */}
-                          {isSelected && (
-                            <Input
-                              className="h-8 w-20 text-xs px-2"
-                              placeholder="Suffix"
-                              value={titleSuffixValue[name] || ''}
-                              onChange={(e) => handleTitleSuffixChange(name, e.target.value)}
-                              title="Custom title suffix (e.g., (f), 25F, [OC])"
-                            />
-                          )}
-                          {/* Flair Dropdown */}
-                          {isSelected && (flairOptions[name] || []).length > 0 && (
-                            <select
-                              className={`flex h-8 w-32 rounded-md border px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                                hasError 
-                                  ? 'border-red-500 bg-red-50 text-red-700 focus-visible:ring-red-500' 
-                                  : 'border-input bg-background'
-                              }`}
-                              value={flairValue[name] || ''}
-                              onChange={(e) => handleFlairChange(name, e.target.value)}
-                            >
-                              <option value="">{flairRequired[name] ? 'Select flair...' : 'No flair'}</option>
-                              {(flairOptions[name] || []).map((f) => (
-                                <option key={f.id} value={f.id}>{f.text || '—'}</option>
-                              ))}
-                            </select>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+              </div>
             );
           })}
           
           {categorizedSubreddits.length === 0 && (
-            <div className="px-3 py-6 text-center text-muted-foreground">
-              <p>No subreddits configured.</p>
+            <div className="px-4 py-8 text-center text-muted-foreground">
+              <p className="text-sm">No subreddits configured.</p>
               <p className="text-xs mt-1">Go to Settings to add subreddits.</p>
             </div>
           )}
         </div>
       )}
+      
+      {/* Selected Tags */}
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-2 pt-2">
+          {selected.slice(0, 8).map((s) => (
+            <span 
+              key={s} 
+              className="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-md bg-primary text-white cursor-pointer hover:bg-primary/80 transition-colors"
+              onClick={() => toggle(s)}
+            >
+              r/{s}
+              <span className="opacity-70 hover:opacity-100">×</span>
+            </span>
+          ))}
+          {selected.length > 8 && (
+            <span className="px-2 py-1 text-xs rounded-md bg-secondary text-muted-foreground">
+              +{selected.length - 8} more
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
-} 
+}

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-// Removed Card import as we're using custom div structure
-import { Send, Loader2, CheckCircle, XCircle, X, Info, ExternalLink } from 'lucide-react';
+import { Send, Loader2, CheckCircle, XCircle, X, ExternalLink, Clock } from 'lucide-react';
 
 interface Item {
   subreddit: string;
@@ -11,7 +10,7 @@ interface Item {
   url?: string;
   text?: string;
   file?: File;
-  files?: File[]; // Support for multiple files
+  files?: File[];
 }
 
 interface Props {
@@ -30,14 +29,12 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
   const [abortController, setAbortController] = React.useState<AbortController | null>(null);
 
   const start = async () => {
-    // Trigger validation check
     if (onPostAttempt) {
       onPostAttempt();
     }
     
-    // Check for validation errors after triggering validation
     if (hasFlairErrors) {
-      return; // Don't proceed if there are flair errors
+      return;
     }
     
     if (items.length === 0) {
@@ -52,12 +49,10 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
     const controller = new AbortController();
     setAbortController(controller);
     
-    // Check if any items have files
     const hasFiles = items.some(item => item.file || (item.files && item.files.length > 0));
     
     let res: Response;
     if (hasFiles) {
-      // Use FormData for file uploads
       const formData = new FormData();
       formData.append('items', JSON.stringify(items.map(item => ({
         subreddit: item.subreddit,
@@ -70,7 +65,6 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
       formData.append('caption', caption);
       formData.append('prefixes', JSON.stringify(prefixes));
       
-      // Add files
       items.forEach((item, index) => {
         if (item.files && item.files.length > 0) {
           item.files.forEach((file, fileIndex) => {
@@ -88,7 +82,6 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
         signal: controller.signal,
       });
     } else {
-      // Use JSON for URL/text-only posts
       res = await fetch('/api/queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -96,27 +89,29 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
         signal: controller.signal,
       });
     }
+    
     if (!res.body) {
       setRunning(false);
       return;
     }
+    
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
       const parts = buffer.split('\n');
       buffer = parts.pop() || '';
+      
       for (const line of parts) {
         if (!line.trim()) continue;
         try {
           const json = JSON.parse(line);
-          console.log('Received streaming data:', json); // Debug log
-          // Handle different types of messages
+          
           if (json.status === 'started') {
-            // Initialize logs with all items in 'posting' state
             const initialLogs = items.map((item, index) => ({
               index,
               status: 'queued',
@@ -125,13 +120,9 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
               error: undefined
             }));
             setLogs(initialLogs);
-          } else if (json.status === 'completed') {
-            // Don't add to logs, just let it complete
           } else if (json.status === 'waiting') {
-            // Add waiting message as a separate entry
             setLogs((prev) => [...prev, json]);
           } else if (typeof json.index === 'number' && json.subreddit) {
-            // Update existing log entry in-place
             setLogs((prev) => prev.map(log => {
               const logEntry = log as any;
               if (logEntry.index === json.index && logEntry.subreddit === json.subreddit) {
@@ -145,10 +136,10 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
         }
       }
     }
+    
     setRunning(false);
     setAbortController(null);
     
-    // Check if all posts completed successfully
     const finalLogs = logs.filter(log => (log as any).subreddit);
     const successCount = finalLogs.filter(log => (log as any).status === 'success').length;
     const totalCount = items.length;
@@ -167,205 +158,149 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
     }
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'success':
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'error':
+        return <XCircle className="w-4 h-4 text-red-500" />;
+      case 'posting':
+        return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
+      default:
+        return <Clock className="w-4 h-4 text-muted-foreground" />;
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
+      {/* Action Buttons */}
+      <div className="flex gap-3">
         <Button
           onClick={completed ? () => { setCompleted(false); setLogs([]); } : start}
           disabled={(running && !abortController) || items.length === 0 || hasFlairErrors}
-          className={`px-6 w-full sm:w-auto rounded-lg ${completed ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
-          size="lg"
+          className="flex-1"
         >
           {completed ? (
             <>
               <CheckCircle className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">All Done! Click to Reset</span>
-              <span className="sm:hidden">Reset</span>
+              Done - Reset
             </>
           ) : cancelled ? (
             <>
               <XCircle className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Cancelled - Click to Retry</span>
-              <span className="sm:hidden">Retry</span>
+              Retry
             </>
           ) : running ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              <span className="hidden sm:inline">Posting to {items.length} communities...</span>
-              <span className="sm:hidden">Posting to {items.length}...</span>
+              Posting...
             </>
           ) : (
             <>
               <Send className="h-4 w-4 mr-2" />
-              {items.length > 0 ? (
-                <>
-                  <span className="hidden sm:inline">Post to {items.length} Subreddit{items.length !== 1 ? 's' : ''}</span>
-                  <span className="sm:hidden">Post to {items.length}</span>
-                </>
-              ) : (
-                <span>Post</span>
-              )}
+              {items.length > 0 ? `Post to ${items.length} Subreddit${items.length !== 1 ? 's' : ''}` : 'Select Communities'}
             </>
           )}
         </Button>
         
         {running && (
-          <Button
-            onClick={cancel}
-            variant="outline"
-            className="h-11 sm:h-12 px-4 sm:px-6 rounded-lg border-red-300 text-red-600 hover:bg-red-600 hover:text-white text-sm sm:text-base w-full sm:w-auto"
-            size="default"
-          >
-            <X className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-            <span className="hidden sm:inline">Stop</span>
-            <span className="sm:hidden">Stop</span>
+          <Button onClick={cancel} variant="outline">
+            <X className="h-4 w-4 mr-2" />
+            Stop
           </Button>
         )}
       </div>
 
-      {(running || logs.length > 0 || completed || cancelled) && (
-        <div className="border rounded-lg bg-card">
-          <div className="px-3 sm:px-4 py-3 border-b bg-muted/20 rounded-t-lg">
-            <div className="text-sm font-medium">Progress Log</div>
+      {/* Empty State */}
+      {items.length === 0 && !running && !completed && !cancelled && (
+        <div className="text-center py-6 text-muted-foreground">
+          <Send className="w-8 h-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">Select communities to post to</p>
+        </div>
+      )}
+
+      {/* Progress Log */}
+      {(running || logs.length > 0) && (
+        <div className="rounded-md border border-border overflow-hidden">
+          <div className="px-3 py-2 border-b border-border bg-secondary">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Progress</span>
+              <span className="text-xs text-muted-foreground">
+                {logs.filter(l => (l as any).status === 'success').length}/{items.length}
+              </span>
+            </div>
           </div>
-          <div className="p-3 sm:p-4 max-h-64 overflow-y-auto">
+          
+          <div className="max-h-48 overflow-y-auto divide-y divide-border">
             {logs.length === 0 && running && (
               <div className="text-center py-6">
-                <div className="text-muted-foreground text-sm">
-                  Starting to post...
-                </div>
+                <Loader2 className="w-5 h-5 mx-auto mb-2 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Starting...</p>
               </div>
             )}
-          {logs.map((l, idx) => {
-            const entry = l as { subreddit?: string; status?: string; url?: string; error?: string; delaySeconds?: number };
             
-            // Handle waiting messages separately
-            if (entry.status === 'waiting') {
-              return (
-                <div key={`waiting-${idx}`} className="py-2 border-b last:border-b-0 bg-blue-50">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse flex-shrink-0" />
-                    <span className="text-xs sm:text-sm font-medium text-blue-600">
-                      Waiting {entry.delaySeconds}s before next post...
-                    </span>
+            {logs.map((l, idx) => {
+              const entry = l as { subreddit?: string; status?: string; url?: string; error?: string; delaySeconds?: number };
+              
+              if (entry.status === 'waiting') {
+                return (
+                  <div key={`waiting-${idx}`} className="px-3 py-2 text-xs text-muted-foreground">
+                    Waiting {entry.delaySeconds}s...
                   </div>
-                </div>
-              );
-            }
-            
-            // Only show subreddit entries
-            if (!entry.subreddit) return null;
-            
-            return (
-              <div key={idx} className="py-2 border-b last:border-b-0">
-                <div className="flex items-center gap-2 min-w-0">
-                  {/* Status indicator */}
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                    entry.status === 'success' ? 'bg-green-500' : 
-                    entry.status === 'error' ? 'bg-red-500' : 
-                    entry.status === 'posting' ? 'bg-blue-500 animate-pulse' : 
-                    entry.status === 'queued' ? 'bg-gray-400' : 'bg-gray-500'
-                  }`} />
-                  
-                  {/* Subreddit/Profile name */}
-                  <span className="font-medium text-foreground text-xs sm:text-sm truncate">
+                );
+              }
+              
+              if (!entry.subreddit) return null;
+              
+              return (
+                <div key={idx} className="px-3 py-2 flex items-center gap-2">
+                  {getStatusIcon(entry.status || '')}
+                  <span className="text-sm flex-1 truncate">
                     {entry.subreddit?.startsWith('u_') 
                       ? `u/${entry.subreddit.substring(2)}` 
                       : `r/${entry.subreddit}`}
                   </span>
-                  
-                  {/* Status badge */}
-                  <div className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
-                    entry.status === 'success' ? 'bg-green-100 text-green-700' : 
-                    entry.status === 'error' ? 'bg-red-100 text-red-700' : 
-                    entry.status === 'posting' ? 'bg-blue-100 text-blue-700' : 
-                    entry.status === 'queued' ? 'bg-gray-100 text-gray-600' : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    {entry.status === 'success' ? '✓' : 
-                     entry.status === 'error' ? '✗' : 
-                     entry.status === 'posting' ? '⏳' : 
-                     entry.status === 'queued' ? '⏸' : '?'}
-                  </div>
-                  
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 ml-auto flex-shrink-0">
-                    {/* Error info button */}
-                    {entry.error && (
-                      <div className="relative group">
-                        <button className="p-1 hover:bg-red-50 rounded-full transition-colors">
-                          <Info className="h-3 w-3 text-red-500" />
-                        </button>
-                        {/* Tooltip - positioned to the left of the icon */}
-                        <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 px-3 py-2 bg-white border border-red-300 text-red-800 text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 max-w-72 w-max min-w-40">
-                          <div className="break-words whitespace-normal leading-relaxed">
-                            {entry.error}
-                          </div>
-                          {/* Arrow pointing right */}
-                          <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-white"></div>
-                          <div className="absolute left-full top-1/2 -translate-y-1/2 ml-px border-4 border-transparent border-l-red-300"></div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* View link */}
-                    {entry.url && (
-                      <a 
-                        className="p-1 hover:bg-green-50 rounded-full transition-colors" 
-                        href={entry.url.startsWith('//') ? `https:${entry.url}` : entry.url} 
-                        target="_blank" 
-                        rel="noreferrer"
-                        title="View post"
-                      >
-                        <ExternalLink className="h-3 w-3 text-green-600" />
-                      </a>
-                    )}
-                  </div>
+                  {entry.error && (
+                    <span className="text-xs text-red-500 truncate max-w-[150px]" title={entry.error}>
+                      {entry.error}
+                    </span>
+                  )}
+                  {entry.url && (
+                    <a 
+                      href={entry.url.startsWith('//') ? `https:${entry.url}` : entry.url} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="text-green-500 hover:text-green-400"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
                 </div>
-                
-                {/* Mobile-friendly status text */}
-                <div className="mt-1 ml-4 sm:hidden">
-                  <span className={`text-xs ${
-                    entry.status === 'success' ? 'text-green-600' : 
-                    entry.status === 'error' ? 'text-red-600' : 
-                    entry.status === 'posting' ? 'text-blue-600' : 
-                    entry.status === 'queued' ? 'text-gray-600' : 'text-muted-foreground'
-                  }`}>
-                    {entry.status === 'success' ? 'Posted successfully' : 
-                     entry.status === 'error' ? 'Failed to post' : 
-                     entry.status === 'posting' ? 'Posting...' : 
-                     entry.status === 'queued' ? 'Queued' : entry.status}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
       )}
       
+      {/* Success Message */}
       {completed && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
-          <div className="flex items-center gap-2 text-green-800">
-            <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-            <span className="font-medium text-sm sm:text-base">All posts completed successfully!</span>
+        <div className="rounded-md bg-green-600/20 border border-green-600/30 p-3 text-green-500">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-5 w-5" />
+            <span className="font-medium">All posts completed!</span>
           </div>
-          <p className="text-xs sm:text-sm text-green-700 mt-1">
-            Posted to {items.length} subreddit{items.length !== 1 ? 's' : ''} with your content.
-          </p>
         </div>
       )}
       
+      {/* Cancelled Message */}
       {cancelled && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4">
-          <div className="flex items-center gap-2 text-yellow-800">
-            <XCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-            <span className="font-medium text-sm sm:text-base">Posting was cancelled</span>
+        <div className="rounded-md bg-yellow-600/20 border border-yellow-600/30 p-3 text-yellow-500">
+          <div className="flex items-center gap-2">
+            <XCircle className="h-5 w-5" />
+            <span className="font-medium">Posting cancelled</span>
           </div>
-          <p className="text-xs sm:text-sm text-yellow-700 mt-1">
-            Click the retry button to post to the remaining subreddits.
-          </p>
         </div>
       )}
     </div>
   );
-} 
+}

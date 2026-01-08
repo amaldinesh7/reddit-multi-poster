@@ -1,38 +1,47 @@
-import React from 'react';
+import * as React from "react"
+import { cn } from "@/lib/utils"
 
 interface AvatarProps {
-  src?: string;
-  alt: string;
-  fallback: string;
-  size?: 'sm' | 'md' | 'lg';
-  className?: string;
+  src?: string
+  alt?: string
+  fallback?: string
+  size?: 'sm' | 'md' | 'lg'
+  className?: string
 }
 
-export function Avatar({ src, alt, fallback, size = 'md', className = '' }: AvatarProps) {
-  const [imageError, setImageError] = React.useState(false);
-  
-  const sizeClasses = {
-    sm: 'w-6 h-6 text-xs',
-    md: 'w-8 h-8 text-sm',
-    lg: 'w-12 h-12 text-base'
-  };
+const sizeClasses = {
+  sm: 'w-7 h-7 text-xs',
+  md: 'w-9 h-9 text-sm',
+  lg: 'w-11 h-11 text-base'
+}
 
-  const shouldShowImage = src && !imageError && src.startsWith('http');
+function Avatar({ src, alt, fallback, size = 'md', className }: AvatarProps) {
+  const [error, setError] = React.useState(false)
+  
+  const initials = fallback 
+    ? fallback.slice(0, 2).toUpperCase() 
+    : alt?.slice(0, 2).toUpperCase() || '?'
 
   return (
-    <div className={`${sizeClasses[size]} rounded-full overflow-hidden bg-muted flex items-center justify-center font-medium ${className}`}>
-      {shouldShowImage ? (
+    <div 
+      className={cn(
+        "rounded-full overflow-hidden bg-secondary flex items-center justify-center",
+        sizeClasses[size],
+        className
+      )}
+    >
+      {src && !error ? (
         <img
           src={src}
-          alt={alt}
+          alt={alt || 'Avatar'}
           className="w-full h-full object-cover"
-          onError={() => setImageError(true)}
+          onError={() => setError(true)}
         />
       ) : (
-        <span className="text-muted-foreground">
-          {fallback.charAt(0).toUpperCase()}
-        </span>
+        <span className="font-medium text-muted-foreground">{initials}</span>
       )}
     </div>
-  );
-} 
+  )
+}
+
+export { Avatar }

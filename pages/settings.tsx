@@ -2,15 +2,13 @@ import React from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import axios from 'axios';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent, CardHeader } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { ArrowLeft, Plus, Trash2, GripVertical, Edit2, Save, X, Loader2, Search, Users, ExternalLink, Download } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, GripVertical, Edit2, X, Loader2, Search, Users, ExternalLink, Download, FolderPlus, Sparkles } from 'lucide-react';
 import { useSubredditCache } from '../hooks/useSubredditCache';
 import { VERIFIED_INDIAN_NSFW_SUBREDDITS, mergeWithExistingSubreddits } from '../constants/subreddits-verified';
 
-// DnD Kit imports
 import {
   DndContext,
   closestCenter,
@@ -21,8 +19,6 @@ import {
   DragEndEvent,
   DragStartEvent,
   DragOverlay,
-  Active,
-  Over,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -111,7 +107,7 @@ function SortableSubreddit({
 
   return (
     <div ref={setNodeRef} style={style}>
-      <SubredditItem 
+      <SubredditItemComponent 
         subreddit={subreddit}
         category={category}
         dragHandleProps={{ ...attributes, ...listeners }}
@@ -133,9 +129,7 @@ function CategoryCard({
 }) {
   const [editingCategory, setEditingCategory] = React.useState<string | null>(null);
   const [newSubredditName, setNewSubredditName] = React.useState('');
-  const { fetchAndCache, removeFromCache, loading, errors } = useSubredditCache();
-
-  // Get data and setData from parent context
+  const { fetchAndCache } = useSubredditCache();
   const { data, setData } = React.useContext(SettingsContext);
 
   const updateCategoryName = (categoryId: string, newName: string) => {
@@ -170,7 +164,6 @@ function CategoryCard({
       name: subredditName
     };
     
-    // Add to state first
     setData(prev => ({
       categories: prev.categories.map(cat =>
         cat.id === categoryId
@@ -180,7 +173,6 @@ function CategoryCard({
     }));
     setNewSubredditName('');
     
-    // Fetch and cache subreddit data in the background
     try {
       await fetchAndCache(subredditName);
       console.log(`Cached data for r/${subredditName}`);
@@ -190,21 +182,17 @@ function CategoryCard({
   };
 
   return (
-    <Card
-      className={`border transition-all duration-200 ${
-        isDragging 
-          ? 'opacity-50 border-dashed border-muted-foreground dragging' 
-          : 'border-border'
-      }`}
-    >
-      <CardHeader className="pb-2 px-3 pt-3">
-        <div className="flex items-center gap-2">
-          <GripVertical 
+    <Card className={`glass-card rounded-xl overflow-hidden transition-all duration-200 ${
+      isDragging ? 'opacity-50 ring-2 ring-primary/50' : ''
+    }`}>
+      <CardHeader className="p-4 bg-secondary/20 border-b border-border/30">
+        <div className="flex items-center gap-3">
+          <div 
             {...dragHandleProps}
-            className={`w-4 h-4 cursor-grab hover:text-foreground transition-colors ${
-              isDragging ? 'text-primary' : 'text-muted-foreground'
-            }`}
-          />
+            className="cursor-grab hover:text-primary transition-colors"
+          >
+            <GripVertical className="w-4 h-4 text-muted-foreground" />
+          </div>
           
           {editingCategory === category.id ? (
             <div className="flex items-center gap-2 flex-1">
@@ -217,45 +205,44 @@ function CategoryCard({
                 }}
                 onBlur={(e) => updateCategoryName(category.id, e.target.value)}
                 autoFocus
-                className="text-sm sm:text-base font-medium h-8"
+                className="h-8 bg-secondary/50 border-border/50"
               />
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => setEditingCategory(null)}
-                className="h-8 w-8 p-0 shrink-0"
+                className="h-8 w-8 p-0"
               >
-                <X className="w-3 h-3" />
+                <X className="w-4 h-4" />
               </Button>
             </div>
           ) : (
             <>
               <h3
-                className="text-sm sm:text-base font-medium flex-1 cursor-pointer min-w-0"
+                className="font-medium flex-1 cursor-pointer hover:text-primary transition-colors"
                 onClick={() => toggleCategory(category.id)}
               >
-                <span className="truncate block">
-                  {category.name} <span className="text-muted-foreground">({category.subreddits.length})</span>
+                {category.name}
+                <span className="text-muted-foreground ml-2 text-sm">
+                  ({category.subreddits.length})
                 </span>
               </h3>
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-1">
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => setEditingCategory(category.id)}
-                  className="h-7 w-7 p-0"
-                  title="Edit category"
+                  className="h-8 w-8 p-0 hover:bg-secondary"
                 >
-                  <Edit2 className="w-3 h-3" />
+                  <Edit2 className="w-4 h-4" />
                 </Button>
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => deleteCategory(category.id)}
-                  className="text-red-600 hover:text-red-700 h-7 w-7 p-0"
-                  title="Delete category"
+                  className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
             </>
@@ -264,32 +251,32 @@ function CategoryCard({
       </CardHeader>
 
       {!category.collapsed && (
-        <CardContent className="pt-0 px-3 pb-3">
+        <CardContent className="p-4 space-y-3">
           {/* Add Subreddit */}
-          <div className="flex gap-2 mb-3">
+          <div className="flex gap-2">
             <Input
               placeholder="Add subreddit..."
               value={newSubredditName}
               onChange={(e) => setNewSubredditName(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && addSubreddit(category.id)}
-              className="text-xs sm:text-sm h-8"
+              className="h-9 bg-secondary/30 border-border/50"
             />
             <Button
               size="sm"
               onClick={() => addSubreddit(category.id)}
               disabled={!newSubredditName.trim()}
-              className="h-8 px-3 shrink-0 font-normal"
+              className="h-9 px-3"
             >
-              <Plus className="size-3" />
+              <Plus className="w-4 h-4" />
             </Button>
           </div>
 
-          {/* Sortable Subreddits List */}
+          {/* Subreddits List */}
           <SortableContext 
             items={category.subreddits.map(s => s.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {category.subreddits.map((subreddit) => (
                 <SortableSubreddit
                   key={subreddit.id}
@@ -300,8 +287,8 @@ function CategoryCard({
               ))}
               
               {category.subreddits.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-2">
-                  No subreddits in this category yet. Add one above.
+                <p className="text-xs text-muted-foreground text-center py-4">
+                  No subreddits yet. Add one above.
                 </p>
               )}
             </div>
@@ -313,7 +300,7 @@ function CategoryCard({
 }
 
 // Subreddit Item Component
-function SubredditItem({ 
+function SubredditItemComponent({ 
   subreddit, 
   category, 
   dragHandleProps, 
@@ -326,7 +313,7 @@ function SubredditItem({
 }) {
   const [editingSubreddit, setEditingSubreddit] = React.useState<string | null>(null);
   const { loading, errors, removeFromCache } = useSubredditCache();
-  const { data, setData } = React.useContext(SettingsContext);
+  const { setData } = React.useContext(SettingsContext);
 
   const updateSubredditName = (categoryId: string, subredditId: string, newName: string) => {
     setData(prev => ({
@@ -352,8 +339,6 @@ function SubredditItem({
           : cat
       )
     }));
-    
-    // Remove from cache
     removeFromCache(subreddit.name);
   };
 
@@ -361,61 +346,54 @@ function SubredditItem({
   const error = errors[subreddit.name.toLowerCase()];
 
   return (
-    <div
-      className={`flex items-center gap-2 px-2 py-1.5 border rounded bg-muted/20 transition-all duration-200 ${
-        isDragging 
-          ? 'opacity-50 border-dashed border-muted-foreground dragging' 
-          : 'border-border'
-      }`}
-    >
-      <GripVertical 
-        {...dragHandleProps}
-        className={`w-3 h-3 cursor-grab hover:text-foreground transition-colors ${
-          isDragging ? 'text-primary' : 'text-muted-foreground'
-        }`}
-      />
+    <div className={`
+      flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/20 border border-border/30 
+      transition-all duration-200 hover:bg-secondary/30
+      ${isDragging ? 'opacity-50 ring-2 ring-primary/50' : ''}
+    `}>
+      <div {...dragHandleProps} className="cursor-grab">
+        <GripVertical className="w-3 h-3 text-muted-foreground" />
+      </div>
       
       {editingSubreddit === subreddit.id ? (
-                  <div className="flex items-center gap-2 flex-1">
-            <span className="text-xs text-muted-foreground">r/</span>
-            <Input
-              defaultValue={subreddit.name}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  updateSubredditName(category.id, subreddit.id, (e.target as HTMLInputElement).value);
-                }
-              }}
-              onBlur={(e) => updateSubredditName(category.id, subreddit.id, e.target.value)}
-              autoFocus
-              className="text-xs h-7"
-            />
-                      <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setEditingSubreddit(null)}
-              className="h-7 w-7 p-0"
-            >
-              <X className="w-3 h-3" />
-            </Button>
+        <div className="flex items-center gap-2 flex-1">
+          <span className="text-xs text-muted-foreground">r/</span>
+          <Input
+            defaultValue={subreddit.name}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                updateSubredditName(category.id, subreddit.id, (e.target as HTMLInputElement).value);
+              }
+            }}
+            onBlur={(e) => updateSubredditName(category.id, subreddit.id, e.target.value)}
+            autoFocus
+            className="h-7 text-xs bg-secondary/50 border-border/50"
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setEditingSubreddit(null)}
+            className="h-7 w-7 p-0"
+          >
+            <X className="w-3 h-3" />
+          </Button>
         </div>
       ) : (
         <>
           <div className="flex items-center gap-2 flex-1">
-            <span className="text-xs">r/{subreddit.name}</span>
+            <span className="text-sm">r/{subreddit.name}</span>
             {isLoading && (
               <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
             )}
             {error && (
-              <span className="text-xs text-red-500" title={error}>
-                ⚠️
-              </span>
+              <span className="text-xs text-red-400" title={error}>⚠️</span>
             )}
           </div>
           <Button
             size="sm"
             variant="ghost"
             onClick={() => setEditingSubreddit(subreddit.id)}
-            className="h-6 w-6 p-0"
+            className="h-7 w-7 p-0 hover:bg-secondary"
           >
             <Edit2 className="w-3 h-3" />
           </Button>
@@ -423,7 +401,7 @@ function SubredditItem({
             size="sm"
             variant="ghost"
             onClick={() => deleteSubreddit(category.id, subreddit.id)}
-            className="text-red-600 hover:text-red-700 h-6 w-6 p-0"
+            className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
           >
             <Trash2 className="w-3 h-3" />
           </Button>
@@ -446,7 +424,6 @@ export default function Settings() {
   const router = useRouter();
   const [data, setData] = React.useState<SubredditData>(DEFAULT_DATA);
   const [isLoaded, setIsLoaded] = React.useState(false);
-
   const [activeId, setActiveId] = React.useState<string | null>(null);
   
   // Search functionality
@@ -455,8 +432,7 @@ export default function Settings() {
   const [isSearching, setIsSearching] = React.useState(false);
   const [showSearchResults, setShowSearchResults] = React.useState(false);
   
-  // Cache management
-  const { fetchAndCache, removeFromCache, loading, errors } = useSubredditCache();
+  const { fetchAndCache } = useSubredditCache();
 
   // DnD Kit sensors
   const sensors = useSensors(
@@ -470,34 +446,28 @@ export default function Settings() {
     })
   );
 
-  // Load data from localStorage on mount
+  // Load data from localStorage
   React.useEffect(() => {
     const stored = localStorage.getItem('reddit-multi-poster-subreddits');
-    console.log('Settings: Loading from localStorage:', stored);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        console.log('Settings: Parsed data:', parsed);
         setData(parsed);
       } catch (e) {
         console.error('Failed to parse stored subreddit data:', e);
       }
-    } else {
-      console.log('Settings: No stored data found, using default:', DEFAULT_DATA);
     }
     setIsLoaded(true);
   }, []);
 
-  // Save data to localStorage whenever it changes (but only after initial load)
+  // Save data to localStorage
   React.useEffect(() => {
     if (isLoaded) {
-      console.log('Settings: Saving to localStorage:', data);
       localStorage.setItem('reddit-multi-poster-subreddits', JSON.stringify(data));
     }
   }, [data, isLoaded]);
 
   const addCategory = () => {
-    // Generate a sample category name
     const categoryNames = ['General', 'Entertainment', 'Technology', 'Sports', 'News', 'Lifestyle', 'Gaming', 'Science', 'Art', 'Music'];
     const existingNames = data.categories.map(cat => cat.name.toLowerCase());
     const availableNames = categoryNames.filter(name => !existingNames.includes(name.toLowerCase()));
@@ -520,52 +490,35 @@ export default function Settings() {
   const loadVerifiedSubreddits = () => {
     const mergedData = mergeWithExistingSubreddits(data, VERIFIED_INDIAN_NSFW_SUBREDDITS);
     setData(mergedData);
-    
-    // Show success message
-    console.log('Loaded 20 verified Indian NSFW subreddits');
-    alert('Successfully loaded 20 verified Indian NSFW subreddits!');
+    alert('Successfully loaded verified subreddits!');
   };
 
-  // Handle drag start
+  // Handle drag
   const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    setActiveId(active.id as string);
-    console.log('🚀 Drag started:', active.id);
+    setActiveId(event.active.id as string);
   };
 
-  // Handle drag end
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
 
-    if (!over || active.id === over.id) {
-      return;
-    }
+    if (!over || active.id === over.id) return;
 
-    console.log('💧 Drag ended:', { activeId: active.id, overId: over.id });
-
-    // Find which type of item is being dragged
     const activeCategory = data.categories.find(cat => cat.id === active.id);
     const activeSubreddit = data.categories.find(cat => 
       cat.subreddits.some(sub => sub.id === active.id)
     )?.subreddits.find(sub => sub.id === active.id);
 
     if (activeCategory) {
-      // Dragging a category
       const overCategory = data.categories.find(cat => cat.id === over.id);
       if (overCategory) {
         setData(prev => {
           const oldIndex = prev.categories.findIndex(cat => cat.id === active.id);
           const newIndex = prev.categories.findIndex(cat => cat.id === over.id);
-          
-          console.log('Reordering categories:', { oldIndex, newIndex });
-          return {
-            categories: arrayMove(prev.categories, oldIndex, newIndex)
-          };
+          return { categories: arrayMove(prev.categories, oldIndex, newIndex) };
         });
       }
     } else if (activeSubreddit) {
-      // Dragging a subreddit
       const sourceCategoryId = data.categories.find(cat => 
         cat.subreddits.some(sub => sub.id === active.id)
       )?.id;
@@ -575,18 +528,12 @@ export default function Settings() {
       )?.id;
 
       if (sourceCategoryId && targetCategoryId && sourceCategoryId === targetCategoryId) {
-        // Reordering within same category
         setData(prev => ({
           categories: prev.categories.map(cat => {
             if (cat.id === sourceCategoryId) {
               const oldIndex = cat.subreddits.findIndex(sub => sub.id === active.id);
               const newIndex = cat.subreddits.findIndex(sub => sub.id === over.id);
-              
-              console.log('Reordering subreddits:', { oldIndex, newIndex });
-              return {
-                ...cat,
-                subreddits: arrayMove(cat.subreddits, oldIndex, newIndex)
-              };
+              return { ...cat, subreddits: arrayMove(cat.subreddits, oldIndex, newIndex) };
             }
             return cat;
           })
@@ -595,14 +542,14 @@ export default function Settings() {
     }
   };
 
-  // Search subreddits on Reddit
+  // Search subreddits
   const searchSubreddits = async () => {
     if (!searchQuery.trim() || searchQuery.length < 2) return;
     
     setIsSearching(true);
     try {
       const response = await axios.get('/api/search-subreddits', {
-        params: { q: searchQuery.trim(), limit: 4 }
+        params: { q: searchQuery.trim(), limit: 5 }
       });
       setSearchResults(response.data.subreddits || []);
       setShowSearchResults(true);
@@ -614,14 +561,13 @@ export default function Settings() {
     }
   };
 
-  // Add subreddit from search results
+  // Add subreddit from search
   const addSubredditFromSearch = async (categoryId: string, subredditName: string) => {
     const newSubreddit: SubredditItem = {
       id: Date.now().toString(),
       name: subredditName
     };
     
-    // Add to state first
     setData(prev => ({
       categories: prev.categories.map(cat =>
         cat.id === categoryId
@@ -630,10 +576,8 @@ export default function Settings() {
       )
     }));
     
-    // Fetch and cache subreddit data in the background
     try {
       await fetchAndCache(subredditName);
-      console.log(`Cached data for r/${subredditName}`);
     } catch (error) {
       console.error(`Failed to cache data for r/${subredditName}:`, error);
     }
@@ -653,7 +597,6 @@ export default function Settings() {
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
-  // Format subscriber count
   const formatSubscribers = (count: number) => {
     if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
     if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
@@ -664,215 +607,195 @@ export default function Settings() {
     <SettingsContext.Provider value={{ data, setData }}>
       <>
         <Head>
-          <title>Settings - Reddit Multi Poster | Manage Subreddit Categories & Communities</title>
-          <meta name="description" content="Customize your Reddit Multi Poster experience. Add, organize, and manage subreddit categories. Search and discover new communities for your content distribution strategy." />
-          <meta name="keywords" content="reddit settings, subreddit management, reddit categories, community organization, subreddit search, reddit content strategy" />
+          <title>Settings - Reddit Multi Poster</title>
+          <meta name="description" content="Manage your subreddit categories and settings" />
           <meta name="robots" content="noindex, nofollow" />
-          
-          {/* Open Graph */}
-          <meta property="og:title" content="Settings - Reddit Multi Poster" />
-          <meta property="og:description" content="Customize your Reddit Multi Poster settings and manage subreddit categories." />
-          <meta property="og:url" content="https://reddit-multi-poster.vercel.app/settings" />
         </Head>
         
         <div className="min-h-screen bg-background">
           {/* Header */}
-          <header className="sticky top-0 z-50 bg-background border-b border-border">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3">
-                              <div className="flex items-center gap-3">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => router.push('/')}
-                    className="p-2 hover:bg-orange-50 hover:text-orange-700"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                  </Button>
-                  <h1 className="text-lg sm:text-xl font-semibold">Settings</h1>
+          <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
+            <div className="container mx-auto px-4 sm:px-6">
+              <div className="flex h-16 items-center gap-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push('/')}
+                  className="p-2 rounded-lg hover:bg-secondary"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-semibold">Settings</h1>
+                    <p className="text-xs text-muted-foreground hidden sm:block">Manage your subreddits</p>
+                  </div>
+                </div>
               </div>
             </div>
           </header>
 
           {/* Main Content */}
-          <main className="max-w-4xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
-            <div className="mb-3 sm:mb-4">
-              <div className="flex items-center justify-between gap-3 mb-1">
-                <h2 className="text-base sm:text-lg font-semibold">Manage Subreddits</h2>
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={loadVerifiedSubreddits} 
-                    size="sm"
-                    variant="outline"
-                    className="h-7 sm:h-8 px-2 sm:px-3 shrink-0 font-normal"
-                  >
-                    <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-                    <span className="text-xs sm:text-sm">Load Verified</span>
-                  </Button>
-                  <Button 
-                    onClick={addCategory} 
-                    size="sm"
-                    className="h-7 sm:h-8 px-2 sm:px-3 shrink-0 font-normal"
-                  >
-                    <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-                    <span className="text-xs sm:text-sm">Add Category</span>
-                  </Button>
-                </div>
+          <main className="container mx-auto px-4 sm:px-6 py-6 max-w-3xl">
+            <div className="space-y-6">
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button 
+                  onClick={loadVerifiedSubreddits} 
+                  variant="outline"
+                  className="flex-1 sm:flex-none rounded-xl h-10"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Load Verified
+                </Button>
+                <Button 
+                  onClick={addCategory}
+                  className="flex-1 sm:flex-none rounded-xl h-10"
+                >
+                  <FolderPlus className="w-4 h-4 mr-2" />
+                  Add Category
+                </Button>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
-                Organize your subreddits into categories and reorder them by dragging.
-              </p>
-            </div>
-            <div className="space-y-3 sm:space-y-4">
-                
-                {/* Search Subreddits */}
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search and add subreddits"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-8 sm:pl-10 text-xs sm:text-sm h-8 sm:h-10"
-                      />
-                      {isSearching && (
-                        <Loader2 className="absolute right-2.5 sm:right-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 animate-spin text-muted-foreground" />
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Search Results */}
-                  {showSearchResults && (
-                    <Card className="border border-border">
-                      <CardHeader className="pb-2 px-3 pt-3">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-xs sm:text-sm font-medium">Search Results</h4>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setShowSearchResults(false)}
-                            className="h-6 w-6 p-0"
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-0 px-3 pb-3 max-h-48 sm:max-h-56 overflow-y-auto">
-                        {searchResults.length > 0 ? (
-                                                      <div className="space-y-2">
-                              {searchResults.map((subreddit) => (
-                                                                <div
-                                  key={subreddit.name}
-                                  className="flex items-center justify-between p-2 border border-border rounded bg-muted/20"
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium text-xs sm:text-sm">r/{subreddit.name}</span>
-                                      {subreddit.over18 && (
-                                        <span className="text-xs bg-red-100 text-red-700 px-1 rounded">18+</span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs text-muted-foreground">
-                                      <div className="flex items-center gap-1">
-                                        <Users className="w-3 h-3" />
-                                        {formatSubscribers(subreddit.subscribers)}
-                                      </div>
-                                      <a
-                                        href={subreddit.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-1 hover:text-primary hidden sm:flex"
-                                      >
-                                        <ExternalLink className="w-3 h-3" />
-                                        View
-                                      </a>
-                                    </div>
-                                    {subreddit.description && (
-                                      <p className="text-xs text-muted-foreground mt-1 truncate hidden sm:block">
-                                        {subreddit.description}
-                                      </p>
-                                    )}
-                                  </div>
-                                  
-                                  {/* Add to Category Dropdown */}
-                                  {data.categories.length > 0 && (
-                                    <div className="ml-2 shrink-0">
-                                      <select
-                                        className="text-xs px-1.5 sm:px-2 py-1 border border-border rounded bg-background"
-                                      onChange={(e) => {
-                                        if (e.target.value) {
-                                          addSubredditFromSearch(e.target.value, subreddit.name);
-                                          e.target.value = '';
-                                        }
-                                      }}
-                                    >
-                                      <option value="">Add to...</option>
-                                      {data.categories.map((category) => (
-                                        <option key={category.id} value={category.id}>
-                                          {category.name}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-center text-muted-foreground py-3">
-                            {searchQuery ? 'No subreddits found' : 'Enter a search term'}
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
+
+              {/* Search */}
+              <div className="space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search Reddit for subreddits..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 h-11 rounded-xl bg-secondary/30 border-border/50"
+                  />
+                  {isSearching && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
                   )}
                 </div>
                 
-                {/* Drag and Drop Context */}
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                >
-                  {/* Categories List */}
-                  <SortableContext 
-                    items={data.categories.map(c => c.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div className="space-y-3 sm:space-y-4">
-                      {data.categories.map((category) => (
-                        <SortableCategory
-                          key={category.id}
-                          category={category}
-                          isActive={activeId === category.id}
-                        />
-                      ))}
-                      
-                                             {data.categories.length === 0 && (
-                        <p className="text-center text-muted-foreground py-6">
-                          No categories yet. Create your first category above.
+                {/* Search Results */}
+                {showSearchResults && (
+                  <Card className="glass-card rounded-xl overflow-hidden animate-fadeIn">
+                    <CardHeader className="p-4 border-b border-border/30 bg-secondary/20">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Search Results</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowSearchResults(false)}
+                          className="h-7 w-7 p-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-0 max-h-64 overflow-y-auto">
+                      {searchResults.length > 0 ? (
+                        <div className="divide-y divide-border/30">
+                          {searchResults.map((subreddit) => (
+                            <div
+                              key={subreddit.name}
+                              className="flex items-center justify-between p-4 hover:bg-secondary/20 transition-colors"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm">r/{subreddit.name}</span>
+                                  {subreddit.over18 && (
+                                    <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">18+</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                  <div className="flex items-center gap-1">
+                                    <Users className="w-3 h-3" />
+                                    {formatSubscribers(subreddit.subscribers)}
+                                  </div>
+                                  <a
+                                    href={subreddit.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 hover:text-primary hidden sm:flex"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                    View
+                                  </a>
+                                </div>
+                              </div>
+                              
+                              {data.categories.length > 0 && (
+                                <select
+                                  className="text-xs px-2 py-1.5 rounded-lg border border-border/50 bg-secondary/30"
+                                  onChange={(e) => {
+                                    if (e.target.value) {
+                                      addSubredditFromSearch(e.target.value, subreddit.name);
+                                      e.target.value = '';
+                                    }
+                                  }}
+                                >
+                                  <option value="">Add to...</option>
+                                  {data.categories.map((category) => (
+                                    <option key={category.id} value={category.id}>
+                                      {category.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-center text-muted-foreground py-8 text-sm">
+                          {searchQuery ? 'No subreddits found' : 'Enter a search term'}
                         </p>
                       )}
-                    </div>
-                  </SortableContext>
-
-                  {/* Drag Overlay */}
-                  <DragOverlay>
-                    {activeId ? (
-                      <div className="opacity-50">
-                        {/* Render dragged item preview here if needed */}
-                        <div className="p-4 bg-primary/10 border-2 border-primary border-dashed rounded">
-                          Dragging...
-                        </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+              
+              {/* Categories */}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext 
+                  items={data.categories.map(c => c.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-4">
+                    {data.categories.map((category) => (
+                      <SortableCategory
+                        key={category.id}
+                        category={category}
+                        isActive={activeId === category.id}
+                      />
+                    ))}
+                    
+                    {data.categories.length === 0 && (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <FolderPlus className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p className="text-sm">No categories yet.</p>
+                        <p className="text-xs mt-1">Create your first category above.</p>
                       </div>
-                    ) : null}
-                  </DragOverlay>
-                </DndContext>
+                    )}
+                  </div>
+                </SortableContext>
+
+                <DragOverlay>
+                  {activeId ? (
+                    <div className="p-4 bg-primary/10 border-2 border-primary border-dashed rounded-xl">
+                      Dragging...
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
             </div>
           </main>
         </div>
       </>
     </SettingsContext.Provider>
   );
-} 
+}
