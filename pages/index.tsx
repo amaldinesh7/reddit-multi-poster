@@ -34,7 +34,7 @@ export default function Home() {
   const [mediaFiles, setMediaFiles] = React.useState<File[]>([]);
   const [mediaMode, setMediaMode] = React.useState<'file' | 'url'>('file');
   const [flairs, setFlairs] = React.useState<Record<string, string | undefined>>({});
-  const [titleTags, setTitleTags] = React.useState<Record<string, string | undefined>>({});
+  const [titleSuffixes, setTitleSuffixes] = React.useState<Record<string, string | undefined>>({});
   const [postToProfile, setPostToProfile] = React.useState(false);
   const [hasFlairErrors, setHasFlairErrors] = React.useState(false);
   const [missingFlairs, setMissingFlairs] = React.useState<string[]>([]);
@@ -96,7 +96,7 @@ export default function Home() {
         allItems.push({
           subreddit: sr,
           flairId: flairs[sr],
-          titleTag: titleTags[sr],
+          titleSuffix: titleSuffixes[sr],
           kind,
           files: mediaFiles, // Use files array for all cases
           url: undefined,
@@ -109,7 +109,7 @@ export default function Home() {
         allItems.push({
           subreddit: sr,
           flairId: flairs[sr],
-          titleTag: titleTags[sr],
+          titleSuffix: titleSuffixes[sr],
           kind: 'link',
           url: mediaUrl,
           file: undefined,
@@ -122,7 +122,7 @@ export default function Home() {
         allItems.push({
           subreddit: sr,
           flairId: flairs[sr],
-          titleTag: titleTags[sr],
+          titleSuffix: titleSuffixes[sr],
           kind: 'self',
           url: undefined,
           file: undefined,
@@ -132,7 +132,7 @@ export default function Home() {
     }
     
     return allItems;
-  }, [selectedSubs, flairs, titleTags, mediaUrl, mediaFiles, caption, postToProfile, auth.me?.name]);
+  }, [selectedSubs, flairs, titleSuffixes, mediaUrl, mediaFiles, caption, postToProfile, auth.me?.name]);
 
   return (
     <>
@@ -319,8 +319,8 @@ export default function Home() {
               onSelectedChange={setSelectedSubs}
               flairValue={flairs}
               onFlairChange={setFlairs}
-              titleTagValue={titleTags}
-              onTitleTagChange={setTitleTags}
+              titleSuffixValue={titleSuffixes}
+              onTitleSuffixChange={setTitleSuffixes}
               onValidationChange={handleValidationChange}
               showValidationErrors={showValidationErrors}
             />

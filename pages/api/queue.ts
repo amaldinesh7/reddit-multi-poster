@@ -118,11 +118,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         subredditRules = undefined;
       }
       
-      // Build title: [titleTag] [prefixes] caption
+      // Build title: [prefixes] caption [titleSuffix]
       let title = addSmartPrefixesToTitle(caption, item.subreddit, prefixes || {}, subredditRules);
-      // Prepend per-subreddit title tag if provided
-      if (item.titleTag) {
-        title = `${item.titleTag} ${title}`.trim();
+      // Append per-subreddit title suffix if provided (e.g., "(f)", "25F", "[OC]")
+      if (item.titleSuffix) {
+        title = `${title} ${item.titleSuffix}`.trim();
       }
       
       try {

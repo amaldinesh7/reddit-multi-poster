@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Info } from 'lucide-react';
 import { useSubreddits } from '../hooks/useSubreddits';
 import { useSubredditCache } from '../hooks/useSubredditCache';
 import { TitleTag } from '../utils/subredditCache';
@@ -15,20 +15,20 @@ interface Props {
   onSelectedChange: (next: string[]) => void;
   flairValue: Record<string, string | undefined>;
   onFlairChange: (v: Record<string, string | undefined>) => void;
-  titleTagValue: Record<string, string | undefined>;
-  onTitleTagChange: (v: Record<string, string | undefined>) => void;
+  titleSuffixValue: Record<string, string | undefined>;
+  onTitleSuffixChange: (v: Record<string, string | undefined>) => void;
   onValidationChange?: (hasErrors: boolean, missingFlairs: string[]) => void;
   showValidationErrors?: boolean;
 }
 
-export default function SubredditFlairPicker({ selected, onSelectedChange, flairValue, onFlairChange, titleTagValue, onTitleTagChange, onValidationChange, showValidationErrors }: Props) {
+export default function SubredditFlairPicker({ selected, onSelectedChange, flairValue, onFlairChange, titleSuffixValue, onTitleSuffixChange, onValidationChange, showValidationErrors }: Props) {
   const { getSubredditsByCategory, getAllSubreddits, isLoaded } = useSubreddits();
   const { getCachedData, fetchAndCache, loading: cacheLoading } = useSubredditCache();
   
   const [query, setQuery] = React.useState('');
   const [flairOptions, setFlairOptions] = React.useState<Record<string, { id: string; text: string }[]>>({});
   const [flairRequired, setFlairRequired] = React.useState<Record<string, boolean>>({});
-  const [subredditRules, setSubredditRules] = React.useState<Record<string, { requiresGenderTag: boolean; requiresContentTag: boolean; genderTags: string[]; contentTags: string[]; titleTags?: TitleTag[] }>>({});
+  const [subredditRules, setSubredditRules] = React.useState<Record<string, { requiresGenderTag: boolean; requiresContentTag: boolean; genderTags: string[]; contentTags: string[]; titleTags?: TitleTag[]; submitText?: string }>>({});
   const [isInitialLoad, setIsInitialLoad] = React.useState(true);
   const [expandedCategories, setExpandedCategories] = React.useState<string[]>([]);
   const [searchResults, setSearchResults] = React.useState<Array<{ name: string; title: string; description: string; subscribers: number; over18: boolean; icon: string; url: string }>>([]);
@@ -238,8 +238,8 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
     onFlairChange({ ...flairValue, [sr]: id || undefined });
   };
 
-  const handleTitleTagChange = (sr: string, tag: string) => {
-    onTitleTagChange({ ...titleTagValue, [sr]: tag || undefined });
+  const handleTitleSuffixChange = (sr: string, suffix: string) => {
+    onTitleSuffixChange({ ...titleSuffixValue, [sr]: suffix || undefined });
   };
 
   // Check if a subreddit has a missing required flair
@@ -348,19 +348,25 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
                   )}
                 </div>
                 <div className="flex gap-2 items-center">
-                  {/* Title Tags Dropdown */}
-                  {isSelected && (subredditRules[name]?.titleTags || []).length > 0 && (
-                    <select
-                      className="flex h-8 w-24 rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      value={titleTagValue[name] || ''}
-                      onChange={(e) => handleTitleTagChange(name, e.target.value)}
-                      title="Title tag"
-                    >
-                      <option value="">Tag</option>
-                      {(subredditRules[name]?.titleTags || []).map((t) => (
-                        <option key={t.tag} value={t.tag}>{t.tag} {t.required ? '*' : ''}</option>
-                      ))}
-                    </select>
+                  {/* Rules Tooltip */}
+                  {isSelected && subredditRules[name]?.submitText && (
+                    <div className="relative group">
+                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                      <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-popover text-popover-foreground text-xs rounded-lg border shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-64 max-h-40 overflow-y-auto">
+                        <div className="font-medium mb-1">Posting Rules:</div>
+                        <div className="whitespace-pre-wrap break-words">{subredditRules[name].submitText}</div>
+                      </div>
+                    </div>
+                  )}
+                  {/* Custom Title Suffix Input */}
+                  {isSelected && (
+                    <Input
+                      className="h-8 w-20 text-xs px-2"
+                      placeholder="Suffix"
+                      value={titleSuffixValue[name] || ''}
+                      onChange={(e) => handleTitleSuffixChange(name, e.target.value)}
+                      title="Custom title suffix (e.g., (f), 25F, [OC])"
+                    />
                   )}
                   {/* Flair Dropdown */}
                   {isSelected && (flairOptions[name] || []).length > 0 && (
@@ -470,19 +476,25 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
                 )}
                         </div>
                         <div className="flex gap-2 items-center">
-                          {/* Title Tags Dropdown */}
-                          {isSelected && (subredditRules[name]?.titleTags || []).length > 0 && (
-                            <select
-                              className="flex h-8 w-24 rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                              value={titleTagValue[name] || ''}
-                              onChange={(e) => handleTitleTagChange(name, e.target.value)}
-                              title="Title tag"
-                            >
-                              <option value="">Tag</option>
-                              {(subredditRules[name]?.titleTags || []).map((t) => (
-                                <option key={t.tag} value={t.tag}>{t.tag} {t.required ? '*' : ''}</option>
-                              ))}
-                            </select>
+                          {/* Rules Tooltip */}
+                          {isSelected && subredditRules[name]?.submitText && (
+                            <div className="relative group">
+                              <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                              <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-popover text-popover-foreground text-xs rounded-lg border shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-64 max-h-40 overflow-y-auto">
+                                <div className="font-medium mb-1">Posting Rules:</div>
+                                <div className="whitespace-pre-wrap break-words">{subredditRules[name].submitText}</div>
+                              </div>
+                            </div>
+                          )}
+                          {/* Custom Title Suffix Input */}
+                          {isSelected && (
+                            <Input
+                              className="h-8 w-20 text-xs px-2"
+                              placeholder="Suffix"
+                              value={titleSuffixValue[name] || ''}
+                              onChange={(e) => handleTitleSuffixChange(name, e.target.value)}
+                              title="Custom title suffix (e.g., (f), 25F, [OC])"
+                            />
                           )}
                           {/* Flair Dropdown */}
                           {isSelected && (flairOptions[name] || []).length > 0 && (

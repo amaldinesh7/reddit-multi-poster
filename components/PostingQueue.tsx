@@ -6,6 +6,7 @@ import { Send, Loader2, CheckCircle, XCircle, X, Info, ExternalLink } from 'luci
 interface Item {
   subreddit: string;
   flairId?: string;
+  titleSuffix?: string;
   kind: 'self' | 'link' | 'image' | 'video' | 'gallery';
   url?: string;
   text?: string;
@@ -61,6 +62,7 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
       formData.append('items', JSON.stringify(items.map(item => ({
         subreddit: item.subreddit,
         flairId: item.flairId,
+        titleSuffix: item.titleSuffix,
         kind: item.kind,
         url: item.url,
         text: item.text,

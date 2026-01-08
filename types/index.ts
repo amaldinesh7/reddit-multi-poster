@@ -13,7 +13,7 @@ export interface QueueItem {
   subreddit: string;
   title?: string;
   flairId?: string;
-  titleTag?: string; // Per-subreddit title tag (e.g., "(f)", "[OC]")
+  titleSuffix?: string; // Per-subreddit custom title suffix
   kind: 'self' | 'link' | 'image' | 'video' | 'gallery';
   text?: string;
   url?: string;
