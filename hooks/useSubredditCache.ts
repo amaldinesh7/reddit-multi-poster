@@ -8,7 +8,8 @@ import {
   removeCachedSubredditData,
   FlairOption,
   SubredditRules,
-  CachedSubredditData
+  CachedSubredditData,
+  TitleTag
 } from '../utils/subredditCache';
 
 interface UseSubredditCacheReturn {
@@ -88,14 +89,32 @@ export function useSubredditCache(): UseSubredditCacheReturn {
             requiresGenderTag: false,
             requiresContentTag: false,
             genderTags: [],
-            contentTags: []
+            contentTags: [],
+            submitText: ''
           }
         }))
       ]);
 
       const flairs: FlairOption[] = flairsResponse.data.flairs || [];
       const flairRequired: boolean = flairsResponse.data.required || false;
-      const rules: SubredditRules = rulesResponse.data;
+      let rules: SubredditRules = rulesResponse.data;
+
+      // Parse title tags from submitText if available
+      if (rules.submitText) {
+        try {
+          const tagsResponse = await axios.post('/api/parse-title-tags', {
+            submitText: rules.submitText,
+            subreddit: normalizedName
+          });
+          rules = {
+            ...rules,
+            titleTags: tagsResponse.data.titleTags || []
+          };
+        } catch (tagError) {
+          console.error('Failed to parse title tags:', tagError);
+          // Continue without title tags
+        }
+      }
 
       // Cache the data
       cacheSubredditData(normalizedName, flairs, flairRequired, rules);
@@ -105,7 +124,7 @@ export function useSubredditCache(): UseSubredditCacheReturn {
         flairRequired,
         rules,
         lastFetched: Date.now(),
-        version: 1
+        version: 2
       };
 
       setLoadingState(normalizedName, false);
@@ -127,7 +146,7 @@ export function useSubredditCache(): UseSubredditCacheReturn {
           contentTags: []
         },
         lastFetched: Date.now(),
-        version: 1
+        version: 2
       };
       
       throw new Error(errorMessage);

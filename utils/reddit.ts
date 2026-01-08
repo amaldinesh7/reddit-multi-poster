@@ -27,6 +27,7 @@ export interface SubredditRules {
   genderTags: string[];
   contentTags: string[];
   rules: string[];
+  submitText: string; // Raw text shown on submit page with title requirements
 }
 
 export const REDDIT_OAUTH_AUTHORIZE = 'https://www.reddit.com/api/v1/authorize';
@@ -266,11 +267,13 @@ export async function getSubredditRules(client: AxiosInstance, subreddit: string
     const rules = rulesResp.data?.rules || [];
     const description = aboutResp.data?.data?.description || '';
     const publicDescription = aboutResp.data?.data?.public_description || '';
+    const submitText = aboutResp.data?.data?.submit_text || '';
     
     // Combine all text to analyze
     const allText = [
       description,
       publicDescription,
+      submitText,
       ...rules.map((r: any) => `${r.short_name} ${r.description}`)
     ].join(' ').toLowerCase();
     
@@ -302,7 +305,8 @@ export async function getSubredditRules(client: AxiosInstance, subreddit: string
       requiresContentTag,
       genderTags,
       contentTags,
-      rules: rules.map((r: any) => r.short_name)
+      rules: rules.map((r: any) => r.short_name),
+      submitText: submitText // Include raw submit text for AI parsing
     };
   } catch (error) {
     // Fallback - assume no special requirements
@@ -311,7 +315,8 @@ export async function getSubredditRules(client: AxiosInstance, subreddit: string
       requiresContentTag: false,
       genderTags: [],
       contentTags: [],
-      rules: []
+      rules: [],
+      submitText: ''
     };
   }
 }

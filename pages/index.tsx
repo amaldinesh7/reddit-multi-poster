@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLoader } from '@/components/ui/loader';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Info, ChevronDown, User, Settings, LogOut } from 'lucide-react';
 
 import { QueueItem } from '@/types';
@@ -33,6 +34,8 @@ export default function Home() {
   const [mediaFiles, setMediaFiles] = React.useState<File[]>([]);
   const [mediaMode, setMediaMode] = React.useState<'file' | 'url'>('file');
   const [flairs, setFlairs] = React.useState<Record<string, string | undefined>>({});
+  const [titleTags, setTitleTags] = React.useState<Record<string, string | undefined>>({});
+  const [postToProfile, setPostToProfile] = React.useState(false);
   const [hasFlairErrors, setHasFlairErrors] = React.useState(false);
   const [missingFlairs, setMissingFlairs] = React.useState<string[]>([]);
   const [showValidationErrors, setShowValidationErrors] = React.useState(false);
@@ -71,9 +74,15 @@ export default function Home() {
   const items = React.useMemo(() => {
     const allItems: QueueItem[] = [];
     
+    // Build list of destinations (subreddits + optionally user profile)
+    const destinations = [...selectedSubs];
+    if (postToProfile && auth.me?.name) {
+      destinations.push(`u_${auth.me.name}`);
+    }
+    
     if (mediaFiles.length > 0) {
-      // File uploads - create one post per subreddit with all files
-      selectedSubs.forEach((sr) => {
+      // File uploads - create one post per destination with all files
+      destinations.forEach((sr) => {
         // Determine post type based on number of files and file type
         let kind: 'image' | 'video' | 'gallery';
         if (mediaFiles.length > 1) {
@@ -87,6 +96,7 @@ export default function Home() {
         allItems.push({
           subreddit: sr,
           flairId: flairs[sr],
+          titleTag: titleTags[sr],
           kind,
           files: mediaFiles, // Use files array for all cases
           url: undefined,
@@ -94,11 +104,12 @@ export default function Home() {
         });
       });
     } else if (mediaUrl) {
-      // URL post - single post to each subreddit
-      selectedSubs.forEach((sr) => {
+      // URL post - single post to each destination
+      destinations.forEach((sr) => {
         allItems.push({
           subreddit: sr,
           flairId: flairs[sr],
+          titleTag: titleTags[sr],
           kind: 'link',
           url: mediaUrl,
           file: undefined,
@@ -106,11 +117,12 @@ export default function Home() {
         });
       });
     } else {
-      // Text post - single post to each subreddit
-      selectedSubs.forEach((sr) => {
+      // Text post - single post to each destination
+      destinations.forEach((sr) => {
         allItems.push({
           subreddit: sr,
           flairId: flairs[sr],
+          titleTag: titleTags[sr],
           kind: 'self',
           url: undefined,
           file: undefined,
@@ -120,7 +132,7 @@ export default function Home() {
     }
     
     return allItems;
-  }, [selectedSubs, flairs, mediaUrl, mediaFiles, caption]);
+  }, [selectedSubs, flairs, titleTags, mediaUrl, mediaFiles, caption, postToProfile, auth.me?.name]);
 
   return (
     <>
@@ -301,15 +313,35 @@ export default function Home() {
           <CardHeader className="pb-4 px-6">
             <CardTitle className="text-lg font-medium">🎯 Communities & Flairs</CardTitle>
           </CardHeader>
-          <CardContent className="px-6 pb-6">
+          <CardContent className="px-6 pb-6 space-y-4">
             <SubredditFlairPicker
               selected={selectedSubs}
               onSelectedChange={setSelectedSubs}
               flairValue={flairs}
               onFlairChange={setFlairs}
+              titleTagValue={titleTags}
+              onTitleTagChange={setTitleTags}
               onValidationChange={handleValidationChange}
               showValidationErrors={showValidationErrors}
             />
+            
+            {/* Post to own profile option */}
+            {auth.authenticated && auth.me?.name && (
+              <div className="flex items-center gap-3 pt-3 border-t">
+                <Checkbox
+                  id="post-to-profile"
+                  checked={postToProfile}
+                  onCheckedChange={(checked) => setPostToProfile(checked === true)}
+                />
+                <label 
+                  htmlFor="post-to-profile" 
+                  className="text-sm cursor-pointer flex items-center gap-2"
+                >
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  Also post to my profile (u/{auth.me.name})
+                </label>
+              </div>
+            )}
           </CardContent>
         </Card>
 

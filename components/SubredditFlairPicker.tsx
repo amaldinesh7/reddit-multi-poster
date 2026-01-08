@@ -8,24 +8,27 @@ import { Button } from '@/components/ui/button';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { useSubreddits } from '../hooks/useSubreddits';
 import { useSubredditCache } from '../hooks/useSubredditCache';
+import { TitleTag } from '../utils/subredditCache';
 
 interface Props {
   selected: string[];
   onSelectedChange: (next: string[]) => void;
   flairValue: Record<string, string | undefined>;
   onFlairChange: (v: Record<string, string | undefined>) => void;
+  titleTagValue: Record<string, string | undefined>;
+  onTitleTagChange: (v: Record<string, string | undefined>) => void;
   onValidationChange?: (hasErrors: boolean, missingFlairs: string[]) => void;
   showValidationErrors?: boolean;
 }
 
-export default function SubredditFlairPicker({ selected, onSelectedChange, flairValue, onFlairChange, onValidationChange, showValidationErrors }: Props) {
+export default function SubredditFlairPicker({ selected, onSelectedChange, flairValue, onFlairChange, titleTagValue, onTitleTagChange, onValidationChange, showValidationErrors }: Props) {
   const { getSubredditsByCategory, getAllSubreddits, isLoaded } = useSubreddits();
   const { getCachedData, fetchAndCache, loading: cacheLoading } = useSubredditCache();
   
   const [query, setQuery] = React.useState('');
   const [flairOptions, setFlairOptions] = React.useState<Record<string, { id: string; text: string }[]>>({});
   const [flairRequired, setFlairRequired] = React.useState<Record<string, boolean>>({});
-  const [subredditRules, setSubredditRules] = React.useState<Record<string, { requiresGenderTag: boolean; requiresContentTag: boolean; genderTags: string[]; contentTags: string[] }>>({});
+  const [subredditRules, setSubredditRules] = React.useState<Record<string, { requiresGenderTag: boolean; requiresContentTag: boolean; genderTags: string[]; contentTags: string[]; titleTags?: TitleTag[] }>>({});
   const [isInitialLoad, setIsInitialLoad] = React.useState(true);
   const [expandedCategories, setExpandedCategories] = React.useState<string[]>([]);
   const [searchResults, setSearchResults] = React.useState<Array<{ name: string; title: string; description: string; subscribers: number; over18: boolean; icon: string; url: string }>>([]);
@@ -235,6 +238,10 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
     onFlairChange({ ...flairValue, [sr]: id || undefined });
   };
 
+  const handleTitleTagChange = (sr: string, tag: string) => {
+    onTitleTagChange({ ...titleTagValue, [sr]: tag || undefined });
+  };
+
   // Check if a subreddit has a missing required flair
   const hasMissingFlair = (subreddit: string) => {
     const isSelected = selected.includes(subreddit);
@@ -340,10 +347,25 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
                     </Badge>
                   )}
                 </div>
-                <div className="w-48">
+                <div className="flex gap-2 items-center">
+                  {/* Title Tags Dropdown */}
+                  {isSelected && (subredditRules[name]?.titleTags || []).length > 0 && (
+                    <select
+                      className="flex h-8 w-24 rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      value={titleTagValue[name] || ''}
+                      onChange={(e) => handleTitleTagChange(name, e.target.value)}
+                      title="Title tag"
+                    >
+                      <option value="">Tag</option>
+                      {(subredditRules[name]?.titleTags || []).map((t) => (
+                        <option key={t.tag} value={t.tag}>{t.tag} {t.required ? '*' : ''}</option>
+                      ))}
+                    </select>
+                  )}
+                  {/* Flair Dropdown */}
                   {isSelected && (flairOptions[name] || []).length > 0 && (
                     <select
-                      className={`flex h-8 w-full rounded-md border px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                      className={`flex h-8 w-32 rounded-md border px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                         hasError 
                           ? 'border-red-500 bg-red-50 text-red-700 focus-visible:ring-red-500' 
                           : 'border-input bg-background'
@@ -447,10 +469,25 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
                     </Badge>
                 )}
                         </div>
-                        <div className="w-48">
+                        <div className="flex gap-2 items-center">
+                          {/* Title Tags Dropdown */}
+                          {isSelected && (subredditRules[name]?.titleTags || []).length > 0 && (
+                            <select
+                              className="flex h-8 w-24 rounded-md border border-input bg-background px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              value={titleTagValue[name] || ''}
+                              onChange={(e) => handleTitleTagChange(name, e.target.value)}
+                              title="Title tag"
+                            >
+                              <option value="">Tag</option>
+                              {(subredditRules[name]?.titleTags || []).map((t) => (
+                                <option key={t.tag} value={t.tag}>{t.tag} {t.required ? '*' : ''}</option>
+                              ))}
+                            </select>
+                          )}
+                          {/* Flair Dropdown */}
                           {isSelected && (flairOptions[name] || []).length > 0 && (
                             <select
-                              className={`flex h-8 w-full rounded-md border px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                              className={`flex h-8 w-32 rounded-md border px-2 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                                 hasError 
                                   ? 'border-red-500 bg-red-50 text-red-700 focus-visible:ring-red-500' 
                                   : 'border-input bg-background'

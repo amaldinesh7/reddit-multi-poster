@@ -118,7 +118,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         subredditRules = undefined;
       }
       
-      const title = addSmartPrefixesToTitle(caption, item.subreddit, prefixes || {}, subredditRules);
+      // Build title: [titleTag] [prefixes] caption
+      let title = addSmartPrefixesToTitle(caption, item.subreddit, prefixes || {}, subredditRules);
+      // Prepend per-subreddit title tag if provided
+      if (item.titleTag) {
+        title = `${item.titleTag} ${title}`.trim();
+      }
       
       try {
         // Get files if uploaded for this item (support multiple files)

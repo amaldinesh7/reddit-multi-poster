@@ -3,11 +3,19 @@ export interface FlairOption {
   text: string;
 }
 
+export interface TitleTag {
+  tag: string;      // The actual tag text e.g., "(f)", "[OC]", "25F"
+  label: string;    // Human readable label e.g., "Female", "Original Content"
+  required: boolean;
+}
+
 export interface SubredditRules {
   requiresGenderTag: boolean;
   requiresContentTag: boolean;
   genderTags: string[];
   contentTags: string[];
+  submitText?: string;  // Raw submit text from Reddit
+  titleTags?: TitleTag[]; // AI-parsed title tags
 }
 
 export interface CachedSubredditData {
@@ -23,7 +31,7 @@ interface SubredditCache {
 }
 
 const CACHE_KEY = 'reddit-multi-poster-subreddit-cache';
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2; // Bumped for new titleTags field
 const CACHE_EXPIRY_HOURS = 24; // Cache expires after 24 hours
 
 // Get cache expiry time in milliseconds

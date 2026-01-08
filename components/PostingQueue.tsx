@@ -265,9 +265,11 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
                     entry.status === 'queued' ? 'bg-gray-400' : 'bg-gray-500'
                   }`} />
                   
-                  {/* Subreddit name */}
+                  {/* Subreddit/Profile name */}
                   <span className="font-medium text-foreground text-xs sm:text-sm truncate">
-                    r/{entry.subreddit}
+                    {entry.subreddit?.startsWith('u_') 
+                      ? `u/${entry.subreddit.substring(2)}` 
+                      : `r/${entry.subreddit}`}
                   </span>
                   
                   {/* Status badge */}
