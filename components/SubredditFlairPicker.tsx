@@ -1,7 +1,6 @@
 import React from 'react';
 import axios from 'axios';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,153 @@ import { AlertTriangle, RefreshCw, Info, ChevronDown, ChevronRight, Search } fro
 import { useSubreddits } from '../hooks/useSubreddits';
 import { useSubredditCache } from '../hooks/useSubredditCache';
 import { TitleTag } from '../utils/subredditCache';
+
+interface SubredditRowProps {
+  name: string;
+  hasError: boolean;
+  isSelected: boolean;
+  isLoading?: boolean;
+  flairRequired?: boolean;
+  flairOptions: { id: string; text: string }[];
+  subredditRules?: { requiresGenderTag: boolean; requiresContentTag: boolean; genderTags: string[]; contentTags: string[]; titleTags?: TitleTag[]; submitText?: string };
+  titleSuffix?: string;
+  flairValue?: string;
+  onToggle: (name: string) => void;
+  onFlairChange: (name: string, id: string) => void;
+  onTitleSuffixChange: (name: string, suffix: string) => void;
+}
+
+const SubredditRow = React.memo(({
+  name,
+  hasError,
+  isSelected,
+  isLoading,
+  flairRequired,
+  flairOptions,
+  subredditRules,
+  titleSuffix,
+  flairValue,
+  onToggle,
+  onFlairChange,
+  onTitleSuffixChange
+}: SubredditRowProps) => {
+  const checkboxId = `checkbox-${name}`;
+
+  return (
+    <div
+      className={`
+        flex items-center gap-3 px-3 sm:px-4 py-3 transition-colors cursor-pointer
+        ${hasError ? 'bg-red-500/20 border-l-2 border-red-500' : 'hover:bg-secondary'}
+      `}
+      onClick={(e) => {
+        // Prevent toggle if clicking on specific interactive controls
+        const target = e.target as HTMLElement;
+        if (target.closest('select') || target.closest('input') || target.closest('button') || target.closest('.group')) {
+          return;
+        }
+        onToggle(name);
+      }}
+    >
+      <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          id={checkboxId}
+          checked={isSelected}
+          onCheckedChange={() => onToggle(name)}
+        />
+      </div>
+
+      <div className="flex-1 min-w-0 flex items-center gap-2">
+        {hasError && (
+          <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+        )}
+        <span
+          className={`text-sm truncate select-none ${hasError ? 'text-red-400' : ''}`}
+        >
+          r/{name}
+        </span>
+
+        {/* Loading indicator */}
+        {isLoading && (
+          <div className="w-3 h-3 border-2 border-muted border-t-primary rounded-full animate-spin" />
+        )}
+
+        {/* Badges */}
+        <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+          {!isLoading && isSelected && flairRequired && (
+            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+              Required
+            </Badge>
+          )}
+          {!isLoading && isSelected && flairRequired === false && flairOptions.length > 0 && (
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+              Optional
+            </Badge>
+          )}
+          {!isLoading && isSelected && subredditRules?.requiresGenderTag && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              (f)/(c)
+            </Badge>
+          )}
+        </div>
+
+        {/* Mobile badges */}
+        <div className="flex sm:hidden items-center gap-1">
+          {!isLoading && isSelected && flairRequired && (
+            <span className="text-red-500 text-xs font-bold">*</span>
+          )}
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+        {/* Rules Tooltip */}
+        {isSelected && subredditRules?.submitText && (
+          <div className="relative group hidden sm:block">
+            <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
+            <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-popover text-popover-foreground text-xs rounded-lg border border-border shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-64 max-h-40 overflow-y-auto">
+              <div className="font-medium mb-1 text-foreground">Posting Rules:</div>
+              <div className="whitespace-pre-wrap break-words text-muted-foreground">{subredditRules.submitText}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Custom Title Suffix Input */}
+        {isSelected && (
+          <Input
+            className="h-8 w-16 sm:w-20 text-xs px-2"
+            placeholder="Suffix"
+            value={titleSuffix || ''}
+            onChange={(e) => onTitleSuffixChange(name, e.target.value)}
+            title="Custom title suffix (e.g., (f), 25F, [OC])"
+          />
+        )}
+
+        {/* Flair Dropdown */}
+        {isSelected && flairOptions.length > 0 && (
+          <select
+            className={`
+              h-8 w-24 sm:w-32 rounded-md border px-2 text-xs bg-input text-foreground
+              focus:outline-none focus:ring-2 focus:ring-primary
+              ${hasError
+                ? 'border-red-500 bg-red-500/10 text-red-400'
+                : 'border-border'
+              }
+            `}
+            value={flairValue || ''}
+            onChange={(e) => onFlairChange(name, e.target.value)}
+          >
+            <option value="">{flairRequired ? 'Select flair...' : 'No flair'}</option>
+            {flairOptions.map((f) => (
+              <option key={f.id} value={f.id}>{f.text || '—'}</option>
+            ))}
+          </select>
+        )}
+      </div>
+    </div>
+  );
+});
+
+SubredditRow.displayName = 'SubredditRow';
 
 interface Props {
   selected: string[];
@@ -24,7 +170,7 @@ interface Props {
 export default function SubredditFlairPicker({ selected, onSelectedChange, flairValue, onFlairChange, titleSuffixValue, onTitleSuffixChange, onValidationChange, showValidationErrors }: Props) {
   const { getSubredditsByCategory, getAllSubreddits, isLoaded } = useSubreddits();
   const { getCachedData, fetchAndCache, loading: cacheLoading } = useSubredditCache();
-  
+
   const [query, setQuery] = React.useState('');
   const [flairOptions, setFlairOptions] = React.useState<Record<string, { id: string; text: string }[]>>({});
   const [flairRequired, setFlairRequired] = React.useState<Record<string, boolean>>({});
@@ -35,15 +181,15 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
   const [isSearching, setIsSearching] = React.useState(false);
   const [searchError, setSearchError] = React.useState<string | null>(null);
   const [isReloading, setIsReloading] = React.useState(false);
-  
+
   const allSubreddits = getAllSubreddits();
   const categorizedSubreddits = getSubredditsByCategory();
-  
+
   const filtered = React.useMemo(() => {
     if (!query.trim()) return allSubreddits;
     return allSubreddits.filter(o => o.toLowerCase().includes(query.toLowerCase()));
   }, [allSubreddits, query]);
-  
+
   // Search Reddit API when user types (debounced)
   React.useEffect(() => {
     if (!query.trim() || query.length < 2) {
@@ -51,7 +197,7 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
       setSearchError(null);
       return;
     }
-    
+
     const timeoutId = setTimeout(async () => {
       setIsSearching(true);
       setSearchError(null);
@@ -68,7 +214,7 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
         setIsSearching(false);
       }
     }, 500);
-    
+
     return () => clearTimeout(timeoutId);
   }, [query]);
 
@@ -79,8 +225,8 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
   };
 
   const toggleCategory = (categoryName: string) => {
-    setExpandedCategories(prev => 
-      prev.includes(categoryName) 
+    setExpandedCategories(prev =>
+      prev.includes(categoryName)
         ? prev.filter(c => c !== categoryName)
         : [...prev, categoryName]
     );
@@ -96,14 +242,14 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
   // Reload flair data for selected subreddits
   const reloadSelectedData = async () => {
     if (selected.length === 0 || isReloading) return;
-    
+
     setIsReloading(true);
-    
+
     try {
       const batchSize = 3;
       for (let i = 0; i < selected.length; i += batchSize) {
         const batch = selected.slice(i, i + batchSize);
-        
+
         const batchPromises = batch.map(async (subreddit) => {
           try {
             const cached = await fetchAndCache(subreddit, true);
@@ -144,7 +290,7 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
   // Load cached data and fetch missing data
   React.useEffect(() => {
     if (!isLoaded) return;
-    
+
     const loadFlairData = async () => {
       const newFlairOptions: Record<string, { id: string; text: string }[]> = {};
       const newFlairRequired: Record<string, boolean> = {};
@@ -164,7 +310,7 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
       setSubredditRules(prev => ({ ...prev, ...newSubredditRules }));
 
       const needsFetching = allSubreddits.filter(name => !getCachedData(name));
-      
+
       if (needsFetching.length === 0) {
         setIsInitialLoad(false);
         return;
@@ -173,15 +319,15 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
       const batchSize = 3;
       for (let i = 0; i < needsFetching.length; i += batchSize) {
         const batch = needsFetching.slice(i, i + batchSize);
-        
+
         const batchPromises = batch.map(async (subreddit) => {
           try {
             const cached = await fetchAndCache(subreddit);
             return { subreddit, cached };
           } catch (error) {
             console.error(`Failed to fetch data for ${subreddit}:`, error);
-            return { 
-              subreddit, 
+            return {
+              subreddit,
               cached: {
                 flairs: [],
                 flairRequired: false,
@@ -252,115 +398,7 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
     }
   }, [selected, flairRequired, flairValue, onValidationChange]);
 
-  // Subreddit Row Component
-  const SubredditRow = ({ name, hasError }: { name: string; hasError: boolean }) => {
-    const isSelected = selected.includes(name);
-    const isLoading = cacheLoading[name.toLowerCase()];
-    
-    return (
-      <div 
-        className={`
-          flex items-center gap-3 px-3 sm:px-4 py-3 transition-colors
-          ${hasError ? 'bg-red-500/20 border-l-2 border-red-500' : 'hover:bg-secondary'}
-        `}
-      >
-        <Checkbox
-          checked={isSelected}
-          onCheckedChange={() => toggle(name)}
-          className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-        />
-        
-        <div className="flex-1 min-w-0 flex items-center gap-2">
-          {hasError && (
-            <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
-          )}
-          <Label 
-            className={`text-sm truncate cursor-pointer ${hasError ? 'text-red-400' : ''}`} 
-            onClick={() => toggle(name)}
-          >
-            r/{name}
-          </Label>
-          
-          {/* Loading indicator */}
-          {isLoading && (
-            <div className="w-3 h-3 border-2 border-muted border-t-primary rounded-full animate-spin" />
-          )}
-          
-          {/* Badges */}
-          <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
-            {!isLoading && isSelected && flairRequired[name] && (
-              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                Required
-              </Badge>
-            )}
-            {!isLoading && isSelected && flairRequired[name] === false && (flairOptions[name]?.length || 0) > 0 && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                Optional
-              </Badge>
-            )}
-            {!isLoading && isSelected && subredditRules[name]?.requiresGenderTag && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                (f)/(c)
-              </Badge>
-            )}
-          </div>
-          
-          {/* Mobile badges */}
-          <div className="flex sm:hidden items-center gap-1">
-            {!isLoading && isSelected && flairRequired[name] && (
-              <span className="text-red-500 text-xs font-bold">*</span>
-            )}
-          </div>
-        </div>
-        
-        {/* Controls */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Rules Tooltip */}
-          {isSelected && subredditRules[name]?.submitText && (
-            <div className="relative group hidden sm:block">
-              <Info className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
-              <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-popover text-popover-foreground text-xs rounded-lg border border-border shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 w-64 max-h-40 overflow-y-auto">
-                <div className="font-medium mb-1 text-foreground">Posting Rules:</div>
-                <div className="whitespace-pre-wrap break-words text-muted-foreground">{subredditRules[name].submitText}</div>
-              </div>
-            </div>
-          )}
-          
-          {/* Custom Title Suffix Input */}
-          {isSelected && (
-            <Input
-              className="h-8 w-16 sm:w-20 text-xs px-2"
-              placeholder="Suffix"
-              value={titleSuffixValue[name] || ''}
-              onChange={(e) => handleTitleSuffixChange(name, e.target.value)}
-              title="Custom title suffix (e.g., (f), 25F, [OC])"
-            />
-          )}
-          
-          {/* Flair Dropdown */}
-          {isSelected && (flairOptions[name] || []).length > 0 && (
-            <select
-              className={`
-                h-8 w-24 sm:w-32 rounded-md border px-2 text-xs bg-input text-foreground
-                focus:outline-none focus:ring-2 focus:ring-primary
-                ${hasError 
-                  ? 'border-red-500 bg-red-500/10 text-red-400' 
-                  : 'border-border'
-                }
-              `}
-              value={flairValue[name] || ''}
-              onChange={(e) => handleFlairChange(name, e.target.value)}
-            >
-              <option value="">{flairRequired[name] ? 'Select flair...' : 'No flair'}</option>
-              {(flairOptions[name] || []).map((f) => (
-                <option key={f.id} value={f.id}>{f.text || '—'}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      </div>
-    );
-  };
+  const allSubreddits_ = allSubreddits; // to pass to rows if needed
 
   return (
     <div className="space-y-4">
@@ -378,12 +416,12 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
             <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-muted border-t-primary rounded-full animate-spin" />
           )}
         </div>
-        
+
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground whitespace-nowrap tabular-nums">
             {selected.length}<span className="text-muted-foreground/50">/30</span>
           </span>
-          
+
           {selected.length > 0 && (
             <Button
               variant="ghost"
@@ -415,7 +453,23 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
         <div className="rounded-md border border-border overflow-hidden divide-y divide-border">
           {filtered.map((name) => {
             const hasError = !!(showValidationErrors && hasMissingFlair(name));
-            return <SubredditRow key={name} name={name} hasError={hasError} />;
+            return (
+              <SubredditRow
+                key={name}
+                name={name}
+                hasError={hasError}
+                isSelected={selected.includes(name)}
+                isLoading={cacheLoading[name.toLowerCase()]}
+                flairRequired={flairRequired[name]}
+                flairOptions={flairOptions[name] || []}
+                subredditRules={subredditRules[name]}
+                titleSuffix={titleSuffixValue[name]}
+                flairValue={flairValue[name]}
+                onToggle={toggle}
+                onFlairChange={handleFlairChange}
+                onTitleSuffixChange={handleTitleSuffixChange}
+              />
+            );
           })}
           {filtered.length === 0 && (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">
@@ -430,7 +484,7 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
             const hasErrors = categoryHasErrors(subreddits);
             const isExpanded = expandedCategories.includes(categoryName);
             const selectedCount = subreddits.filter(s => selected.includes(s)).length;
-            
+
             return (
               <div key={categoryName} className="border-b border-border last:border-b-0">
                 <button
@@ -456,7 +510,7 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
                       </span>
                     )}
                   </div>
-                  
+
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -467,19 +521,35 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
                     Select All
                   </button>
                 </button>
-                
+
                 {isExpanded && (
                   <div className="divide-y divide-border">
                     {subreddits.map((name) => {
                       const hasError = !!(showValidationErrors && hasMissingFlair(name));
-                      return <SubredditRow key={name} name={name} hasError={hasError} />;
+                      return (
+                        <SubredditRow
+                          key={name}
+                          name={name}
+                          hasError={hasError}
+                          isSelected={selected.includes(name)}
+                          isLoading={cacheLoading[name.toLowerCase()]}
+                          flairRequired={flairRequired[name]}
+                          flairOptions={flairOptions[name] || []}
+                          subredditRules={subredditRules[name]}
+                          titleSuffix={titleSuffixValue[name]}
+                          flairValue={flairValue[name]}
+                          onToggle={toggle}
+                          onFlairChange={handleFlairChange}
+                          onTitleSuffixChange={handleTitleSuffixChange}
+                        />
+                      );
                     })}
                   </div>
                 )}
               </div>
             );
           })}
-          
+
           {categorizedSubreddits.length === 0 && (
             <div className="px-4 py-8 text-center text-muted-foreground">
               <p className="text-sm">No subreddits configured.</p>
@@ -488,13 +558,13 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
           )}
         </div>
       )}
-      
+
       {/* Selected Tags */}
       {selected.length > 0 && (
         <div className="flex flex-wrap gap-2 pt-2">
           {selected.slice(0, 8).map((s) => (
-            <span 
-              key={s} 
+            <span
+              key={s}
               className="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-md bg-primary text-white cursor-pointer hover:bg-primary/80 transition-colors"
               onClick={() => toggle(s)}
             >
