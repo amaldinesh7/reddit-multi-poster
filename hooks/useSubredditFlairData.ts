@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSubreddits } from './useSubreddits';
 import { useSubredditCache } from './useSubredditCache';
 import { TitleTag } from '../utils/subredditCache';
@@ -35,8 +35,8 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isReloading, setIsReloading] = useState(false);
 
-  const allSubreddits = getAllSubreddits();
-  const categorizedSubreddits = getSubredditsByCategory();
+  const allSubreddits = useMemo(() => getAllSubreddits(), [getAllSubreddits]);
+  const categorizedSubreddits = useMemo(() => getSubredditsByCategory(), [getSubredditsByCategory]);
 
   // Store refs for functions that change frequently
   const getCachedDataRef = useRef(getCachedData);
