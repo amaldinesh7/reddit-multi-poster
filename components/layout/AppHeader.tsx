@@ -28,16 +28,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         <div className="flex h-14 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-white font-bold text-sm">R</span>
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+              <img src="/logo.png" alt="Reddit Multi Poster" className="w-full h-full object-contain" />
             </div>
             <span className="font-semibold">Multi Poster</span>
           </div>
-          
+
           {/* User Menu */}
           <DropdownMenu
             trigger={
-              <button 
+              <button
                 className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-secondary transition-colors cursor-pointer"
                 aria-label="User menu"
               >

@@ -63,14 +63,27 @@ export async function exchangeCodeForToken(code: string): Promise<RedditToken> {
   form.set('grant_type', 'authorization_code');
   form.set('code', code);
   form.set('redirect_uri', process.env.REDDIT_REDIRECT_URI!);
-  const { data } = await axios.post<RedditToken>(REDDIT_OAUTH_TOKEN, form, {
-    headers: {
-      'Authorization': `Basic ${basic}`,
-      'User-Agent': process.env.REDDIT_USER_AGENT!,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-  });
-  return data;
+  
+  try {
+    const { data } = await axios.post<RedditToken>(REDDIT_OAUTH_TOKEN, form, {
+      headers: {
+        'Authorization': `Basic ${basic}`,
+        'User-Agent': process.env.REDDIT_USER_AGENT!,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+    return data;
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      console.error('Reddit Token Exchange Error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+      throw new Error(`Reddit Token Exchange Failed: ${error.response?.data?.error || error.message}`);
+    }
+    throw error;
+  }
 }
 
 export async function refreshAccessToken(refresh_token: string): Promise<RedditToken> {

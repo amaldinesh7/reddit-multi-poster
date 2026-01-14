@@ -17,7 +17,6 @@ A web application that lets you post the same content to multiple Reddit communi
 3. **Choose Subreddits**: Select which communities you want to post to (the app comes pre-configured with popular subreddits)
 4. **Write Your Post**: Add a title/caption for your post (100 character limit)
 5. **Configure Options**: 
-   - Add prefixes like [F], [C], or [OC] to your title
    - Set custom flairs for specific subreddits
 6. **Start Posting**: Hit "Start Posting" and watch as your content gets submitted to each subreddit automatically
 
