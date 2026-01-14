@@ -4,7 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, RefreshCw, Info, ChevronDown, ChevronRight, Search } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Info, ChevronDown, ChevronRight, Search, Settings } from 'lucide-react';
 import { useSubreddits } from '../hooks/useSubreddits';
 import { useSubredditCache } from '../hooks/useSubredditCache';
 import { TitleTag } from '../utils/subredditCache';
@@ -182,8 +182,8 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
   const [searchError, setSearchError] = React.useState<string | null>(null);
   const [isReloading, setIsReloading] = React.useState(false);
 
-  const allSubreddits = getAllSubreddits();
-  const categorizedSubreddits = getSubredditsByCategory();
+  const allSubreddits = React.useMemo(() => getAllSubreddits(), [getAllSubreddits]);
+  const categorizedSubreddits = React.useMemo(() => getSubredditsByCategory(), [getSubredditsByCategory]);
 
   const filtered = React.useMemo(() => {
     if (!query.trim()) return allSubreddits;
@@ -287,6 +287,18 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
     }
   };
 
+  // Store refs for functions that change frequently
+  const getCachedDataRef = React.useRef(getCachedData);
+  const fetchAndCacheRef = React.useRef(fetchAndCache);
+  
+  React.useEffect(() => {
+    getCachedDataRef.current = getCachedData;
+    fetchAndCacheRef.current = fetchAndCache;
+  });
+
+  // Track which subreddits we've already started loading to prevent duplicate fetches
+  const loadingStartedRef = React.useRef<Set<string>>(new Set());
+
   // Load cached data and fetch missing data
   React.useEffect(() => {
     if (!isLoaded) return;
@@ -297,7 +309,7 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
       const newSubredditRules: Record<string, { requiresGenderTag: boolean; requiresContentTag: boolean; genderTags: string[]; contentTags: string[] }> = {};
 
       for (const subreddit of allSubreddits) {
-        const cached = getCachedData(subreddit);
+        const cached = getCachedDataRef.current(subreddit);
         if (cached) {
           newFlairOptions[subreddit] = cached.flairs;
           newFlairRequired[subreddit] = cached.flairRequired;
@@ -305,16 +317,23 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
         }
       }
 
-      setFlairOptions(prev => ({ ...prev, ...newFlairOptions }));
-      setFlairRequired(prev => ({ ...prev, ...newFlairRequired }));
-      setSubredditRules(prev => ({ ...prev, ...newSubredditRules }));
+      if (Object.keys(newFlairOptions).length > 0) {
+        setFlairOptions(prev => ({ ...prev, ...newFlairOptions }));
+        setFlairRequired(prev => ({ ...prev, ...newFlairRequired }));
+        setSubredditRules(prev => ({ ...prev, ...newSubredditRules }));
+      }
 
-      const needsFetching = allSubreddits.filter(name => !getCachedData(name));
+      const needsFetching = allSubreddits.filter(name => 
+        !getCachedDataRef.current(name) && !loadingStartedRef.current.has(name.toLowerCase())
+      );
 
       if (needsFetching.length === 0) {
         setIsInitialLoad(false);
         return;
       }
+
+      // Mark all as loading started
+      needsFetching.forEach(name => loadingStartedRef.current.add(name.toLowerCase()));
 
       const batchSize = 3;
       for (let i = 0; i < needsFetching.length; i += batchSize) {
@@ -322,7 +341,7 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
 
         const batchPromises = batch.map(async (subreddit) => {
           try {
-            const cached = await fetchAndCache(subreddit);
+            const cached = await fetchAndCacheRef.current(subreddit);
             return { subreddit, cached };
           } catch (error) {
             console.error(`Failed to fetch data for ${subreddit}:`, error);
@@ -369,7 +388,7 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
     };
 
     loadFlairData();
-  }, [isLoaded, allSubreddits, getCachedData, fetchAndCache]);
+  }, [isLoaded, allSubreddits]);
 
   const handleFlairChange = (sr: string, id: string) => {
     onFlairChange({ ...flairValue, [sr]: id || undefined });
@@ -390,9 +409,14 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
     return showValidationErrors && subreddits.some(subreddit => hasMissingFlair(subreddit));
   };
 
+  // Run validation whenever dependencies change
   React.useEffect(() => {
     if (onValidationChange) {
-      const missingFlairs = selected.filter(subreddit => hasMissingFlair(subreddit));
+      const missingFlairs = selected.filter(subreddit => {
+        const isRequired = flairRequired[subreddit];
+        const hasFlairSelected = flairValue[subreddit];
+        return isRequired && !hasFlairSelected;
+      });
       const hasErrors = missingFlairs.length > 0;
       onValidationChange(hasErrors, missingFlairs);
     }
@@ -553,32 +577,18 @@ export default function SubredditFlairPicker({ selected, onSelectedChange, flair
           {categorizedSubreddits.length === 0 && (
             <div className="px-4 py-8 text-center text-muted-foreground">
               <p className="text-sm">No subreddits configured.</p>
-              <p className="text-xs mt-1">Go to Settings to add subreddits.</p>
+              <a 
+                href="/settings" 
+                className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 text-sm font-medium rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
+              >
+                <Settings className="h-4 w-4" />
+                Go to Settings
+              </a>
             </div>
           )}
         </div>
       )}
 
-      {/* Selected Tags */}
-      {selected.length > 0 && (
-        <div className="flex flex-wrap gap-2 pt-2">
-          {selected.slice(0, 8).map((s) => (
-            <span
-              key={s}
-              className="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-md bg-primary text-white cursor-pointer hover:bg-primary/80 transition-colors"
-              onClick={() => toggle(s)}
-            >
-              r/{s}
-              <span className="opacity-70 hover:opacity-100">×</span>
-            </span>
-          ))}
-          {selected.length > 8 && (
-            <span className="px-2 py-1 text-xs rounded-md bg-secondary text-muted-foreground">
-              +{selected.length - 8} more
-            </span>
-          )}
-        </div>
-      )}
     </div>
   );
 }

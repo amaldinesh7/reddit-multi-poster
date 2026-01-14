@@ -1,23 +1,49 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import axios from 'axios';
-import {
-  getCachedSubredditData,
-  cacheSubredditData,
-  isSubredditDataCached,
-  getCachedSubredditsData,
-  removeCachedSubredditData,
-  FlairOption,
-  SubredditRules,
-  CachedSubredditData,
-  TitleTag
-} from '../utils/subredditCache';
+
+export interface FlairOption {
+  id: string;
+  text: string;
+  text_editable?: boolean;
+}
+
+export interface TitleTag {
+  tag: string;
+  label: string;
+  required: boolean;
+}
+
+export interface SubredditRules {
+  requiresGenderTag: boolean;
+  requiresContentTag: boolean;
+  genderTags: string[];
+  contentTags: string[];
+}
+
+export interface CachedSubredditData {
+  subreddit_name: string;
+  flairs: FlairOption[];
+  flair_required: boolean;
+  flairRequired: boolean; // Alias for backwards compatibility
+  rules: SubredditRules;
+  title_tags: TitleTag[];
+  cached: boolean;
+  stale?: boolean;
+  cached_at: string;
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+  };
+}
 
 interface UseSubredditCacheReturn {
   // Get cached data for a subreddit
   getCachedData: (subredditName: string) => CachedSubredditData | null;
-  
-  // Check if subreddit is cached
-  isCached: (subredditName: string) => boolean;
   
   // Fetch and cache data for a subreddit
   fetchAndCache: (subredditName: string, force?: boolean) => Promise<CachedSubredditData>;
@@ -25,133 +51,84 @@ interface UseSubredditCacheReturn {
   // Fetch and cache data for multiple subreddits
   fetchAndCacheMultiple: (subredditNames: string[], force?: boolean) => Promise<Record<string, CachedSubredditData>>;
   
-  // Remove cached data for a subreddit
-  removeFromCache: (subredditName: string) => void;
-  
   // Get loading states
   loading: Record<string, boolean>;
   
   // Get error states
   errors: Record<string, string>;
+  
+  // Local cache of fetched data (for quick access within session)
+  cache: Record<string, CachedSubredditData>;
 }
 
 export function useSubredditCache(): UseSubredditCacheReturn {
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [cache, setCache] = useState<Record<string, CachedSubredditData>>({});
 
   const setLoadingState = useCallback((subreddit: string, isLoading: boolean) => {
-    setLoading(prev => ({ ...prev, [subreddit]: isLoading }));
+    setLoading(prev => ({ ...prev, [subreddit.toLowerCase()]: isLoading }));
   }, []);
 
   const setErrorState = useCallback((subreddit: string, error: string | null) => {
     setErrors(prev => {
+      const key = subreddit.toLowerCase();
       if (error) {
-        return { ...prev, [subreddit]: error };
+        return { ...prev, [key]: error };
       } else {
-        const { [subreddit]: _, ...rest } = prev;
+        const { [key]: _, ...rest } = prev;
         return rest;
       }
     });
   }, []);
 
   const getCachedData = useCallback((subredditName: string): CachedSubredditData | null => {
-    return getCachedSubredditData(subredditName);
-  }, []);
+    return cache[subredditName.toLowerCase()] || null;
+  }, [cache]);
 
-  const isCached = useCallback((subredditName: string): boolean => {
-    return isSubredditDataCached(subredditName);
-  }, []);
-
-  const fetchAndCache = useCallback(async (subredditName: string, force: boolean = false): Promise<CachedSubredditData> => {
+  const fetchAndCache = useCallback(async (
+    subredditName: string, 
+    force: boolean = false
+  ): Promise<CachedSubredditData> => {
     const normalizedName = subredditName.toLowerCase();
     
-    // If not forcing and data is cached, return cached data
-    if (!force && isSubredditDataCached(normalizedName)) {
-      const cached = getCachedSubredditData(normalizedName);
-      if (cached) {
-        return cached;
-      }
+    // Return from local cache if available and not forcing
+    if (!force && cache[normalizedName]) {
+      return cache[normalizedName];
     }
 
     setLoadingState(normalizedName, true);
     setErrorState(normalizedName, null);
 
     try {
-      // Fetch both flairs and rules in parallel
-      const [flairsResponse, rulesResponse] = await Promise.all([
-        axios.get('/api/flairs', { 
-          params: { subreddit: normalizedName, force: force ? '1' : undefined } 
-        }),
-        axios.get('/api/subreddit-rules', { 
-          params: { subreddit: normalizedName, force: force ? '1' : undefined } 
-        }).catch(() => ({
-          data: {
-            requiresGenderTag: false,
-            requiresContentTag: false,
-            genderTags: [],
-            contentTags: [],
-            submitText: ''
-          }
-        }))
-      ]);
+      const { data: response } = await axios.get<ApiResponse<CachedSubredditData>>(
+        `/api/cache/subreddit/${normalizedName}`,
+        { params: force ? { force: 'true' } : {} }
+      );
 
-      const flairs: FlairOption[] = flairsResponse.data.flairs || [];
-      const flairRequired: boolean = flairsResponse.data.required || false;
-      let rules: SubredditRules = rulesResponse.data;
-
-      // Parse title tags from submitText if available
-      if (rules.submitText) {
-        try {
-          const tagsResponse = await axios.post('/api/parse-title-tags', {
-            submitText: rules.submitText,
-            subreddit: normalizedName
-          });
-          rules = {
-            ...rules,
-            titleTags: tagsResponse.data.titleTags || []
-          };
-        } catch (tagError) {
-          console.error('Failed to parse title tags:', tagError);
-          // Continue without title tags
-        }
+      if (!response.success || !response.data) {
+        throw new Error(response.error?.message || 'Failed to fetch subreddit data');
       }
 
-      // Cache the data
-      cacheSubredditData(normalizedName, flairs, flairRequired, rules);
-
+      // Normalize data to include both formats for backwards compatibility
       const cachedData: CachedSubredditData = {
-        flairs,
-        flairRequired,
-        rules,
-        lastFetched: Date.now(),
-        version: 2
+        ...response.data,
+        flairRequired: response.data.flair_required, // Add alias
       };
 
+      // Store in local cache
+      setCache(prev => ({ ...prev, [normalizedName]: cachedData }));
       setLoadingState(normalizedName, false);
-      return cachedData;
 
+      return cachedData;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch subreddit data';
       setErrorState(normalizedName, errorMessage);
       setLoadingState(normalizedName, false);
       
-      // Return empty data structure on error
-      const emptyData: CachedSubredditData = {
-        flairs: [],
-        flairRequired: false,
-        rules: {
-          requiresGenderTag: false,
-          requiresContentTag: false,
-          genderTags: [],
-          contentTags: []
-        },
-        lastFetched: Date.now(),
-        version: 2
-      };
-      
       throw new Error(errorMessage);
     }
-  }, [setLoadingState, setErrorState]);
+  }, [cache, setLoadingState, setErrorState]);
 
   const fetchAndCacheMultiple = useCallback(async (
     subredditNames: string[], 
@@ -161,21 +138,25 @@ export function useSubredditCache(): UseSubredditCacheReturn {
     
     // Get already cached data if not forcing
     if (!force) {
-      const cached = getCachedSubredditsData(subredditNames);
-      Object.assign(results, cached);
+      for (const name of subredditNames) {
+        const normalizedName = name.toLowerCase();
+        if (cache[normalizedName]) {
+          results[name] = cache[normalizedName];
+        }
+      }
     }
     
     // Find subreddits that need to be fetched
     const needsFetching = subredditNames.filter(name => 
-      force || !isSubredditDataCached(name.toLowerCase())
+      force || !cache[name.toLowerCase()]
     );
     
     if (needsFetching.length === 0) {
       return results;
     }
     
-    // Fetch missing data in parallel (with some rate limiting)
-    const batchSize = 3; // Limit concurrent requests to avoid rate limits
+    // Fetch missing data in parallel with rate limiting
+    const batchSize = 3;
     const batches: string[][] = [];
     
     for (let i = 0; i < needsFetching.length; i += batchSize) {
@@ -201,26 +182,21 @@ export function useSubredditCache(): UseSubredditCacheReturn {
         }
       });
       
-      // Small delay between batches to be respectful to Reddit's API
+      // Small delay between batches
       if (batches.indexOf(batch) < batches.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
     }
     
     return results;
-  }, [fetchAndCache]);
-
-  const removeFromCache = useCallback((subredditName: string) => {
-    removeCachedSubredditData(subredditName);
-  }, []);
+  }, [cache, fetchAndCache]);
 
   return {
     getCachedData,
-    isCached,
     fetchAndCache,
     fetchAndCacheMultiple,
-    removeFromCache,
     loading,
-    errors
+    errors,
+    cache,
   };
-} 
+}

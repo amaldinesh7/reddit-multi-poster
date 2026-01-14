@@ -1,11 +1,11 @@
 import React from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import axios from 'axios';
 import MediaUpload from '../components/MediaUpload';
 import SubredditFlairPicker from '../components/SubredditFlairPicker';
 import PostComposer from '../components/PostComposer';
 import PostingQueue from '../components/PostingQueue';
-import { Button } from '@/components/ui/button';
 import { AppLoader } from '@/components/ui/loader';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -17,15 +17,18 @@ import { QueueItem } from '@/types';
 
 interface MeResponse {
   authenticated: boolean;
-  me?: { name: string; icon_img?: string };
+  me?: { name: string; icon_img?: string; id?: string };
   subs?: string[];
+  userId?: string;
 }
 
 export default function Home() {
+  const router = useRouter();
   const [auth, setAuth] = React.useState<MeResponse>({ authenticated: false });
   const [loading, setLoading] = React.useState(true);
   const [selectedSubs, setSelectedSubs] = React.useState<string[]>([]);
   const [caption, setCaption] = React.useState('');
+  const [body, setBody] = React.useState('');
   const [prefixes, setPrefixes] = React.useState({ f: false, c: false });
   const [mediaUrl, setMediaUrl] = React.useState<string>('');
   const [mediaFiles, setMediaFiles] = React.useState<File[]>([]);
@@ -49,17 +52,26 @@ export default function Home() {
       try {
         const { data } = await axios.get<MeResponse>('/api/me');
         setAuth(data);
+        
+        // Redirect to login if not authenticated
+        if (!data.authenticated) {
+          router.replace('/login');
+          return;
+        }
       } catch {
         setAuth({ authenticated: false });
+        router.replace('/login');
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, []);
+  }, [router]);
 
-  const login = () => { window.location.href = '/api/auth/login'; };
-  const logout = async () => { await axios.post('/api/auth/logout'); location.reload(); };
+  const logout = async () => { 
+    await axios.post('/api/auth/logout'); 
+    router.replace('/login');
+  };
 
   const items = React.useMemo(() => {
     const allItems: QueueItem[] = [];
@@ -85,7 +97,7 @@ export default function Home() {
           kind,
           files: mediaFiles,
           url: undefined,
-          text: undefined,
+          text: body || undefined, // Include body for image/video posts too (as comment potentially)
         });
       });
     } else if (mediaUrl) {
@@ -97,7 +109,7 @@ export default function Home() {
           kind: 'link',
           url: mediaUrl,
           file: undefined,
-          text: undefined,
+          text: body || undefined,
         });
       });
     } else {
@@ -109,13 +121,18 @@ export default function Home() {
           kind: 'self',
           url: undefined,
           file: undefined,
-          text: caption,
+          text: body || caption, // Use body if provided, otherwise caption
         });
       });
     }
     
     return allItems;
-  }, [selectedSubs, flairs, titleSuffixes, mediaUrl, mediaFiles, caption, postToProfile, auth.me?.name]);
+  }, [selectedSubs, flairs, titleSuffixes, mediaUrl, mediaFiles, caption, body, postToProfile, auth.me?.name]);
+
+  // Handler to unselect successful subreddits
+  const handleUnselectSuccessItems = (subreddits: string[]) => {
+    setSelectedSubs(prev => prev.filter(s => !subreddits.includes(s)));
+  };
 
   return (
     <>
@@ -142,41 +159,35 @@ export default function Home() {
                 </div>
                 
                 {/* User Menu */}
-                {auth.authenticated ? (
-                  <DropdownMenu
-                    trigger={
-                      <button className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-secondary transition-colors">
-                        <Avatar
-                          src={auth.me?.icon_img}
-                          alt={auth.me?.name || 'User'}
-                          fallback={auth.me?.name || 'U'}
-                          size="sm"
-                        />
-                        <span className="text-sm font-medium hidden sm:inline">
-                          u/{auth.me?.name}
-                        </span>
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                    }
-                  >
-                    <DropdownMenuItem onClick={() => window.open(`https://reddit.com/user/${auth.me?.name}`, '_blank')}>
-                      <User className="h-4 w-4 mr-2" />
-                      View Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => window.location.href = '/settings'}>
-                      <Settings className="h-4 w-4 mr-2" />
-                      Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={logout} className="text-red-400">
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Logout
-                    </DropdownMenuItem>
-                  </DropdownMenu>
-                ) : (
-                  <Button onClick={login}>
-                    Login with Reddit
-                  </Button>
-                )}
+                <DropdownMenu
+                  trigger={
+                    <button className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-secondary transition-colors">
+                      <Avatar
+                        src={auth.me?.icon_img}
+                        alt={auth.me?.name || 'User'}
+                        fallback={auth.me?.name || 'U'}
+                        size="sm"
+                      />
+                      <span className="text-sm font-medium hidden sm:inline">
+                        u/{auth.me?.name}
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  }
+                >
+                  <DropdownMenuItem onClick={() => window.open(`https://reddit.com/user/${auth.me?.name}`, '_blank')}>
+                    <User className="h-4 w-4 mr-2" />
+                    View Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => window.location.href = '/settings'}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={logout} className="text-red-400">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenu>
               </div>
             </div>
           </header>
@@ -219,6 +230,23 @@ export default function Home() {
                 </CardContent>
               </Card>
 
+              {/* Title Section */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle>Title</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <PostComposer 
+                    value={caption} 
+                    onChange={setCaption}
+                    body={body}
+                    onBodyChange={setBody}
+                    prefixes={prefixes} 
+                    onPrefixesChange={setPrefixes} 
+                  />
+                </CardContent>
+              </Card>
+
               {/* Communities Section */}
               <Card>
                 <CardHeader className="pb-3">
@@ -252,21 +280,6 @@ export default function Home() {
                 </CardContent>
               </Card>
 
-              {/* Title Section */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle>Title</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <PostComposer 
-                    value={caption} 
-                    onChange={setCaption} 
-                    prefixes={prefixes} 
-                    onPrefixesChange={setPrefixes} 
-                  />
-                </CardContent>
-              </Card>
-
               {/* Queue Section */}
               <Card>
                 <CardHeader className="pb-3">
@@ -286,6 +299,7 @@ export default function Home() {
                     prefixes={prefixes}
                     hasFlairErrors={hasFlairErrors}
                     onPostAttempt={handlePostAttempt}
+                    onUnselectSuccessItems={handleUnselectSuccessItems}
                   />
                 </CardContent>
               </Card>

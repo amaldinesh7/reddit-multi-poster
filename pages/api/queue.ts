@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { redditClient, refreshAccessToken, submitPost, addSmartPrefixesToTitle, getSubredditRules } from '../../utils/reddit';
+import { applyRateLimit, postingRateLimit } from '../../lib/rateLimit';
 import formidable from 'formidable';
 import fs from 'fs';
 
@@ -7,6 +8,11 @@ export const config = { api: { bodyParser: false } }; // Disable default body pa
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
+  
+  // Apply rate limiting for posting
+  if (!applyRateLimit(req, res, postingRateLimit)) {
+    return; // Response already sent by applyRateLimit
+  }
   
   // Check if it's a file upload (multipart) or JSON
   const contentType = req.headers['content-type'] || '';
@@ -209,9 +215,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         write({ index: i, status: 'error', subreddit: item.subreddit, error: msg });
       }
 
-      // Add random delay between posts (1-10 seconds)
+      // Add random delay between posts (1-4 seconds)
       if (i < items.length - 1) { // Don't delay after the last post
-        const delayMs = Math.floor(Math.random() * (10000 - 1000 + 1)) + 1000; // 1s to 10s
+        const delayMs = Math.floor(Math.random() * (4000 - 1000 + 1)) + 1000; // 1s to 4s
         const delaySeconds = Math.round(delayMs / 1000);
         write({ index: i, status: 'waiting', subreddit: '', delaySeconds });
         await new Promise(resolve => setTimeout(resolve, delayMs));

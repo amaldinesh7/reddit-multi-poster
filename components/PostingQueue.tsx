@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Send, Loader2, CheckCircle, XCircle, X, ExternalLink, Clock } from 'lucide-react';
+import { Tooltip } from '@/components/ui/tooltip';
+import { Send, Loader2, CheckCircle, XCircle, X, ExternalLink, Clock, AlertCircle, RotateCcw } from 'lucide-react';
 
 interface Item {
   subreddit: string;
@@ -19,14 +20,25 @@ interface Props {
   prefixes: { f?: boolean; c?: boolean };
   hasFlairErrors?: boolean;
   onPostAttempt?: () => void;
+  onUnselectSuccessItems?: (subreddits: string[]) => void;
 }
 
-export default function PostingQueue({ items, caption, prefixes, hasFlairErrors, onPostAttempt }: Props) {
-  const [logs, setLogs] = React.useState<Record<string, unknown>[]>([]);
+interface LogEntry {
+  index: number;
+  status: 'queued' | 'posting' | 'success' | 'error' | 'waiting';
+  subreddit: string;
+  url?: string;
+  error?: string;
+  waitingSeconds?: number;
+}
+
+export default function PostingQueue({ items, caption, prefixes, hasFlairErrors, onPostAttempt, onUnselectSuccessItems }: Props) {
+  const [logs, setLogs] = React.useState<LogEntry[]>([]);
   const [running, setRunning] = React.useState(false);
   const [completed, setCompleted] = React.useState(false);
   const [cancelled, setCancelled] = React.useState(false);
   const [abortController, setAbortController] = React.useState<AbortController | null>(null);
+  const [currentWait, setCurrentWait] = React.useState<{ index: number; seconds: number; remaining: number } | null>(null);
 
   const start = async () => {
     if (onPostAttempt) {
@@ -45,6 +57,7 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
     setCompleted(false);
     setCancelled(false);
     setLogs([]);
+    setCurrentWait(null);
     
     const controller = new AbortController();
     setAbortController(controller);
@@ -112,7 +125,7 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
           const json = JSON.parse(line);
           
           if (json.status === 'started') {
-            const initialLogs = items.map((item, index) => ({
+            const initialLogs: LogEntry[] = items.map((item, index) => ({
               index,
               status: 'queued',
               subreddit: item.subreddit,
@@ -121,12 +134,14 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
             }));
             setLogs(initialLogs);
           } else if (json.status === 'waiting') {
-            setLogs((prev) => [...prev, json]);
+            // Update the current wait indicator with countdown
+            setCurrentWait({ index: json.index, seconds: json.delaySeconds, remaining: json.delaySeconds });
           } else if (typeof json.index === 'number' && json.subreddit) {
+            // Clear wait when we get a new status for an item
+            setCurrentWait(null);
             setLogs((prev) => prev.map(log => {
-              const logEntry = log as any;
-              if (logEntry.index === json.index && logEntry.subreddit === json.subreddit) {
-                return { ...logEntry, ...json };
+              if (log.index === json.index && log.subreddit === json.subreddit) {
+                return { ...log, ...json };
               }
               return log;
             }));
@@ -139,14 +154,16 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
     
     setRunning(false);
     setAbortController(null);
+    setCurrentWait(null);
     
-    const finalLogs = logs.filter(log => (log as any).subreddit);
-    const successCount = finalLogs.filter(log => (log as any).status === 'success').length;
-    const totalCount = items.length;
-    
-    if (!cancelled && successCount === totalCount) {
-      setCompleted(true);
-    }
+    // Check completion after logs are updated
+    setLogs(currentLogs => {
+      const successCount = currentLogs.filter(log => log.status === 'success').length;
+      if (!cancelled && successCount === items.length) {
+        setCompleted(true);
+      }
+      return currentLogs;
+    });
   };
   
   const cancel = () => {
@@ -155,21 +172,52 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
       setCancelled(true);
       setRunning(false);
       setAbortController(null);
+      setCurrentWait(null);
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  // Countdown timer effect
+  React.useEffect(() => {
+    if (!currentWait || currentWait.remaining <= 0) return;
+    
+    const timer = setInterval(() => {
+      setCurrentWait(prev => {
+        if (!prev || prev.remaining <= 1) return prev;
+        return { ...prev, remaining: prev.remaining - 1 };
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [currentWait?.index, currentWait?.seconds]);
+
+  // Handler to unselect successful items
+  const handleUnselectSuccess = () => {
+    const successSubreddits = logs
+      .filter(l => l.status === 'success')
+      .map(l => l.subreddit);
+    if (onUnselectSuccessItems && successSubreddits.length > 0) {
+      onUnselectSuccessItems(successSubreddits);
+    }
+  };
+
+  const getStatusIcon = (status: string, isWaiting: boolean) => {
+    if (isWaiting) {
+      return <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />;
+    }
     switch (status) {
       case 'success':
         return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'error':
-        return <XCircle className="w-4 h-4 text-red-500" />;
+        return <AlertCircle className="w-4 h-4 text-red-500" />;
       case 'posting':
         return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
       default:
-        return <Clock className="w-4 h-4 text-muted-foreground" />;
+        return <Clock className="w-4 h-4 text-muted-foreground/50" />;
     }
   };
+
+  const successCount = logs.filter(l => l.status === 'success').length;
+  const errorCount = logs.filter(l => l.status === 'error').length;
 
   return (
     <div className="space-y-4">
@@ -225,13 +273,29 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
           <div className="px-3 py-2 border-b border-border bg-secondary">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Progress</span>
-              <span className="text-xs text-muted-foreground">
-                {logs.filter(l => (l as any).status === 'success').length}/{items.length}
-              </span>
+              <div className="flex items-center gap-2 text-xs">
+                {/* Unselect success button */}
+                {successCount > 0 && onUnselectSuccessItems && !running && (
+                  <button
+                    onClick={handleUnselectSuccess}
+                    className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                    title="Unselect successful posts"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    <span>Unselect Successful Posts ({successCount})</span>
+                  </button>
+                )}
+                {errorCount > 0 && (
+                  <span className="text-red-500">{errorCount} failed</span>
+                )}
+                <span className="text-muted-foreground tabular-nums">
+                  {successCount}/{items.length}
+                </span>
+              </div>
             </div>
           </div>
           
-          <div className="max-h-48 overflow-y-auto divide-y divide-border">
+          <div className="max-h-64 overflow-y-auto">
             {logs.length === 0 && running && (
               <div className="text-center py-6">
                 <Loader2 className="w-5 h-5 mx-auto mb-2 animate-spin text-primary" />
@@ -239,38 +303,44 @@ export default function PostingQueue({ items, caption, prefixes, hasFlairErrors,
               </div>
             )}
             
-            {logs.map((l, idx) => {
-              const entry = l as { subreddit?: string; status?: string; url?: string; error?: string; delaySeconds?: number };
-              
-              if (entry.status === 'waiting') {
-                return (
-                  <div key={`waiting-${idx}`} className="px-3 py-2 text-xs text-muted-foreground">
-                    Waiting {entry.delaySeconds}s...
-                  </div>
-                );
-              }
-              
-              if (!entry.subreddit) return null;
+            {logs.map((entry) => {
+              const isWaiting = currentWait?.index === entry.index && entry.status === 'success';
+              const isError = entry.status === 'error';
               
               return (
-                <div key={idx} className="px-3 py-2 flex items-center gap-2">
-                  {getStatusIcon(entry.status || '')}
-                  <span className="text-sm flex-1 truncate">
+                <div 
+                  key={entry.index} 
+                  className="px-3 py-2 flex items-center gap-2 border-b border-border/50 last:border-b-0"
+                >
+                  {getStatusIcon(entry.status, isWaiting)}
+                  
+                  <span className={`text-sm flex-1 truncate ${isError ? 'text-red-400' : ''}`}>
                     {entry.subreddit?.startsWith('u_') 
                       ? `u/${entry.subreddit.substring(2)}` 
                       : `r/${entry.subreddit}`}
                   </span>
-                  {entry.error && (
-                    <span className="text-xs text-red-500 truncate max-w-[150px]" title={entry.error}>
-                      {entry.error}
+                  
+                  {/* Waiting indicator - countdown timer */}
+                  {isWaiting && currentWait && (
+                    <span className="text-xs text-amber-500 tabular-nums">
+                      next in {currentWait.remaining}s
                     </span>
                   )}
+                  
+                  {/* Error - icon with tooltip */}
+                  {isError && entry.error && (
+                    <Tooltip content={entry.error} side="left">
+                      <AlertCircle className="h-4 w-4 text-red-500 cursor-pointer" />
+                    </Tooltip>
+                  )}
+                  
+                  {/* Success link */}
                   {entry.url && (
                     <a 
                       href={entry.url.startsWith('//') ? `https:${entry.url}` : entry.url} 
                       target="_blank" 
                       rel="noreferrer"
-                      className="text-green-500 hover:text-green-400"
+                      className="text-green-500 hover:text-green-400 p-1 rounded hover:bg-green-500/10 transition-colors"
                     >
                       <ExternalLink className="h-4 w-4" />
                     </a>

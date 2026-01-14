@@ -5,9 +5,10 @@ import axios from 'axios';
 import { Card, CardContent, CardHeader } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { ArrowLeft, Plus, Trash2, GripVertical, Edit2, X, Loader2, Search, Users, ExternalLink, Download, FolderPlus, Sparkles } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, GripVertical, Edit2, X, Loader2, Search, Users, ExternalLink, FolderPlus, Sparkles, RefreshCw } from 'lucide-react';
+import { useSubreddits, Category, SubredditItem } from '../hooks/useSubreddits';
 import { useSubredditCache } from '../hooks/useSubredditCache';
-import { VERIFIED_INDIAN_NSFW_SUBREDDITS, mergeWithExistingSubreddits } from '../constants/subreddits-verified';
+import { useAuth } from '../hooks/useAuth';
 
 import {
   DndContext,
@@ -18,7 +19,9 @@ import {
   useSensors,
   DragEndEvent,
   DragStartEvent,
+  DragOverEvent,
   DragOverlay,
+  useDroppable,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -31,26 +34,28 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-interface SubredditItem {
-  id: string;
-  name: string;
-  displayName?: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  subreddits: SubredditItem[];
-  collapsed?: boolean;
-}
-
-interface SubredditData {
-  categories: Category[];
-}
-
-const DEFAULT_DATA: SubredditData = {
-  categories: []
-};
+// Create context for data sharing
+const SettingsContext = React.createContext<{
+  addSubreddit: (categoryId: string, name: string) => Promise<SubredditItem | null>;
+  updateCategory: (categoryId: string, updates: { name?: string; collapsed?: boolean }) => Promise<boolean>;
+  deleteCategory: (categoryId: string) => Promise<boolean>;
+  updateSubreddit: (subredditId: string, updates: { subreddit_name?: string; category_id?: string }) => Promise<boolean>;
+  deleteSubreddit: (subredditId: string) => Promise<boolean>;
+  fetchAndCache: (name: string) => Promise<unknown>;
+  loading: Record<string, boolean>;
+  errors: Record<string, string>;
+  dragOverCategoryId: string | null;
+}>({
+  addSubreddit: async () => null,
+  updateCategory: async () => false,
+  deleteCategory: async () => false,
+  updateSubreddit: async () => false,
+  deleteSubreddit: async () => false,
+  fetchAndCache: async () => {},
+  loading: {},
+  errors: {},
+  dragOverCategoryId: null,
+});
 
 // Sortable Category Component
 function SortableCategory({ category, isActive }: { category: Category; isActive: boolean }) {
@@ -97,7 +102,14 @@ function SortableSubreddit({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: subreddit.id });
+  } = useSortable({ 
+    id: subreddit.id,
+    data: { 
+      type: 'subreddit', 
+      subreddit, 
+      categoryId: category.id 
+    }
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -124,67 +136,65 @@ function CategoryCard({
   isDragging 
 }: { 
   category: Category; 
-  dragHandleProps: any;
+  dragHandleProps: Record<string, unknown>;
   isDragging: boolean;
 }) {
-  const [editingCategory, setEditingCategory] = React.useState<string | null>(null);
+  const [editingCategory, setEditingCategory] = React.useState(false);
   const [newSubredditName, setNewSubredditName] = React.useState('');
-  const { fetchAndCache } = useSubredditCache();
-  const { data, setData } = React.useContext(SettingsContext);
+  const [isAddingSubreddit, setIsAddingSubreddit] = React.useState(false);
+  const { addSubreddit, updateCategory, deleteCategory, fetchAndCache, dragOverCategoryId } = React.useContext(SettingsContext);
+  
+  // Make category a drop zone for subreddits
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
+    id: `category-drop-${category.id}`,
+    data: { type: 'category', categoryId: category.id }
+  });
+  
+  const isDropTarget = dragOverCategoryId === category.id || isOver;
 
-  const updateCategoryName = (categoryId: string, newName: string) => {
-    setData(prev => ({
-      categories: prev.categories.map(cat =>
-        cat.id === categoryId ? { ...cat, name: newName } : cat
-      )
-    }));
-    setEditingCategory(null);
+  const handleUpdateCategoryName = async (newName: string) => {
+    if (newName.trim() && newName !== category.name) {
+      await updateCategory(category.id, { name: newName.trim() });
+    }
+    setEditingCategory(false);
   };
 
-  const deleteCategory = (categoryId: string) => {
-    setData(prev => ({
-      categories: prev.categories.filter(cat => cat.id !== categoryId)
-    }));
-  };
-
-  const toggleCategory = (categoryId: string) => {
-    setData(prev => ({
-      categories: prev.categories.map(cat =>
-        cat.id === categoryId ? { ...cat, collapsed: !cat.collapsed } : cat
-      )
-    }));
-  };
-
-  const addSubreddit = async (categoryId: string) => {
-    if (!newSubredditName.trim()) return;
-    
-    const subredditName = newSubredditName.trim().replace(/^r\//, '');
-    const newSubreddit: SubredditItem = {
-      id: Date.now().toString(),
-      name: subredditName
-    };
-    
-    setData(prev => ({
-      categories: prev.categories.map(cat =>
-        cat.id === categoryId
-          ? { ...cat, subreddits: [...cat.subreddits, newSubreddit] }
-          : cat
-      )
-    }));
-    setNewSubredditName('');
-    
-    try {
-      await fetchAndCache(subredditName);
-      console.log(`Cached data for r/${subredditName}`);
-    } catch (error) {
-      console.error(`Failed to cache data for r/${subredditName}:`, error);
+  const handleDeleteCategory = async () => {
+    if (confirm(`Delete category "${category.name}" and all its subreddits?`)) {
+      await deleteCategory(category.id);
     }
   };
 
+  const handleToggleCategory = async () => {
+    await updateCategory(category.id, { collapsed: !category.collapsed });
+  };
+
+  const handleAddSubreddit = async () => {
+    if (!newSubredditName.trim()) return;
+    
+    setIsAddingSubreddit(true);
+    const subredditName = newSubredditName.trim().replace(/^r\//, '');
+    
+    const result = await addSubreddit(category.id, subredditName);
+    if (result) {
+      setNewSubredditName('');
+      // Pre-fetch cache for the new subreddit
+      try {
+        await fetchAndCache(subredditName);
+      } catch (error) {
+        console.error(`Failed to cache data for r/${subredditName}:`, error);
+      }
+    }
+    setIsAddingSubreddit(false);
+  };
+
   return (
-    <Card className={`glass-card rounded-xl overflow-hidden transition-all duration-200 ${
-      isDragging ? 'opacity-50 ring-2 ring-primary/50' : ''
-    }`}>
+    <Card 
+      ref={setDroppableRef}
+      className={`glass-card rounded-xl overflow-hidden transition-all duration-200 ${
+        isDragging ? 'opacity-50 ring-2 ring-primary/50' : ''
+      } ${isDropTarget ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+    >
       <CardHeader className="p-4 bg-secondary/20 border-b border-border/30">
         <div className="flex items-center gap-3">
           <div 
@@ -194,23 +204,23 @@ function CategoryCard({
             <GripVertical className="w-4 h-4 text-muted-foreground" />
           </div>
           
-          {editingCategory === category.id ? (
+          {editingCategory ? (
             <div className="flex items-center gap-2 flex-1">
               <Input
                 defaultValue={category.name}
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
-                    updateCategoryName(category.id, (e.target as HTMLInputElement).value);
+                    handleUpdateCategoryName((e.target as HTMLInputElement).value);
                   }
                 }}
-                onBlur={(e) => updateCategoryName(category.id, e.target.value)}
+                onBlur={(e) => handleUpdateCategoryName(e.target.value)}
                 autoFocus
                 className="h-8 bg-secondary/50 border-border/50"
               />
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setEditingCategory(null)}
+                onClick={() => setEditingCategory(false)}
                 className="h-8 w-8 p-0"
               >
                 <X className="w-4 h-4" />
@@ -220,18 +230,18 @@ function CategoryCard({
             <>
               <h3
                 className="font-medium flex-1 cursor-pointer hover:text-primary transition-colors"
-                onClick={() => toggleCategory(category.id)}
+                onClick={handleToggleCategory}
               >
                 {category.name}
                 <span className="text-muted-foreground ml-2 text-sm">
-                  ({category.subreddits.length})
+                  ({category.user_subreddits?.length || 0})
                 </span>
               </h3>
               <div className="flex items-center gap-1">
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => setEditingCategory(category.id)}
+                  onClick={() => setEditingCategory(true)}
                   className="h-8 w-8 p-0 hover:bg-secondary"
                 >
                   <Edit2 className="w-4 h-4" />
@@ -239,7 +249,7 @@ function CategoryCard({
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => deleteCategory(category.id)}
+                  onClick={handleDeleteCategory}
                   className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -258,26 +268,31 @@ function CategoryCard({
               placeholder="Add subreddit..."
               value={newSubredditName}
               onChange={(e) => setNewSubredditName(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && addSubreddit(category.id)}
+              onKeyPress={(e) => e.key === 'Enter' && handleAddSubreddit()}
               className="h-9 bg-secondary/30 border-border/50"
+              disabled={isAddingSubreddit}
             />
             <Button
               size="sm"
-              onClick={() => addSubreddit(category.id)}
-              disabled={!newSubredditName.trim()}
+              onClick={handleAddSubreddit}
+              disabled={!newSubredditName.trim() || isAddingSubreddit}
               className="h-9 px-3"
             >
-              <Plus className="w-4 h-4" />
+              {isAddingSubreddit ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4" />
+              )}
             </Button>
           </div>
 
           {/* Subreddits List */}
           <SortableContext 
-            items={category.subreddits.map(s => s.id)}
+            items={category.user_subreddits?.map(s => s.id) || []}
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-2">
-              {category.subreddits.map((subreddit) => (
+              {category.user_subreddits?.map((subreddit) => (
                 <SortableSubreddit
                   key={subreddit.id}
                   subreddit={subreddit}
@@ -286,10 +301,14 @@ function CategoryCard({
                 />
               ))}
               
-              {category.subreddits.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-4">
-                  No subreddits yet. Add one above.
-                </p>
+              {(!category.user_subreddits || category.user_subreddits.length === 0) && (
+                <div className={`text-center py-6 border-2 border-dashed rounded-lg transition-colors ${
+                  isDropTarget ? 'border-primary bg-primary/5' : 'border-border/30'
+                }`}>
+                  <p className="text-xs text-muted-foreground">
+                    {isDropTarget ? 'Drop here to move' : 'No subreddits yet. Add one above or drag here.'}
+                  </p>
+                </div>
               )}
             </div>
           </SortableContext>
@@ -308,42 +327,25 @@ function SubredditItemComponent({
 }: { 
   subreddit: SubredditItem; 
   category: Category; 
-  dragHandleProps: any;
+  dragHandleProps: Record<string, unknown>;
   isDragging: boolean;
 }) {
-  const [editingSubreddit, setEditingSubreddit] = React.useState<string | null>(null);
-  const { loading, errors, removeFromCache } = useSubredditCache();
-  const { setData } = React.useContext(SettingsContext);
+  const [editingSubreddit, setEditingSubreddit] = React.useState(false);
+  const { updateSubreddit, deleteSubreddit, loading, errors } = React.useContext(SettingsContext);
 
-  const updateSubredditName = (categoryId: string, subredditId: string, newName: string) => {
-    setData(prev => ({
-      categories: prev.categories.map(cat =>
-        cat.id === categoryId
-          ? {
-              ...cat,
-              subreddits: cat.subreddits.map(sub =>
-                sub.id === subredditId ? { ...sub, name: newName.replace(/^r\//, '') } : sub
-              )
-            }
-          : cat
-      )
-    }));
-    setEditingSubreddit(null);
+  const handleUpdateSubredditName = async (newName: string) => {
+    if (newName.trim() && newName !== subreddit.subreddit_name) {
+      await updateSubreddit(subreddit.id, { subreddit_name: newName.trim() });
+    }
+    setEditingSubreddit(false);
   };
 
-  const deleteSubreddit = (categoryId: string, subredditId: string) => {
-    setData(prev => ({
-      categories: prev.categories.map(cat =>
-        cat.id === categoryId
-          ? { ...cat, subreddits: cat.subreddits.filter(sub => sub.id !== subredditId) }
-          : cat
-      )
-    }));
-    removeFromCache(subreddit.name);
+  const handleDeleteSubreddit = async () => {
+    await deleteSubreddit(subreddit.id);
   };
 
-  const isLoading = loading[subreddit.name.toLowerCase()];
-  const error = errors[subreddit.name.toLowerCase()];
+  const isLoading = loading[subreddit.subreddit_name.toLowerCase()];
+  const error = errors[subreddit.subreddit_name.toLowerCase()];
 
   return (
     <div className={`
@@ -355,24 +357,24 @@ function SubredditItemComponent({
         <GripVertical className="w-3 h-3 text-muted-foreground" />
       </div>
       
-      {editingSubreddit === subreddit.id ? (
+      {editingSubreddit ? (
         <div className="flex items-center gap-2 flex-1">
           <span className="text-xs text-muted-foreground">r/</span>
           <Input
-            defaultValue={subreddit.name}
+            defaultValue={subreddit.subreddit_name}
             onKeyPress={(e) => {
               if (e.key === 'Enter') {
-                updateSubredditName(category.id, subreddit.id, (e.target as HTMLInputElement).value);
+                handleUpdateSubredditName((e.target as HTMLInputElement).value);
               }
             }}
-            onBlur={(e) => updateSubredditName(category.id, subreddit.id, e.target.value)}
+            onBlur={(e) => handleUpdateSubredditName(e.target.value)}
             autoFocus
             className="h-7 text-xs bg-secondary/50 border-border/50"
           />
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => setEditingSubreddit(null)}
+            onClick={() => setEditingSubreddit(false)}
             className="h-7 w-7 p-0"
           >
             <X className="w-3 h-3" />
@@ -381,7 +383,7 @@ function SubredditItemComponent({
       ) : (
         <>
           <div className="flex items-center gap-2 flex-1">
-            <span className="text-sm">r/{subreddit.name}</span>
+            <span className="text-sm">r/{subreddit.subreddit_name}</span>
             {isLoading && (
               <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
             )}
@@ -392,7 +394,7 @@ function SubredditItemComponent({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => setEditingSubreddit(subreddit.id)}
+            onClick={() => setEditingSubreddit(true)}
             className="h-7 w-7 p-0 hover:bg-secondary"
           >
             <Edit2 className="w-3 h-3" />
@@ -400,7 +402,7 @@ function SubredditItemComponent({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => deleteSubreddit(category.id, subreddit.id)}
+            onClick={handleDeleteSubreddit}
             className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
           >
             <Trash2 className="w-3 h-3" />
@@ -411,28 +413,46 @@ function SubredditItemComponent({
   );
 }
 
-// Create context for data sharing
-const SettingsContext = React.createContext<{
-  data: SubredditData;
-  setData: React.Dispatch<React.SetStateAction<SubredditData>>;
-}>({
-  data: DEFAULT_DATA,
-  setData: () => {},
-});
-
 export default function Settings() {
   const router = useRouter();
-  const [data, setData] = React.useState<SubredditData>(DEFAULT_DATA);
-  const [isLoaded, setIsLoaded] = React.useState(false);
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { 
+    data, 
+    isLoaded, 
+    isLoading,
+    refresh,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    addSubreddit,
+    updateSubreddit,
+    deleteSubreddit,
+    reorderCategories,
+    reorderSubreddits,
+  } = useSubreddits();
+  const { fetchAndCache, loading: cacheLoading, errors: cacheErrors } = useSubredditCache();
+  
   const [activeId, setActiveId] = React.useState<string | null>(null);
+  const [activeDragData, setActiveDragData] = React.useState<{ type: string; subreddit?: SubredditItem; categoryId?: string } | null>(null);
+  const [dragOverCategoryId, setDragOverCategoryId] = React.useState<string | null>(null);
   
   // Search functionality
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [searchResults, setSearchResults] = React.useState<any[]>([]);
+  const [searchResults, setSearchResults] = React.useState<Array<{
+    name: string;
+    subscribers: number;
+    over18: boolean;
+    url: string;
+  }>>([]);
   const [isSearching, setIsSearching] = React.useState(false);
   const [showSearchResults, setShowSearchResults] = React.useState(false);
-  
-  const { fetchAndCache } = useSubredditCache();
+
+  // Redirect to login if not authenticated
+  React.useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   // DnD Kit sensors
   const sensors = useSensors(
@@ -446,28 +466,7 @@ export default function Settings() {
     })
   );
 
-  // Load data from localStorage
-  React.useEffect(() => {
-    const stored = localStorage.getItem('reddit-multi-poster-subreddits');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setData(parsed);
-      } catch (e) {
-        console.error('Failed to parse stored subreddit data:', e);
-      }
-    }
-    setIsLoaded(true);
-  }, []);
-
-  // Save data to localStorage
-  React.useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('reddit-multi-poster-subreddits', JSON.stringify(data));
-    }
-  }, [data, isLoaded]);
-
-  const addCategory = () => {
+  const handleAddCategory = async () => {
     const categoryNames = ['General', 'Entertainment', 'Technology', 'Sports', 'News', 'Lifestyle', 'Gaming', 'Science', 'Art', 'Music'];
     const existingNames = data.categories.map(cat => cat.name.toLowerCase());
     const availableNames = categoryNames.filter(name => !existingNames.includes(name.toLowerCase()));
@@ -476,68 +475,100 @@ export default function Settings() {
       ? availableNames[0] 
       : `Category ${data.categories.length + 1}`;
     
-    const newCategory: Category = {
-      id: Date.now().toString(),
-      name: categoryName,
-      subreddits: []
-    };
-    
-    setData(prev => ({
-      categories: [...prev.categories, newCategory]
-    }));
-  };
-
-  const loadVerifiedSubreddits = () => {
-    const mergedData = mergeWithExistingSubreddits(data, VERIFIED_INDIAN_NSFW_SUBREDDITS);
-    setData(mergedData);
-    alert('Successfully loaded verified subreddits!');
+    await createCategory(categoryName);
   };
 
   // Handle drag
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
+    setActiveDragData(event.active.data.current as typeof activeDragData);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event;
+    
+    if (!over) {
+      setDragOverCategoryId(null);
+      return;
+    }
+
+    // Check if we're over a category drop zone
+    const overId = over.id as string;
+    if (overId.startsWith('category-drop-')) {
+      const categoryId = overId.replace('category-drop-', '');
+      setDragOverCategoryId(categoryId);
+    } else {
+      // Check if we're over a subreddit in a different category
+      const overData = over.data.current;
+      if (overData?.type === 'subreddit' && overData?.categoryId) {
+        setDragOverCategoryId(overData.categoryId);
+      } else {
+        setDragOverCategoryId(null);
+      }
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
+    setActiveDragData(null);
+    setDragOverCategoryId(null);
 
-    if (!over || active.id === over.id) return;
+    if (!over) return;
 
+    const activeData = active.data.current;
+    const overId = over.id as string;
+
+    // Handle category reordering
     const activeCategory = data.categories.find(cat => cat.id === active.id);
-    const activeSubreddit = data.categories.find(cat => 
-      cat.subreddits.some(sub => sub.id === active.id)
-    )?.subreddits.find(sub => sub.id === active.id);
-
     if (activeCategory) {
       const overCategory = data.categories.find(cat => cat.id === over.id);
-      if (overCategory) {
-        setData(prev => {
-          const oldIndex = prev.categories.findIndex(cat => cat.id === active.id);
-          const newIndex = prev.categories.findIndex(cat => cat.id === over.id);
-          return { categories: arrayMove(prev.categories, oldIndex, newIndex) };
-        });
+      if (overCategory && active.id !== over.id) {
+        const oldIndex = data.categories.findIndex(cat => cat.id === active.id);
+        const newIndex = data.categories.findIndex(cat => cat.id === over.id);
+        const newOrder = arrayMove(data.categories, oldIndex, newIndex);
+        const items = newOrder.map((cat, idx) => ({ id: cat.id, position: idx }));
+        await reorderCategories(items);
       }
-    } else if (activeSubreddit) {
-      const sourceCategoryId = data.categories.find(cat => 
-        cat.subreddits.some(sub => sub.id === active.id)
-      )?.id;
-      
-      const targetCategoryId = data.categories.find(cat => 
-        cat.subreddits.some(sub => sub.id === over.id)
-      )?.id;
+      return;
+    }
 
-      if (sourceCategoryId && targetCategoryId && sourceCategoryId === targetCategoryId) {
-        setData(prev => ({
-          categories: prev.categories.map(cat => {
-            if (cat.id === sourceCategoryId) {
-              const oldIndex = cat.subreddits.findIndex(sub => sub.id === active.id);
-              const newIndex = cat.subreddits.findIndex(sub => sub.id === over.id);
-              return { ...cat, subreddits: arrayMove(cat.subreddits, oldIndex, newIndex) };
-            }
-            return cat;
-          })
-        }));
+    // Handle subreddit drag
+    if (activeData?.type === 'subreddit') {
+      const sourceCategoryId = activeData.categoryId;
+      let targetCategoryId: string | null = null;
+      let targetSubredditId: string | null = null;
+
+      // Check if dropped on a category drop zone
+      if (overId.startsWith('category-drop-')) {
+        targetCategoryId = overId.replace('category-drop-', '');
+      } else {
+        // Check if dropped on another subreddit
+        const overData = over.data.current;
+        if (overData?.type === 'subreddit') {
+          targetCategoryId = overData.categoryId;
+          targetSubredditId = over.id as string;
+        }
+      }
+
+      if (!targetCategoryId) return;
+
+      // Moving to a different category
+      if (sourceCategoryId !== targetCategoryId) {
+        // Update subreddit's category - local state is updated in the hook
+        await updateSubreddit(active.id as string, { category_id: targetCategoryId });
+      } else if (targetSubredditId && active.id !== over.id) {
+        // Reordering within the same category
+        const category = data.categories.find(cat => cat.id === sourceCategoryId);
+        if (category?.user_subreddits) {
+          const oldIndex = category.user_subreddits.findIndex(sub => sub.id === active.id);
+          const newIndex = category.user_subreddits.findIndex(sub => sub.id === over.id);
+          if (oldIndex !== -1 && newIndex !== -1) {
+            const newOrder = arrayMove(category.user_subreddits, oldIndex, newIndex);
+            const items = newOrder.map((sub, idx) => ({ id: sub.id, position: idx }));
+            await reorderSubreddits(sourceCategoryId, items);
+          }
+        }
       }
     }
   };
@@ -563,23 +594,13 @@ export default function Settings() {
 
   // Add subreddit from search
   const addSubredditFromSearch = async (categoryId: string, subredditName: string) => {
-    const newSubreddit: SubredditItem = {
-      id: Date.now().toString(),
-      name: subredditName
-    };
-    
-    setData(prev => ({
-      categories: prev.categories.map(cat =>
-        cat.id === categoryId
-          ? { ...cat, subreddits: [...cat.subreddits, newSubreddit] }
-          : cat
-      )
-    }));
-    
-    try {
-      await fetchAndCache(subredditName);
-    } catch (error) {
-      console.error(`Failed to cache data for r/${subredditName}:`, error);
+    const result = await addSubreddit(categoryId, subredditName);
+    if (result) {
+      try {
+        await fetchAndCache(subredditName);
+      } catch (error) {
+        console.error(`Failed to cache data for r/${subredditName}:`, error);
+      }
     }
   };
 
@@ -603,8 +624,30 @@ export default function Settings() {
     return count.toString();
   };
 
+  // Show loading state
+  if (authLoading || !isLoaded) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading settings...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <SettingsContext.Provider value={{ data, setData }}>
+    <SettingsContext.Provider value={{ 
+      addSubreddit, 
+      updateCategory, 
+      deleteCategory, 
+      updateSubreddit, 
+      deleteSubreddit,
+      fetchAndCache,
+      loading: cacheLoading,
+      errors: cacheErrors,
+      dragOverCategoryId,
+    }}>
       <>
         <Head>
           <title>Settings - Reddit Multi Poster</title>
@@ -634,6 +677,19 @@ export default function Settings() {
                     <p className="text-xs text-muted-foreground hidden sm:block">Manage your subreddits</p>
                   </div>
                 </div>
+                
+                {/* Refresh button */}
+                <div className="ml-auto">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => refresh()}
+                    disabled={isLoading}
+                    className="p-2"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
               </div>
             </div>
           </header>
@@ -644,15 +700,7 @@ export default function Settings() {
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button 
-                  onClick={loadVerifiedSubreddits} 
-                  variant="outline"
-                  className="flex-1 sm:flex-none rounded-xl h-10"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Load Verified
-                </Button>
-                <Button 
-                  onClick={addCategory}
+                  onClick={handleAddCategory}
                   className="flex-1 sm:flex-none rounded-xl h-10"
                 >
                   <FolderPlus className="w-4 h-4 mr-2" />
@@ -759,6 +807,7 @@ export default function Settings() {
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext 
@@ -785,7 +834,12 @@ export default function Settings() {
                 </SortableContext>
 
                 <DragOverlay>
-                  {activeId ? (
+                  {activeId && activeDragData?.type === 'subreddit' && activeDragData.subreddit ? (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/20 border-2 border-primary shadow-lg">
+                      <GripVertical className="w-3 h-3 text-primary" />
+                      <span className="text-sm font-medium">r/{activeDragData.subreddit.subreddit_name}</span>
+                    </div>
+                  ) : activeId ? (
                     <div className="p-4 bg-primary/10 border-2 border-primary border-dashed rounded-xl">
                       Dragging...
                     </div>
