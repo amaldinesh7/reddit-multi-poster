@@ -8,6 +8,20 @@ module.exports = {
   ],
   theme: {
     extend: {
+      keyframes: {
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-8px)' },
+        },
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+      },
+      animation: {
+        float: 'float 3s ease-in-out infinite',
+        fadeIn: 'fadeIn 0.2s ease-out',
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',

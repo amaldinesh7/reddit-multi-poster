@@ -81,7 +81,10 @@ export default function Login() {
         <div className="absolute inset-0 bg-[#0a0a0a]">
           <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#12121a] to-[#1a1a2e]" />
           <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-orange-500/5 rounded-full blur-[120px] animate-pulse" />
-          <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
+          <div 
+            className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-[100px] animate-pulse"
+            style={{ animationDelay: '1s' }}
+          />
         </div>
 
         {/* Content */}
@@ -122,7 +125,8 @@ export default function Login() {
               <button
                 onClick={handleLogin}
                 disabled={isRedirecting}
-                className="w-full relative group"
+                className="w-full relative group cursor-pointer"
+                aria-label="Continue with Reddit"
               >
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-[#FF4500] to-[#FF6B35] rounded-xl blur opacity-60 group-hover:opacity-100 transition duration-300" />
                 <div className="relative flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-[#FF4500] to-[#FF6B35] rounded-xl text-white font-semibold text-lg transition-all duration-300 hover:shadow-lg">
@@ -133,7 +137,7 @@ export default function Login() {
                     </>
                   ) : (
                     <>
-                      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/>
                       </svg>
                       <span>Continue with Reddit</span>
@@ -160,7 +164,7 @@ export default function Login() {
                     }}
                   >
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500/20 to-orange-600/10 flex items-center justify-center flex-shrink-0">
-                      <feature.icon className="w-5 h-5 text-orange-400" />
+                      <feature.icon className="w-5 h-5 text-orange-400" aria-hidden="true" />
                     </div>
                     <div>
                       <h3 className="text-white font-medium text-sm">{feature.title}</h3>
@@ -175,7 +179,12 @@ export default function Login() {
             <div className="mt-6 text-center">
               <p className="text-gray-600 text-xs">
                 By continuing, you agree to Reddit&apos;s{' '}
-                <a href="https://www.reddit.com/policies/user-agreement" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-orange-400 transition-colors">
+                <a 
+                  href="https://www.reddit.com/policies/user-agreement" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-gray-500 hover:text-orange-400 transition-colors cursor-pointer"
+                >
                   Terms of Service
                 </a>
               </p>
@@ -185,34 +194,20 @@ export default function Login() {
           {/* Trust badges */}
           <div className="mt-12 flex items-center gap-6 text-gray-600">
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-500/60" />
+              <CheckCircle className="w-4 h-4 text-green-500/60" aria-hidden="true" />
               <span className="text-xs">Secure OAuth</span>
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-500/60" />
+              <CheckCircle className="w-4 h-4 text-green-500/60" aria-hidden="true" />
               <span className="text-xs">No Password Stored</span>
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-500/60" />
+              <CheckCircle className="w-4 h-4 text-green-500/60" aria-hidden="true" />
               <span className="text-xs">Rate Limited</span>
             </div>
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0px);
-          }
-          50% {
-            transform: translateY(-8px);
-          }
-        }
-        .animate-float {
-          animation: float 3s ease-in-out infinite;
-        }
-      `}</style>
     </>
   );
 }

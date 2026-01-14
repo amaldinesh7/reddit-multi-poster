@@ -1,4 +1,5 @@
 import React from 'react';
+import { Input } from '@/components/ui/input';
 import { useSubreddits } from '../hooks/useSubreddits';
 
 interface Props {
@@ -44,10 +45,10 @@ export default function SubredditSelector({ selected, onChange }: Props) {
     return (
       <div className="space-y-2">
         <div className="animate-pulse">
-          <div className="h-10 bg-muted rounded-lg mb-2"></div>
+          <div className="h-10 bg-muted rounded-lg mb-2" />
           <div className="grid grid-cols-2 gap-2">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-10 bg-muted rounded-lg"></div>
+              <div key={i} className="h-10 bg-muted rounded-lg" />
             ))}
           </div>
         </div>
@@ -58,13 +59,14 @@ export default function SubredditSelector({ selected, onChange }: Props) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <input
-          className="input flex-1"
+        <Input
+          className="flex-1"
           placeholder="Search subreddits"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search subreddits"
         />
-        <span className="helper">{selected.length}/30</span>
+        <span className="text-sm text-muted-foreground">{selected.length}/30</span>
       </div>
       
       {query.trim() ? (
@@ -74,23 +76,31 @@ export default function SubredditSelector({ selected, onChange }: Props) {
             <button
               key={name}
               onClick={() => toggle(name)}
-              className={`px-3 py-2 rounded-lg text-sm border ${selected.includes(name) ? 'border-[var(--primary)] bg-[rgba(124,92,255,0.08)]' : 'border-[var(--color-ring)] bg-[var(--color-surface)]'}`}
+              className={`px-3 py-2 rounded-lg text-sm border cursor-pointer transition-colors ${
+                selected.includes(name) 
+                  ? 'border-primary bg-primary/10 text-foreground' 
+                  : 'border-border bg-card hover:bg-secondary text-foreground'
+              }`}
+              aria-pressed={selected.includes(name)}
+              aria-label={`Toggle r/${name}`}
             >
               r/{name}
             </button>
           ))}
           {filtered.length === 0 && (
-            <p className="col-span-2 helper">No results</p>
+            <p className="col-span-2 text-sm text-muted-foreground text-center py-4">No results</p>
           )}
         </div>
       ) : (
         // Category view
         <div className="max-h-56 overflow-y-auto space-y-3">
           {categorizedSubreddits.map(({ categoryName, subreddits }) => (
-            <div key={categoryName} className="border border-[var(--color-ring)] rounded-lg overflow-hidden">
+            <div key={categoryName} className="border border-border rounded-lg overflow-hidden">
               <button
                 onClick={() => toggleCategory(categoryName)}
-                className="w-full px-4 py-3 bg-[var(--color-surface)] border-b border-[var(--color-ring)] flex items-center justify-between hover:bg-muted/50"
+                className="w-full px-4 py-3 bg-card border-b border-border flex items-center justify-between hover:bg-secondary/50 transition-colors cursor-pointer"
+                aria-expanded={expandedCategories.includes(categoryName)}
+                aria-label={`${categoryName} category`}
               >
                 <span className="font-medium text-sm">{categoryName} ({subreddits.length})</span>
                 <div className="flex items-center gap-2">
@@ -99,7 +109,8 @@ export default function SubredditSelector({ selected, onChange }: Props) {
                       e.stopPropagation();
                       selectAllInCategory(subreddits);
                     }}
-                    className="text-xs px-2 py-1 rounded bg-[var(--primary)] text-white hover:opacity-80"
+                    className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+                    aria-label={`Select all in ${categoryName}`}
                   >
                     Select All
                   </button>
@@ -115,7 +126,13 @@ export default function SubredditSelector({ selected, onChange }: Props) {
                     <button
                       key={name}
                       onClick={() => toggle(name)}
-                      className={`px-3 py-2 rounded-lg text-sm border ${selected.includes(name) ? 'border-[var(--primary)] bg-[rgba(124,92,255,0.08)]' : 'border-[var(--color-ring)] bg-[var(--color-surface)]'}`}
+                      className={`px-3 py-2 rounded-lg text-sm border cursor-pointer transition-colors ${
+                        selected.includes(name) 
+                          ? 'border-primary bg-primary/10 text-foreground' 
+                          : 'border-border bg-card hover:bg-secondary text-foreground'
+                      }`}
+                      aria-pressed={selected.includes(name)}
+                      aria-label={`Toggle r/${name}`}
                     >
                       r/{name}
                     </button>
@@ -137,10 +154,15 @@ export default function SubredditSelector({ selected, onChange }: Props) {
       {selected.length > 0 && (
         <div className="flex flex-wrap gap-2 pt-1">
           {selected.map((s) => (
-            <span key={s} className="px-2 py-1 text-xs rounded-full border border-[var(--color-ring)] bg-[var(--color-surface)]">r/{s}</span>
+            <span 
+              key={s} 
+              className="px-2 py-1 text-xs rounded-full border border-border bg-card"
+            >
+              r/{s}
+            </span>
           ))}
         </div>
       )}
     </div>
   );
-} 
+}

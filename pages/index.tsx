@@ -7,13 +7,10 @@ import SubredditFlairPicker from '../components/SubredditFlairPicker';
 import PostComposer from '../components/PostComposer';
 import PostingQueue from '../components/PostingQueue';
 import { AppLoader } from '@/components/ui/loader';
-import { Avatar } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { ChevronDown, User, Settings, LogOut } from 'lucide-react';
-
-import { QueueItem } from '@/types';
+import { AppHeader } from '@/components/layout';
+import { useHomePageState } from '@/hooks/useHomePageState';
 
 interface MeResponse {
   authenticated: boolean;
@@ -26,26 +23,35 @@ export default function Home() {
   const router = useRouter();
   const [auth, setAuth] = React.useState<MeResponse>({ authenticated: false });
   const [loading, setLoading] = React.useState(true);
-  const [selectedSubs, setSelectedSubs] = React.useState<string[]>([]);
-  const [caption, setCaption] = React.useState('');
-  const [body, setBody] = React.useState('');
-  const [prefixes, setPrefixes] = React.useState({ f: false, c: false });
-  const [mediaUrl, setMediaUrl] = React.useState<string>('');
-  const [mediaFiles, setMediaFiles] = React.useState<File[]>([]);
-  const [mediaMode, setMediaMode] = React.useState<'file' | 'url'>('file');
-  const [flairs, setFlairs] = React.useState<Record<string, string | undefined>>({});
-  const [titleSuffixes, setTitleSuffixes] = React.useState<Record<string, string | undefined>>({});
-  const [postToProfile, setPostToProfile] = React.useState(false);
-  const [hasFlairErrors, setHasFlairErrors] = React.useState(false);
-  const [showValidationErrors, setShowValidationErrors] = React.useState(false);
 
-  const handleValidationChange = (hasErrors: boolean) => {
-    setHasFlairErrors(hasErrors);
-  };
-
-  const handlePostAttempt = () => {
-    setShowValidationErrors(true);
-  };
+  const {
+    selectedSubs,
+    setSelectedSubs,
+    caption,
+    setCaption,
+    body,
+    setBody,
+    prefixes,
+    setPrefixes,
+    mediaUrl,
+    setMediaUrl,
+    mediaFiles,
+    setMediaFiles,
+    mediaMode,
+    setMediaMode,
+    flairs,
+    setFlairs,
+    titleSuffixes,
+    setTitleSuffixes,
+    postToProfile,
+    setPostToProfile,
+    hasFlairErrors,
+    showValidationErrors,
+    items,
+    handleValidationChange,
+    handlePostAttempt,
+    handleUnselectSuccessItems,
+  } = useHomePageState({ authMe: auth.me });
 
   React.useEffect(() => {
     const load = async () => {
@@ -68,70 +74,9 @@ export default function Home() {
     load();
   }, [router]);
 
-  const logout = async () => { 
+  const handleLogout = async () => { 
     await axios.post('/api/auth/logout'); 
     router.replace('/login');
-  };
-
-  const items = React.useMemo(() => {
-    const allItems: QueueItem[] = [];
-    
-    const destinations = [...selectedSubs];
-    if (postToProfile && auth.me?.name) {
-      destinations.push(`u_${auth.me.name}`);
-    }
-    
-    if (mediaFiles.length > 0) {
-      destinations.forEach((sr) => {
-        let kind: 'image' | 'video' | 'gallery';
-        if (mediaFiles.length > 1) {
-          kind = 'gallery';
-        } else {
-          kind = mediaFiles[0].type.startsWith('video/') ? 'video' : 'image';
-        }
-        
-        allItems.push({
-          subreddit: sr,
-          flairId: flairs[sr],
-          titleSuffix: titleSuffixes[sr],
-          kind,
-          files: mediaFiles,
-          url: undefined,
-          text: body || undefined, // Include body for image/video posts too (as comment potentially)
-        });
-      });
-    } else if (mediaUrl) {
-      destinations.forEach((sr) => {
-        allItems.push({
-          subreddit: sr,
-          flairId: flairs[sr],
-          titleSuffix: titleSuffixes[sr],
-          kind: 'link',
-          url: mediaUrl,
-          file: undefined,
-          text: body || undefined,
-        });
-      });
-    } else {
-      destinations.forEach((sr) => {
-        allItems.push({
-          subreddit: sr,
-          flairId: flairs[sr],
-          titleSuffix: titleSuffixes[sr],
-          kind: 'self',
-          url: undefined,
-          file: undefined,
-          text: body || caption, // Use body if provided, otherwise caption
-        });
-      });
-    }
-    
-    return allItems;
-  }, [selectedSubs, flairs, titleSuffixes, mediaUrl, mediaFiles, caption, body, postToProfile, auth.me?.name]);
-
-  // Handler to unselect successful subreddits
-  const handleUnselectSuccessItems = (subreddits: string[]) => {
-    setSelectedSubs(prev => prev.filter(s => !subreddits.includes(s)));
   };
 
   return (
@@ -147,50 +92,11 @@ export default function Home() {
       ) : (
         <div className="min-h-screen bg-background">
           {/* Header */}
-          <header className="sticky top-0 z-50 border-b border-border bg-background">
-            <div className="container mx-auto px-4">
-              <div className="flex h-14 items-center justify-between">
-                {/* Logo */}
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">R</span>
-                  </div>
-                  <span className="font-semibold">Multi Poster</span>
-                </div>
-                
-                {/* User Menu */}
-                <DropdownMenu
-                  trigger={
-                    <button className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-secondary transition-colors">
-                      <Avatar
-                        src={auth.me?.icon_img}
-                        alt={auth.me?.name || 'User'}
-                        fallback={auth.me?.name || 'U'}
-                        size="sm"
-                      />
-                      <span className="text-sm font-medium hidden sm:inline">
-                        u/{auth.me?.name}
-                      </span>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  }
-                >
-                  <DropdownMenuItem onClick={() => window.open(`https://reddit.com/user/${auth.me?.name}`, '_blank')}>
-                    <User className="h-4 w-4 mr-2" />
-                    View Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => window.location.href = '/settings'}>
-                    <Settings className="h-4 w-4 mr-2" />
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={logout} className="text-red-400">
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Logout
-                  </DropdownMenuItem>
-                </DropdownMenu>
-              </div>
-            </div>
-          </header>
+          <AppHeader
+            userName={auth.me?.name}
+            userAvatar={auth.me?.icon_img}
+            onLogout={handleLogout}
+          />
 
           {/* Main Content */}
           <main className="container mx-auto px-4 py-6 max-w-2xl">
@@ -204,21 +110,25 @@ export default function Home() {
                     <div className="flex rounded-md border border-border overflow-hidden">
                       <button
                         onClick={() => setMediaMode('file')}
-                        className={`px-3 py-1 text-sm font-medium transition-colors ${
+                        className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${
                           mediaMode === 'file' 
                             ? 'bg-primary text-white' 
                             : 'bg-transparent text-muted-foreground hover:text-foreground'
                         }`}
+                        aria-pressed={mediaMode === 'file'}
+                        aria-label="Upload file"
                       >
                         Upload
                       </button>
                       <button
                         onClick={() => setMediaMode('url')}
-                        className={`px-3 py-1 text-sm font-medium transition-colors ${
+                        className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${
                           mediaMode === 'url' 
                             ? 'bg-primary text-white' 
                             : 'bg-transparent text-muted-foreground hover:text-foreground'
                         }`}
+                        aria-pressed={mediaMode === 'url'}
+                        aria-label="Enter URL"
                       >
                         URL
                       </button>
@@ -272,7 +182,10 @@ export default function Home() {
                         checked={postToProfile}
                         onCheckedChange={(checked) => setPostToProfile(checked === true)}
                       />
-                      <label htmlFor="post-to-profile" className="text-sm cursor-pointer">
+                      <label 
+                        htmlFor="post-to-profile" 
+                        className="text-sm cursor-pointer"
+                      >
                         Also post to my profile (u/{auth.me.name})
                       </label>
                     </div>
