@@ -20,6 +20,8 @@ interface MeResponse {
   userId?: string;
 }
 
+import { PwaOnboarding } from '@/components/PwaOnboarding';
+
 export default function Home() {
   const router = useRouter();
   const [auth, setAuth] = React.useState<MeResponse>({ authenticated: false });
@@ -98,6 +100,8 @@ export default function Home() {
             userAvatar={auth.me?.icon_img}
             onLogout={handleLogout}
           />
+
+          <PwaOnboarding />
 
           {/* Main Content */}
           <main className="container mx-auto px-4 py-6 max-w-2xl lg:max-w-7xl">
