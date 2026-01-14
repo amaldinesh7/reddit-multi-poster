@@ -2,7 +2,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Client-side Supabase client (uses anon key)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase environment variables not configured');
@@ -18,7 +18,7 @@ let serverClient: SupabaseClient | null = null;
 export function createServerSupabaseClient(): SupabaseClient {
   // Support both old service_role JWT key and new sb_secret key
   // New sb_secret keys are only available on Supabase Cloud, not local dev
-  const serviceRoleKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error('Supabase server environment variables not configured. Set SUPABASE_SECRET_KEY (production) or SUPABASE_SERVICE_ROLE_KEY (local dev).');
