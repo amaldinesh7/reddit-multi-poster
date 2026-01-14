@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSubreddits } from './useSubreddits';
 import { useSubredditCache } from './useSubredditCache';
+import { PostRequirements } from '../utils/reddit';
 import { TitleTag } from '../utils/subredditCache';
 
 export interface SubredditRulesData {
@@ -18,20 +19,24 @@ interface UseSubredditFlairDataReturn {
   flairOptions: Record<string, { id: string; text: string }[]>;
   flairRequired: Record<string, boolean>;
   subredditRules: Record<string, SubredditRulesData>;
+  postRequirements: Record<string, PostRequirements>;
   isLoaded: boolean;
   isInitialLoad: boolean;
   cacheLoading: Record<string, boolean>;
   reloadSelectedData: (selected: string[]) => Promise<void>;
   isReloading: boolean;
+  refreshSubreddits: () => Promise<void>;
+  addSubreddit: (categoryId: string, subredditName: string) => Promise<{ id: string; subreddit_name: string; display_name?: string | null; category_id: string; position: number } | null>;
 }
 
 export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
-  const { getSubredditsByCategory, getAllSubreddits, isLoaded } = useSubreddits();
+  const { getSubredditsByCategory, getAllSubreddits, isLoaded, refresh, addSubreddit } = useSubreddits();
   const { getCachedData, fetchAndCache, loading: cacheLoading } = useSubredditCache();
 
   const [flairOptions, setFlairOptions] = useState<Record<string, { id: string; text: string }[]>>({});
   const [flairRequired, setFlairRequired] = useState<Record<string, boolean>>({});
   const [subredditRules, setSubredditRules] = useState<Record<string, SubredditRulesData>>({});
+  const [postRequirements, setPostRequirements] = useState<Record<string, PostRequirements>>({});
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isReloading, setIsReloading] = useState(false);
 
@@ -58,6 +63,7 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
       const newFlairOptions: Record<string, { id: string; text: string }[]> = {};
       const newFlairRequired: Record<string, boolean> = {};
       const newSubredditRules: Record<string, SubredditRulesData> = {};
+      const newPostRequirements: Record<string, PostRequirements> = {};
 
       for (const subreddit of allSubreddits) {
         const cached = getCachedDataRef.current(subreddit);
@@ -65,6 +71,9 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
           newFlairOptions[subreddit] = cached.flairs;
           newFlairRequired[subreddit] = cached.flairRequired;
           newSubredditRules[subreddit] = cached.rules;
+          if (cached.post_requirements) {
+            newPostRequirements[subreddit] = cached.post_requirements;
+          }
         }
       }
 
@@ -72,6 +81,7 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
         setFlairOptions(prev => ({ ...prev, ...newFlairOptions }));
         setFlairRequired(prev => ({ ...prev, ...newFlairRequired }));
         setSubredditRules(prev => ({ ...prev, ...newSubredditRules }));
+        setPostRequirements(prev => ({ ...prev, ...newPostRequirements }));
       }
 
       const needsFetching = allSubreddits.filter(name => 
@@ -99,14 +109,15 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
             return {
               subreddit,
               cached: {
-                flairs: [],
+                flairs: [] as { id: string; text: string }[],
                 flairRequired: false,
                 rules: {
                   requiresGenderTag: false,
                   requiresContentTag: false,
-                  genderTags: [],
-                  contentTags: []
+                  genderTags: [] as string[],
+                  contentTags: [] as string[]
                 },
+                post_requirements: undefined as PostRequirements | undefined,
                 lastFetched: Date.now(),
                 version: 1
               }
@@ -119,16 +130,21 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
         const batchFlairOptions: Record<string, { id: string; text: string }[]> = {};
         const batchFlairRequired: Record<string, boolean> = {};
         const batchSubredditRules: Record<string, SubredditRulesData> = {};
+        const batchPostRequirements: Record<string, PostRequirements> = {};
 
         batchResults.forEach(({ subreddit, cached }) => {
           batchFlairOptions[subreddit] = cached.flairs;
           batchFlairRequired[subreddit] = cached.flairRequired;
           batchSubredditRules[subreddit] = cached.rules;
+          if (cached.post_requirements) {
+            batchPostRequirements[subreddit] = cached.post_requirements;
+          }
         });
 
         setFlairOptions(prev => ({ ...prev, ...batchFlairOptions }));
         setFlairRequired(prev => ({ ...prev, ...batchFlairRequired }));
         setSubredditRules(prev => ({ ...prev, ...batchSubredditRules }));
+        setPostRequirements(prev => ({ ...prev, ...batchPostRequirements }));
 
         if (i + batchSize < needsFetching.length) {
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -167,18 +183,23 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
         const batchFlairOptions: Record<string, { id: string; text: string }[]> = {};
         const batchFlairRequired: Record<string, boolean> = {};
         const batchSubredditRules: Record<string, SubredditRulesData> = {};
+        const batchPostRequirements: Record<string, PostRequirements> = {};
 
         batchResults.forEach((result) => {
           if (result) {
             batchFlairOptions[result.subreddit] = result.cached.flairs;
             batchFlairRequired[result.subreddit] = result.cached.flairRequired;
             batchSubredditRules[result.subreddit] = result.cached.rules;
+            if (result.cached.post_requirements) {
+              batchPostRequirements[result.subreddit] = result.cached.post_requirements;
+            }
           }
         });
 
         setFlairOptions(prev => ({ ...prev, ...batchFlairOptions }));
         setFlairRequired(prev => ({ ...prev, ...batchFlairRequired }));
         setSubredditRules(prev => ({ ...prev, ...batchSubredditRules }));
+        setPostRequirements(prev => ({ ...prev, ...batchPostRequirements }));
 
         if (i + batchSize < selected.length) {
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -195,10 +216,13 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
     flairOptions,
     flairRequired,
     subredditRules,
+    postRequirements,
     isLoaded,
     isInitialLoad,
     cacheLoading,
     reloadSelectedData,
     isReloading,
+    refreshSubreddits: refresh,
+    addSubreddit,
   };
 };

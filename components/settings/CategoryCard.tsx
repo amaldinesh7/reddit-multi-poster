@@ -26,13 +26,13 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   const [isAddingSubreddit, setIsAddingSubreddit] = React.useState(false);
   const { addSubreddit, updateCategory, deleteCategory, fetchAndCache, dragOverCategoryId } = useSettingsContext();
   const confirmDialog = useConfirmDialog();
-  
+
   // Make category a drop zone for subreddits
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: `category-drop-${category.id}`,
     data: { type: 'category', categoryId: category.id }
   });
-  
+
   const isDropTarget = dragOverCategoryId === category.id || isOver;
 
   const handleUpdateCategoryName = async (newName: string) => {
@@ -48,7 +48,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
       message: `Are you sure you want to delete "${category.name}" and all its subreddits? This action cannot be undone.`,
       variant: 'destructive',
     });
-    
+
     if (confirmed) {
       await deleteCategory(category.id);
     }
@@ -60,10 +60,10 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
 
   const handleAddSubreddit = async () => {
     if (!newSubredditName.trim()) return;
-    
+
     setIsAddingSubreddit(true);
     const subredditName = newSubredditName.trim().replace(/^r\//, '');
-    
+
     const result = await addSubreddit(category.id, subredditName);
     if (result) {
       setNewSubredditName('');
@@ -90,21 +90,20 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   };
 
   return (
-    <Card 
+    <Card
       ref={setDroppableRef}
-      className={`glass-card rounded-xl overflow-hidden transition-all duration-200 ${
-        isDragging ? 'opacity-50 ring-2 ring-primary/50' : ''
-      } ${isDropTarget ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+      className={`glass-card rounded-xl overflow-hidden transition-all duration-200 ${isDragging ? 'opacity-50 ring-2 ring-primary/50' : ''
+        } ${isDropTarget ? 'ring-2 ring-primary bg-primary/5' : ''}`}
     >
       <CardHeader className="p-4 bg-secondary/20 border-b border-border/30">
         <div className="flex items-center gap-3">
-          <div 
+          <div
             {...dragHandleProps}
             className="cursor-grab hover:text-primary transition-colors"
           >
             <GripVertical className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
           </div>
-          
+
           {editingCategory ? (
             <div className="flex items-center gap-2 flex-1">
               <Input
@@ -200,12 +199,12 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
           </div>
 
           {/* Subreddits List */}
-          <SortableContext 
-            items={category.user_subreddits?.map(s => s.id) || []}
+          <SortableContext
+            items={category.user_subreddits?.map((s: { id: string }) => s.id) || []}
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-2">
-              {category.user_subreddits?.map((subreddit) => (
+              {category.user_subreddits?.map((subreddit: any) => (
                 <SortableSubreddit
                   key={subreddit.id}
                   subreddit={subreddit}
@@ -213,11 +212,10 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
                   isActive={false}
                 />
               ))}
-              
+
               {(!category.user_subreddits || category.user_subreddits.length === 0) && (
-                <div className={`text-center py-6 border-2 border-dashed rounded-lg transition-colors ${
-                  isDropTarget ? 'border-primary bg-primary/5' : 'border-border/30'
-                }`}>
+                <div className={`text-center py-6 border-2 border-dashed rounded-lg transition-colors ${isDropTarget ? 'border-primary bg-primary/5' : 'border-border/30'
+                  }`}>
                   <p className="text-xs text-muted-foreground">
                     {isDropTarget ? 'Drop here to move' : 'No subreddits yet. Add one above or drag here.'}
                   </p>
@@ -227,7 +225,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
           </SortableContext>
         </CardContent>
       )}
-      
+
       {/* Confirm Dialog */}
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}

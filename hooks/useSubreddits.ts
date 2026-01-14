@@ -1,41 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
-export interface SubredditItem {
-  id: string;
-  subreddit_name: string;
-  display_name?: string | null;
-  position: number;
-  created_at: string;
-  category_id: string;
-}
-
-export interface Category {
-  id: string;
-  name: string;
-  position: number;
-  collapsed: boolean;
-  created_at: string;
-  updated_at: string;
-  user_subreddits: SubredditItem[];
-}
-
-export interface SubredditData {
-  categories: Category[];
-}
+import { 
+  fetchCategories as fetchCategoriesAPI, 
+  createCategory as createCategoryAPI, 
+  updateCategoryAPI, 
+  deleteCategoryAPI, 
+  addSubredditAPI, 
+  updateSubredditAPI, 
+  deleteSubredditAPI, 
+  reorderItems 
+} from '../lib/api/settings';
+import { SubredditItem, Category, SubredditData, ApiResponse } from '../types/api';
 
 const DEFAULT_DATA: SubredditData = {
   categories: []
 };
-
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: {
-    code: string;
-    message: string;
-  };
-}
 
 export function useSubreddits() {
   const [data, setData] = useState<SubredditData>(DEFAULT_DATA);
@@ -49,13 +29,8 @@ export function useSubreddits() {
     setError(null);
     
     try {
-      const { data: response } = await axios.get<ApiResponse<Category[]>>('/api/settings/categories');
-      
-      if (response.success && response.data) {
-        setData({ categories: response.data });
-      } else {
-        throw new Error(response.error?.message || 'Failed to fetch categories');
-      }
+      const fetchedCategories = await fetchCategoriesAPI();
+      setData({ categories: fetchedCategories });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch categories';
       setError(message);
@@ -74,16 +49,12 @@ export function useSubreddits() {
   // Create a new category
   const createCategory = useCallback(async (name: string): Promise<Category | null> => {
     try {
-      const { data: response } = await axios.post<ApiResponse<Category>>('/api/settings/categories', { name });
+      const newCategory = await createCategoryAPI(name);
       
-      if (response.success && response.data) {
-        const newCategory = { ...response.data, user_subreddits: [] };
-        setData(prev => ({
-          categories: [...prev.categories, newCategory]
-        }));
-        return newCategory;
-      }
-      throw new Error(response.error?.message || 'Failed to create category');
+      setData(prev => ({
+        categories: [...prev.categories, newCategory]
+      }));
+      return newCategory;
     } catch (err) {
       console.error('Failed to create category:', err);
       return null;
@@ -96,20 +67,14 @@ export function useSubreddits() {
     updates: { name?: string; collapsed?: boolean; position?: number }
   ): Promise<boolean> => {
     try {
-      const { data: response } = await axios.put<ApiResponse<Category>>(
-        `/api/settings/categories/${categoryId}`,
-        updates
-      );
+      const updatedCategory = await updateCategoryAPI(categoryId, updates);
       
-      if (response.success && response.data) {
-        setData(prev => ({
-          categories: prev.categories.map(cat =>
-            cat.id === categoryId ? { ...cat, ...response.data } : cat
-          )
-        }));
-        return true;
-      }
-      throw new Error(response.error?.message || 'Failed to update category');
+      setData(prev => ({
+        categories: prev.categories.map(cat =>
+          cat.id === categoryId ? { ...cat, ...updatedCategory } : cat
+        )
+      }));
+      return true;
     } catch (err) {
       console.error('Failed to update category:', err);
       return false;
@@ -119,17 +84,12 @@ export function useSubreddits() {
   // Delete a category
   const deleteCategory = useCallback(async (categoryId: string): Promise<boolean> => {
     try {
-      const { data: response } = await axios.delete<ApiResponse<{ deleted: boolean }>>(
-        `/api/settings/categories/${categoryId}`
-      );
+      await deleteCategoryAPI(categoryId);
       
-      if (response.success) {
-        setData(prev => ({
-          categories: prev.categories.filter(cat => cat.id !== categoryId)
-        }));
-        return true;
-      }
-      throw new Error(response.error?.message || 'Failed to delete category');
+      setData(prev => ({
+        categories: prev.categories.filter(cat => cat.id !== categoryId)
+      }));
+      return true;
     } catch (err) {
       console.error('Failed to delete category:', err);
       return false;
@@ -142,22 +102,16 @@ export function useSubreddits() {
     subredditName: string
   ): Promise<SubredditItem | null> => {
     try {
-      const { data: response } = await axios.post<ApiResponse<SubredditItem>>(
-        '/api/settings/subreddits',
-        { category_id: categoryId, subreddit_name: subredditName }
-      );
+      const newSubreddit = await addSubredditAPI(categoryId, subredditName);
       
-      if (response.success && response.data) {
-        setData(prev => ({
-          categories: prev.categories.map(cat =>
-            cat.id === categoryId
-              ? { ...cat, user_subreddits: [...cat.user_subreddits, response.data!] }
-              : cat
-          )
-        }));
-        return response.data;
-      }
-      throw new Error(response.error?.message || 'Failed to add subreddit');
+      setData(prev => ({
+        categories: prev.categories.map(cat =>
+          cat.id === categoryId
+            ? { ...cat, user_subreddits: [...cat.user_subreddits, newSubreddit] }
+            : cat
+        )
+      }));
+      return newSubreddit;
     } catch (err) {
       console.error('Failed to add subreddit:', err);
       return null;
@@ -170,63 +124,55 @@ export function useSubreddits() {
     updates: { subreddit_name?: string; display_name?: string; position?: number; category_id?: string }
   ): Promise<boolean> => {
     try {
-      const { data: response } = await axios.put<ApiResponse<SubredditItem>>(
-        `/api/settings/subreddits/${subredditId}`,
-        updates
-      );
+      const updatedSubreddit = await updateSubredditAPI(subredditId, updates);
       
-      if (response.success && response.data) {
-        const updatedSubreddit = response.data;
-        
-        // Handle moving to a different category
-        if (updates.category_id) {
-          setData(prev => {
-            // Find and remove from old category, add to new category
-            let movedSubreddit: SubredditItem | null = null;
-            
-            const categoriesWithRemoved = prev.categories.map(cat => {
-              const foundSub = cat.user_subreddits.find(sub => sub.id === subredditId);
-              if (foundSub) {
-                movedSubreddit = { ...foundSub, ...updatedSubreddit };
-                return {
-                  ...cat,
-                  user_subreddits: cat.user_subreddits.filter(sub => sub.id !== subredditId)
-                };
-              }
-              return cat;
-            });
-            
-            // Add to new category
-            if (movedSubreddit) {
+      // Handle moving to a different category
+      if (updates.category_id) {
+        setData(prev => {
+          // Find and remove from old category, add to new category
+          let movedSubreddit: SubredditItem | null = null;
+          
+          const categoriesWithRemoved = prev.categories.map(cat => {
+            const foundSub = cat.user_subreddits.find(sub => sub.id === subredditId);
+            if (foundSub) {
+              movedSubreddit = { ...foundSub, ...updatedSubreddit };
               return {
-                categories: categoriesWithRemoved.map(cat => {
-                  if (cat.id === updates.category_id) {
-                    return {
-                      ...cat,
-                      user_subreddits: [...cat.user_subreddits, movedSubreddit!]
-                    };
-                  }
-                  return cat;
-                })
+                ...cat,
+                user_subreddits: cat.user_subreddits.filter(sub => sub.id !== subredditId)
               };
             }
-            
-            return { categories: categoriesWithRemoved };
+            return cat;
           });
-        } else {
-          // Normal update within same category
-          setData(prev => ({
-            categories: prev.categories.map(cat => ({
-              ...cat,
-              user_subreddits: cat.user_subreddits.map(sub =>
-                sub.id === subredditId ? { ...sub, ...updatedSubreddit } : sub
-              )
-            }))
-          }));
-        }
-        return true;
+          
+          // Add to new category
+          if (movedSubreddit) {
+            return {
+              categories: categoriesWithRemoved.map(cat => {
+                if (cat.id === updates.category_id) {
+                  return {
+                    ...cat,
+                    user_subreddits: [...cat.user_subreddits, movedSubreddit!]
+                  };
+                }
+                return cat;
+              })
+            };
+          }
+          
+          return { categories: categoriesWithRemoved };
+        });
+      } else {
+        // Normal update within same category
+        setData(prev => ({
+          categories: prev.categories.map(cat => ({
+            ...cat,
+            user_subreddits: cat.user_subreddits.map(sub =>
+              sub.id === subredditId ? { ...sub, ...updatedSubreddit } : sub
+            )
+          }))
+        }));
       }
-      throw new Error(response.error?.message || 'Failed to update subreddit');
+      return true;
     } catch (err) {
       console.error('Failed to update subreddit:', err);
       return false;
@@ -236,20 +182,15 @@ export function useSubreddits() {
   // Delete a subreddit
   const deleteSubreddit = useCallback(async (subredditId: string): Promise<boolean> => {
     try {
-      const { data: response } = await axios.delete<ApiResponse<{ deleted: boolean }>>(
-        `/api/settings/subreddits/${subredditId}`
-      );
+      await deleteSubredditAPI(subredditId);
       
-      if (response.success) {
-        setData(prev => ({
-          categories: prev.categories.map(cat => ({
-            ...cat,
-            user_subreddits: cat.user_subreddits.filter(sub => sub.id !== subredditId)
-          }))
-        }));
-        return true;
-      }
-      throw new Error(response.error?.message || 'Failed to delete subreddit');
+      setData(prev => ({
+        categories: prev.categories.map(cat => ({
+          ...cat,
+          user_subreddits: cat.user_subreddits.filter(sub => sub.id !== subredditId)
+        }))
+      }));
+      return true;
     } catch (err) {
       console.error('Failed to delete subreddit:', err);
       return false;
@@ -272,12 +213,9 @@ export function useSubreddits() {
     });
 
     try {
-      const { data: response } = await axios.put<ApiResponse<{ updated: number }>>(
-        '/api/settings/reorder',
-        { type: 'categories', items }
-      );
+      const success = await reorderItems('categories', items);
       
-      if (!response.success) {
+      if (!success) {
         // Revert on failure
         await fetchCategories();
         return false;
@@ -310,12 +248,9 @@ export function useSubreddits() {
     }));
 
     try {
-      const { data: response } = await axios.put<ApiResponse<{ updated: number }>>(
-        '/api/settings/reorder',
-        { type: 'subreddits', items }
-      );
+      const success = await reorderItems('subreddits', items);
       
-      if (!response.success) {
+      if (!success) {
         await fetchCategories();
         return false;
       }

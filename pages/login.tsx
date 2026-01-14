@@ -67,8 +67,23 @@ export default function Login() {
     <>
       <Head>
         <title>Login - Reddit Multi Poster</title>
-        <meta name="description" content="Post to multiple Reddit communities with one click" />
+        <meta name="description" content="Log in to Reddit Multi Poster to manage your posts and share content across multiple subreddits simultaneously." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="canonical" href="https://reddit-multi-poster.vercel.app/login" />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://reddit-multi-poster.vercel.app/login" />
+        <meta property="og:title" content="Login - Reddit Multi Poster" />
+        <meta property="og:description" content="Log in to Reddit Multi Poster to manage your posts and share content across multiple subreddits simultaneously." />
+        <meta property="og:image" content="https://reddit-multi-poster.vercel.app/og-image.png" />
+
+        {/* Twitter */}
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content="https://reddit-multi-poster.vercel.app/login" />
+        <meta property="twitter:title" content="Login - Reddit Multi Poster" />
+        <meta property="twitter:description" content="Log in to Reddit Multi Poster to manage your posts and share content across multiple subreddits simultaneously." />
+        <meta property="twitter:image" content="https://reddit-multi-poster.vercel.app/og-image.png" />
       </Head>
 
       <div className="min-h-screen relative overflow-hidden">
@@ -96,9 +111,9 @@ export default function Login() {
               <div className="flex flex-col items-center mb-8">
                 <div
                   className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center mb-4 shadow-lg"
-                  // style={{
-                  //   boxShadow: '0 0 40px rgba(255, 69, 0, 0.3)',
-                  // }}
+                // style={{
+                //   boxShadow: '0 0 40px rgba(255, 69, 0, 0.3)',
+                // }}
                 >
                   <img src="/logo.png" alt="Reddit Multi Poster" className="w-full h-full object-contain" />
                 </div>

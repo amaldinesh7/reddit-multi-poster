@@ -35,6 +35,107 @@ A web application that lets you post the same content to multiple Reddit communi
 3. Run `npm install` and `npm run dev`
 4. Open http://localhost:3000 and start posting!
 
+---
+
+## Local Development with Supabase
+
+This project uses Supabase for data persistence. You can run Supabase locally for development.
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) installed and running
+- Node.js 18+ and npm
+
+### Setup Local Supabase
+
+1. **Install Supabase CLI** (if not already installed):
+   ```bash
+   npm install supabase --save-dev
+   ```
+
+2. **Start Supabase locally**:
+   ```bash
+   npx supabase start
+   ```
+   
+   This will start all Supabase services (PostgreSQL, Auth, Storage, etc.) in Docker containers.
+   
+   After starting, you'll see output like:
+   ```
+   Studio URL: http://127.0.0.1:54323
+   API URL: http://127.0.0.1:54321
+   DB URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+   ```
+
+3. **Configure environment variables** in `.env.local`:
+   ```env
+   # Local Supabase
+   NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+   SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key-from-supabase-start-output>
+   
+   # Reddit OAuth (required)
+   REDDIT_CLIENT_ID=your_client_id
+   REDDIT_CLIENT_SECRET=your_client_secret
+   REDDIT_REDIRECT_URI=http://localhost:3000/api/auth/callback
+   REDDIT_USER_AGENT=reddit-multi-poster/1.0
+   ```
+
+### Database Migrations
+
+Migrations are stored in `supabase/migrations/` and are applied automatically when you run:
+
+```bash
+# Apply all migrations to local database
+npx supabase db reset
+
+# Or just push new migrations without resetting
+npx supabase db push
+```
+
+**Current migrations:**
+- `001_initial_schema.sql` - Core tables (users, categories, user_subreddits, subreddit_cache)
+- `002_add_post_requirements.sql` - Adds post_requirements column for Reddit posting rules
+
+### Useful Supabase Commands
+
+```bash
+# Check status of local Supabase
+npx supabase status
+
+# Stop local Supabase
+npx supabase stop
+
+# View database in browser (Supabase Studio)
+# Open http://127.0.0.1:54323
+
+# Generate TypeScript types from database schema
+npx supabase gen types typescript --local > types/database.ts
+
+# Create a new migration
+npx supabase migration new <migration_name>
+
+# View migration history
+npx supabase migration list
+
+# Connect to local database via psql
+PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres
+```
+
+### Production Deployment
+
+Migrations are automatically deployed to production via GitHub Actions when you push to `main` branch. See `.github/workflows/deploy-supabase.yml`.
+
+To manually deploy to production:
+```bash
+# Link to your Supabase project (one-time setup)
+npx supabase link --project-ref YOUR_PROJECT_ID
+
+# Push migrations to production
+npx supabase db push
+```
+
+---
+
 ## Perfect For
 
 - Content creators who want to share across multiple communities

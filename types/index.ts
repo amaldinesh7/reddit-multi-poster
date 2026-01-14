@@ -14,6 +14,7 @@ export interface QueueItem {
   title?: string;
   flairId?: string;
   titleSuffix?: string; // Per-subreddit custom title suffix
+  customTitle?: string;
   kind: 'self' | 'link' | 'image' | 'video' | 'gallery';
   text?: string;
   url?: string;
@@ -22,4 +23,4 @@ export interface QueueItem {
   status?: 'queued' | 'posting' | 'success' | 'error' | 'retrying' | 'cancelled';
   error?: string;
   attempt?: number;
-} 
+}

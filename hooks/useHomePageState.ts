@@ -30,6 +30,8 @@ interface UseHomePageStateReturn {
   setFlairs: React.Dispatch<React.SetStateAction<Record<string, string | undefined>>>;
   titleSuffixes: Record<string, string | undefined>;
   setTitleSuffixes: React.Dispatch<React.SetStateAction<Record<string, string | undefined>>>;
+  customTitles: Record<string, string>;
+  setCustomTitles: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   postToProfile: boolean;
   setPostToProfile: React.Dispatch<React.SetStateAction<boolean>>;
   hasFlairErrors: boolean;
@@ -54,6 +56,7 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
   const [titleSuffixes, setTitleSuffixes] = useState<Record<string, string | undefined>>({});
   const [postToProfile, setPostToProfile] = useState(false);
   const [hasFlairErrors, setHasFlairErrors] = useState(false);
+  const [customTitles, setCustomTitles] = useState<Record<string, string>>({});
   const [showValidationErrors, setShowValidationErrors] = useState(false);
 
   const handleValidationChange = useCallback((hasErrors: boolean) => {
@@ -89,6 +92,7 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
           subreddit: sr,
           flairId: flairs[sr],
           titleSuffix: titleSuffixes[sr],
+          customTitle: customTitles[sr],
           kind,
           files: mediaFiles,
           url: undefined,
@@ -101,6 +105,7 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
           subreddit: sr,
           flairId: flairs[sr],
           titleSuffix: titleSuffixes[sr],
+          customTitle: customTitles[sr],
           kind: 'link',
           url: mediaUrl,
           file: undefined,
@@ -113,6 +118,7 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
           subreddit: sr,
           flairId: flairs[sr],
           titleSuffix: titleSuffixes[sr],
+          customTitle: customTitles[sr],
           kind: 'self',
           url: undefined,
           file: undefined,
@@ -122,7 +128,7 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
     }
     
     return allItems;
-  }, [selectedSubs, flairs, titleSuffixes, mediaUrl, mediaFiles, caption, body, postToProfile, authMe?.name]);
+  }, [selectedSubs, flairs, titleSuffixes, customTitles, mediaUrl, mediaFiles, caption, body, postToProfile, authMe?.name]);
 
   return {
     selectedSubs,
@@ -143,6 +149,8 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
     setFlairs,
     titleSuffixes,
     setTitleSuffixes,
+    customTitles,
+    setCustomTitles,
     postToProfile,
     setPostToProfile,
     hasFlairErrors,

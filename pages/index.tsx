@@ -22,6 +22,7 @@ interface MeResponse {
 
 import { PwaOnboarding } from '@/components/PwaOnboarding';
 
+
 export default function Home() {
   const router = useRouter();
   const [auth, setAuth] = React.useState<MeResponse>({ authenticated: false });
@@ -85,9 +86,24 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Reddit Multi Poster</title>
-        <meta name="description" content="Post to multiple subreddits simultaneously" />
+        <title>Reddit Multi Poster - Post to Multiple Subreddits</title>
+        <meta name="description" content="Effortlessly post content to multiple subreddits at once. Manage your Reddit marketing, schedule posts, and save time with Reddit Multi Poster." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="canonical" href="https://reddit-multi-poster.vercel.app/" />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://reddit-multi-poster.vercel.app/" />
+        <meta property="og:title" content="Reddit Multi Poster - Post to Multiple Subreddits" />
+        <meta property="og:description" content="Effortlessly post content to multiple subreddits at once. Manage your Reddit marketing, schedule posts, and save time with Reddit Multi Poster." />
+        <meta property="og:image" content="https://reddit-multi-poster.vercel.app/og-image.png" />
+
+        {/* Twitter */}
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content="https://reddit-multi-poster.vercel.app/" />
+        <meta property="twitter:title" content="Reddit Multi Poster - Post to Multiple Subreddits" />
+        <meta property="twitter:description" content="Effortlessly post content to multiple subreddits at once. Manage your Reddit marketing, schedule posts, and save time with Reddit Multi Poster." />
+        <meta property="twitter:image" content="https://reddit-multi-poster.vercel.app/og-image.png" />
       </Head>
 
       {loading ? (
@@ -105,11 +121,11 @@ export default function Home() {
 
           {/* Main Content */}
           <main className="container mx-auto px-4 py-6 max-w-2xl lg:max-w-7xl">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 items-start">
 
               {/* Left Column: Create Post */}
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold hidden lg:block mb-2">Create Post</h2>
+                <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Create Post</h2>
 
                 {/* Media Section */}
                 <Card>
@@ -167,7 +183,7 @@ export default function Home() {
 
               {/* Right Column: Communities & Queue */}
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold hidden lg:block mb-2">Subreddits & Queue</h2>
+                <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Subreddits & Queue</h2>
 
                 {/* Communities Section */}
                 <Card>
@@ -248,9 +264,10 @@ export default function Home() {
                 </Card>
               </div>
             </div>
-          </main>
-        </div>
-      )}
+          </main >
+        </div >
+      )
+      }
     </>
   );
 }

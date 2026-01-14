@@ -643,4 +643,42 @@ export function addSmartPrefixesToTitle(
   if (!subredditRules && globalPrefixes.c) parts.push('(c)');
   
   return [parts.join(' '), title].filter(Boolean).join(' ').trim().replace(/\s+/g, ' ');
-} 
+}
+
+// ... (previous code)
+
+export interface PostRequirements {
+  domain_blacklist?: string[];
+  body_restriction_policy?: string;
+  domain_whitelist?: string[];
+  title_regexes?: string[];
+  body_blacklisted_strings?: string[];
+  body_required_strings?: string[];
+  title_text_min_length?: number;
+  is_flair_required?: boolean;
+  title_text_max_length?: number;
+  body_regexes?: string[];
+  link_repost_age?: number;
+  body_text_min_length?: number;
+  body_text_max_length?: number;
+  title_required_strings?: string[];
+  title_blacklisted_strings?: string[];
+  guidelines_text?: string | null;
+  gallery_min_items?: number | null;
+  gallery_max_items?: number | null;
+  gallery_captions_requirement?: string;
+  gallery_urls_requirement?: string;
+}
+
+export async function getPostRequirements(client: AxiosInstance, subreddit: string): Promise<PostRequirements> {
+// ... (rest of function)
+  try {
+    const { data } = await client.get(`/api/v1/subreddit/post_requirements`, {
+      params: { subreddit: subreddit },
+    });
+    return data;
+  } catch (error) {
+    console.error(`Failed to get post requirements for ${subreddit}`, error);
+    return {};
+  }
+}

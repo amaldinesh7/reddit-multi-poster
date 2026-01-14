@@ -1,5 +1,6 @@
 import React from 'react';
 import SubredditRow, { SubredditRules } from './SubredditRow';
+import { PostRequirements } from '@/utils/reddit';
 
 interface SubredditSearchResultsProps {
   filtered: string[];
@@ -10,6 +11,7 @@ interface SubredditSearchResultsProps {
   flairValue: Record<string, string | undefined>;
   titleSuffixValue: Record<string, string | undefined>;
   subredditRules: Record<string, SubredditRules>;
+  postRequirements: Record<string, PostRequirements>;
   cacheLoading: Record<string, boolean>;
   showValidationErrors?: boolean;
   onToggle: (name: string) => void;
@@ -27,6 +29,7 @@ const SubredditSearchResults: React.FC<SubredditSearchResultsProps> = ({
   flairValue,
   titleSuffixValue,
   subredditRules,
+  postRequirements,
   cacheLoading,
   showValidationErrors,
   onToggle,
@@ -35,7 +38,7 @@ const SubredditSearchResults: React.FC<SubredditSearchResultsProps> = ({
   hasMissingFlair,
 }) => {
   return (
-    <div className="rounded-md border border-border overflow-hidden divide-y divide-border">
+    <div className="rounded-md border border-border overflow-hidden">
       {filtered.map((name) => {
         const hasError = !!(showValidationErrors && hasMissingFlair(name));
         return (
@@ -48,6 +51,7 @@ const SubredditSearchResults: React.FC<SubredditSearchResultsProps> = ({
             flairRequired={flairRequired[name]}
             flairOptions={flairOptions[name] || []}
             subredditRules={subredditRules[name]}
+            postRequirements={postRequirements[name]}
             titleSuffix={titleSuffixValue[name]}
             flairValue={flairValue[name]}
             onToggle={onToggle}

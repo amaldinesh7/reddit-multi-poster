@@ -5,7 +5,7 @@ import {
   DragOverEvent,
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import { Category, SubredditItem } from '../hooks/useSubreddits';
+import { Category, SubredditItem } from '../types/api';
 
 interface DragData {
   type: string;

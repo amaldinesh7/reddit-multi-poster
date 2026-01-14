@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServerSupabaseClient } from '../../../../lib/supabase';
-import { redditClient, refreshAccessToken, getFlairs, getSubredditRules } from '../../../../utils/reddit';
+import { redditClient, refreshAccessToken, getFlairs, getSubredditRules, getPostRequirements, PostRequirements } from '../../../../utils/reddit';
 
 interface ApiResponse {
   success: boolean;
@@ -17,6 +17,7 @@ interface CachedData {
   flair_required: boolean;
   rules: unknown;
   title_tags: unknown[];
+  post_requirements: PostRequirements | null;
   cached_at: string;
   cache_version: number;
 }
@@ -67,6 +68,7 @@ export default async function handler(
                 flair_required: cached.flair_required,
                 rules: cached.rules,
                 title_tags: cached.title_tags,
+                post_requirements: cached.post_requirements,
                 cached: true,
                 cached_at: cached.cached_at,
               },
@@ -90,6 +92,7 @@ export default async function handler(
                 flair_required: cached.flair_required,
                 rules: cached.rules,
                 title_tags: cached.title_tags,
+                post_requirements: cached.post_requirements,
                 cached: true,
                 stale: true,
                 cached_at: cached.cached_at,
@@ -118,8 +121,8 @@ export default async function handler(
 
         const client = redditClient(token);
 
-        // Fetch data from Reddit
-        const [flairsResult, rulesResult] = await Promise.all([
+        // Fetch data from Reddit (including post requirements)
+        const [flairsResult, rulesResult, postRequirementsResult] = await Promise.all([
           getFlairs(client, subredditName).catch(() => ({ flairs: [], required: false })),
           getSubredditRules(client, subredditName).catch(() => ({
             requiresGenderTag: false,
@@ -129,6 +132,7 @@ export default async function handler(
             rules: [],
             submitText: '',
           })),
+          getPostRequirements(client, subredditName).catch(() => ({} as PostRequirements)),
         ]);
 
         // Parse title tags from submitText if available
@@ -161,8 +165,9 @@ export default async function handler(
             contentTags: rulesResult.contentTags,
           },
           title_tags: titleTags,
+          post_requirements: postRequirementsResult,
           cached_at: new Date().toISOString(),
-          cache_version: 1,
+          cache_version: 2,
         };
 
         const { error: upsertError } = await supabase

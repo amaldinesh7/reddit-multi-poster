@@ -1,7 +1,6 @@
 import React from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { ArrowLeft, Loader2, Search, FolderPlus, Sparkles, RefreshCw, GripVertical } from 'lucide-react';
@@ -9,6 +8,7 @@ import { useSubreddits } from '../hooks/useSubreddits';
 import { useSubredditCache } from '../hooks/useSubredditCache';
 import { useAuth } from '../hooks/useAuth';
 import { useSettingsDnd } from '../hooks/useSettingsDnd';
+import { searchSubreddits as searchSubredditsAPI } from '../lib/api/reddit';
 
 import {
   DndContext,
@@ -34,9 +34,9 @@ import {
 export default function Settings() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const { 
-    data, 
-    isLoaded, 
+  const {
+    data,
+    isLoaded,
     isLoading,
     refresh,
     createCategory,
@@ -49,7 +49,7 @@ export default function Settings() {
     reorderSubreddits,
   } = useSubreddits();
   const { fetchAndCache, loading: cacheLoading, errors: cacheErrors } = useSubredditCache();
-  
+
   // Search functionality
   const [searchQuery, setSearchQuery] = React.useState('');
   const [searchResults, setSearchResults] = React.useState<Array<{
@@ -99,24 +99,22 @@ export default function Settings() {
     const categoryNames = ['General', 'Entertainment', 'Technology', 'Sports', 'News', 'Lifestyle', 'Gaming', 'Science', 'Art', 'Music'];
     const existingNames = data.categories.map(cat => cat.name.toLowerCase());
     const availableNames = categoryNames.filter(name => !existingNames.includes(name.toLowerCase()));
-    
-    const categoryName = availableNames.length > 0 
-      ? availableNames[0] 
+
+    const categoryName = availableNames.length > 0
+      ? availableNames[0]
       : `Category ${data.categories.length + 1}`;
-    
+
     await createCategory(categoryName);
   };
 
   // Search subreddits
   const searchSubreddits = async () => {
     if (!searchQuery.trim() || searchQuery.length < 2) return;
-    
+
     setIsSearching(true);
     try {
-      const response = await axios.get('/api/search-subreddits', {
-        params: { q: searchQuery.trim(), limit: 5 }
-      });
-      setSearchResults(response.data.subreddits || []);
+      const subreddits = await searchSubredditsAPI(searchQuery.trim(), 5);
+      setSearchResults(subreddits);
       setShowSearchResults(true);
     } catch (error) {
       console.error('Search failed:', error);
@@ -144,11 +142,11 @@ export default function Settings() {
       setShowSearchResults(false);
       return;
     }
-    
+
     const timeoutId = setTimeout(() => {
       searchSubreddits();
     }, 500);
-    
+
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
@@ -165,11 +163,11 @@ export default function Settings() {
   }
 
   return (
-    <SettingsContext.Provider value={{ 
-      addSubreddit, 
-      updateCategory, 
-      deleteCategory, 
-      updateSubreddit, 
+    <SettingsContext.Provider value={{
+      addSubreddit,
+      updateCategory,
+      deleteCategory,
+      updateSubreddit,
       deleteSubreddit,
       fetchAndCache,
       loading: cacheLoading,
@@ -182,7 +180,7 @@ export default function Settings() {
           <meta name="description" content="Manage your subreddit categories and settings" />
           <meta name="robots" content="noindex, nofollow" />
         </Head>
-        
+
         <div className="min-h-screen bg-background">
           {/* Header */}
           <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
@@ -206,7 +204,7 @@ export default function Settings() {
                     <p className="text-xs text-muted-foreground hidden sm:block">Manage your subreddits</p>
                   </div>
                 </div>
-                
+
                 {/* Refresh button */}
                 <div className="ml-auto">
                   <Button
@@ -229,7 +227,7 @@ export default function Settings() {
             <div className="space-y-6">
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button 
+                <Button
                   onClick={handleAddCategory}
                   className="flex-1 sm:flex-none rounded-xl h-10 cursor-pointer"
                   aria-label="Add new category"
@@ -254,7 +252,7 @@ export default function Settings() {
                     <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" aria-label="Searching" />
                   )}
                 </div>
-                
+
                 {/* Search Results */}
                 {showSearchResults && (
                   <SearchResults
@@ -266,7 +264,7 @@ export default function Settings() {
                   />
                 )}
               </div>
-              
+
               {/* Categories */}
               <DndContext
                 sensors={sensors}
@@ -275,7 +273,7 @@ export default function Settings() {
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
               >
-                <SortableContext 
+                <SortableContext
                   items={data.categories.map(c => c.id)}
                   strategy={verticalListSortingStrategy}
                 >
@@ -287,7 +285,7 @@ export default function Settings() {
                         isActive={activeId === category.id}
                       />
                     ))}
-                    
+
                     {data.categories.length === 0 && (
                       <div className="text-center py-12 text-muted-foreground">
                         <FolderPlus className="w-12 h-12 mx-auto mb-4 opacity-50" />

@@ -1,4 +1,4 @@
-import { Category, SubredditItem } from '../../hooks/useSubreddits';
+import { Category, SubredditItem } from '../../types/api';
 
 export interface SettingsContextType {
   addSubreddit: (categoryId: string, name: string) => Promise<SubredditItem | null>;

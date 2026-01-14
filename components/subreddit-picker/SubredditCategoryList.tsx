@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronDown, ChevronRight, AlertTriangle, Settings } from 'lucide-react';
 import SubredditRow, { SubredditRules } from './SubredditRow';
+import { PostRequirements } from '@/utils/reddit';
 
 interface CategoryData {
   categoryName: string;
@@ -16,6 +17,7 @@ interface SubredditCategoryListProps {
   flairValue: Record<string, string | undefined>;
   titleSuffixValue: Record<string, string | undefined>;
   subredditRules: Record<string, SubredditRules>;
+  postRequirements: Record<string, PostRequirements>;
   cacheLoading: Record<string, boolean>;
   showValidationErrors?: boolean;
   onToggle: (name: string) => void;
@@ -35,6 +37,7 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
   flairValue,
   titleSuffixValue,
   subredditRules,
+  postRequirements,
   cacheLoading,
   showValidationErrors,
   onToggle,
@@ -52,8 +55,8 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
     return (
       <div className="px-4 py-8 text-center text-muted-foreground">
         <p className="text-sm">No subreddits configured.</p>
-        <a 
-          href="/settings" 
+        <a
+          href="/settings"
           className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 text-sm font-medium rounded-md bg-primary text-white hover:bg-primary/90 transition-colors cursor-pointer"
         >
           <Settings className="h-4 w-4" />
@@ -111,7 +114,7 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
             </button>
 
             {isExpanded && (
-              <div className="divide-y divide-border">
+              <div>
                 {subreddits.map((name) => {
                   const hasError = !!(showValidationErrors && hasMissingFlair(name));
                   return (
@@ -124,6 +127,7 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
                       flairRequired={flairRequired[name]}
                       flairOptions={flairOptions[name] || []}
                       subredditRules={subredditRules[name]}
+                      postRequirements={postRequirements[name]}
                       titleSuffix={titleSuffixValue[name]}
                       flairValue={flairValue[name]}
                       onToggle={onToggle}

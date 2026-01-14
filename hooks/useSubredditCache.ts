@@ -1,45 +1,9 @@
 import { useState, useCallback } from 'react';
 import axios from 'axios';
 
-export interface FlairOption {
-  id: string;
-  text: string;
-  text_editable?: boolean;
-}
-
-export interface TitleTag {
-  tag: string;
-  label: string;
-  required: boolean;
-}
-
-export interface SubredditRules {
-  requiresGenderTag: boolean;
-  requiresContentTag: boolean;
-  genderTags: string[];
-  contentTags: string[];
-}
-
-export interface CachedSubredditData {
-  subreddit_name: string;
-  flairs: FlairOption[];
-  flair_required: boolean;
-  flairRequired: boolean; // Alias for backwards compatibility
-  rules: SubredditRules;
-  title_tags: TitleTag[];
-  cached: boolean;
-  stale?: boolean;
-  cached_at: string;
-}
-
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: {
-    code: string;
-    message: string;
-  };
-}
+import { PostRequirements, SubredditRules, FlairOption } from '../utils/reddit';
+import { TitleTag, CachedSubredditData, ApiResponse } from '../types/api';
+import { fetchSubredditCache } from '../lib/api/reddit';
 
 interface UseSubredditCacheReturn {
   // Get cached data for a subreddit
@@ -101,20 +65,7 @@ export function useSubredditCache(): UseSubredditCacheReturn {
     setErrorState(normalizedName, null);
 
     try {
-      const { data: response } = await axios.get<ApiResponse<CachedSubredditData>>(
-        `/api/cache/subreddit/${normalizedName}`,
-        { params: force ? { force: 'true' } : {} }
-      );
-
-      if (!response.success || !response.data) {
-        throw new Error(response.error?.message || 'Failed to fetch subreddit data');
-      }
-
-      // Normalize data to include both formats for backwards compatibility
-      const cachedData: CachedSubredditData = {
-        ...response.data,
-        flairRequired: response.data.flair_required, // Add alias
-      };
+      const cachedData = await fetchSubredditCache(normalizedName, force);
 
       // Store in local cache
       setCache(prev => ({ ...prev, [normalizedName]: cachedData }));
