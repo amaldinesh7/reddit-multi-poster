@@ -58,7 +58,7 @@ export default function Home() {
       try {
         const { data } = await axios.get<MeResponse>('/api/me');
         setAuth(data);
-        
+
         // Redirect to login if not authenticated
         if (!data.authenticated) {
           router.replace('/login');
@@ -74,8 +74,8 @@ export default function Home() {
     load();
   }, [router]);
 
-  const handleLogout = async () => { 
-    await axios.post('/api/auth/logout'); 
+  const handleLogout = async () => {
+    await axios.post('/api/auth/logout');
     router.replace('/login');
   };
 
@@ -86,7 +86,7 @@ export default function Home() {
         <meta name="description" content="Post to multiple subreddits simultaneously" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
-      
+
       {loading ? (
         <AppLoader />
       ) : (
@@ -99,123 +99,131 @@ export default function Home() {
           />
 
           {/* Main Content */}
-          <main className="container mx-auto px-4 py-6 max-w-2xl">
-            <div className="space-y-6">
-              
-              {/* Media Section */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle>Media</CardTitle>
-                    <div className="flex rounded-md border border-border overflow-hidden">
-                      <button
-                        onClick={() => setMediaMode('file')}
-                        className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${
-                          mediaMode === 'file' 
-                            ? 'bg-primary text-white' 
+          <main className="container mx-auto px-4 py-6 max-w-2xl lg:max-w-7xl">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+
+              {/* Left Column: Create Post */}
+              <div className="space-y-6">
+                <h2 className="text-xl font-semibold hidden lg:block mb-2">Create Post</h2>
+
+                {/* Media Section */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Media</CardTitle>
+                      <div className="flex rounded-md border border-border overflow-hidden">
+                        <button
+                          onClick={() => setMediaMode('file')}
+                          className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${mediaMode === 'file'
+                            ? 'bg-primary text-white'
                             : 'bg-transparent text-muted-foreground hover:text-foreground'
-                        }`}
-                        aria-pressed={mediaMode === 'file'}
-                        aria-label="Upload file"
-                      >
-                        Upload
-                      </button>
-                      <button
-                        onClick={() => setMediaMode('url')}
-                        className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${
-                          mediaMode === 'url' 
-                            ? 'bg-primary text-white' 
+                            }`}
+                          aria-pressed={mediaMode === 'file'}
+                          aria-label="Upload file"
+                        >
+                          Upload
+                        </button>
+                        <button
+                          onClick={() => setMediaMode('url')}
+                          className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${mediaMode === 'url'
+                            ? 'bg-primary text-white'
                             : 'bg-transparent text-muted-foreground hover:text-foreground'
-                        }`}
-                        aria-pressed={mediaMode === 'url'}
-                        aria-label="Enter URL"
-                      >
-                        URL
-                      </button>
+                            }`}
+                          aria-pressed={mediaMode === 'url'}
+                          aria-label="Enter URL"
+                        >
+                          URL
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <MediaUpload onUrl={setMediaUrl} onFile={setMediaFiles} mode={mediaMode} />
-                </CardContent>
-              </Card>
+                  </CardHeader>
+                  <CardContent>
+                    <MediaUpload onUrl={setMediaUrl} onFile={setMediaFiles} mode={mediaMode} />
+                  </CardContent>
+                </Card>
 
-              {/* Title Section */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle>Title</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <PostComposer 
-                    value={caption} 
-                    onChange={setCaption}
-                    body={body}
-                    onBodyChange={setBody}
-                    prefixes={prefixes} 
-                    onPrefixesChange={setPrefixes} 
-                  />
-                </CardContent>
-              </Card>
+                {/* Title Section */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle>Title</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <PostComposer
+                      value={caption}
+                      onChange={setCaption}
+                      body={body}
+                      onBodyChange={setBody}
+                      prefixes={prefixes}
+                      onPrefixesChange={setPrefixes}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
 
-              {/* Communities Section */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle>Communities & Flairs</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <SubredditFlairPicker
-                    selected={selectedSubs}
-                    onSelectedChange={setSelectedSubs}
-                    flairValue={flairs}
-                    onFlairChange={setFlairs}
-                    titleSuffixValue={titleSuffixes}
-                    onTitleSuffixChange={setTitleSuffixes}
-                    onValidationChange={handleValidationChange}
-                    showValidationErrors={showValidationErrors}
-                  />
-                  
-                  {/* Post to Profile */}
-                  {auth.authenticated && auth.me?.name && (
-                    <div className="flex items-center gap-2 pt-3 border-t border-border">
-                      <Checkbox
-                        id="post-to-profile"
-                        checked={postToProfile}
-                        onCheckedChange={(checked) => setPostToProfile(checked === true)}
-                      />
-                      <label 
-                        htmlFor="post-to-profile" 
-                        className="text-sm cursor-pointer"
-                      >
-                        Also post to my profile (u/{auth.me.name})
-                      </label>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              {/* Right Column: Communities & Queue */}
+              <div className="space-y-6">
+                <h2 className="text-xl font-semibold hidden lg:block mb-2">Communities & Queue</h2>
 
-              {/* Queue Section */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <CardTitle>Posting Queue</CardTitle>
-                    {items.length > 0 && (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
-                        {items.length}
-                      </span>
+                {/* Communities Section */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle>Communities & Flairs</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <SubredditFlairPicker
+                      selected={selectedSubs}
+                      onSelectedChange={setSelectedSubs}
+                      flairValue={flairs}
+                      onFlairChange={setFlairs}
+                      titleSuffixValue={titleSuffixes}
+                      onTitleSuffixChange={setTitleSuffixes}
+                      onValidationChange={handleValidationChange}
+                      showValidationErrors={showValidationErrors}
+                    />
+
+                    {/* Post to Profile */}
+                    {auth.authenticated && auth.me?.name && (
+                      <div className="flex items-center gap-2 pt-3 border-t border-border">
+                        <Checkbox
+                          id="post-to-profile"
+                          checked={postToProfile}
+                          onCheckedChange={(checked) => setPostToProfile(checked === true)}
+                        />
+                        <label
+                          htmlFor="post-to-profile"
+                          className="text-sm cursor-pointer"
+                        >
+                          Also post to my profile (u/{auth.me.name})
+                        </label>
+                      </div>
                     )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <PostingQueue 
-                    items={items} 
-                    caption={caption} 
-                    prefixes={prefixes}
-                    hasFlairErrors={hasFlairErrors}
-                    onPostAttempt={handlePostAttempt}
-                    onUnselectSuccessItems={handleUnselectSuccessItems}
-                  />
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+
+                {/* Queue Section */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <CardTitle>Posting Queue</CardTitle>
+                      {items.length > 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
+                          {items.length}
+                        </span>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <PostingQueue
+                      items={items}
+                      caption={caption}
+                      prefixes={prefixes}
+                      hasFlairErrors={hasFlairErrors}
+                      onPostAttempt={handlePostAttempt}
+                      onUnselectSuccessItems={handleUnselectSuccessItems}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </main>
         </div>
