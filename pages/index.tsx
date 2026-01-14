@@ -8,6 +8,7 @@ import PostComposer from '../components/PostComposer';
 import PostingQueue from '../components/PostingQueue';
 import { AppLoader } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { AppHeader } from '@/components/layout';
 import { useHomePageState } from '@/hooks/useHomePageState';
@@ -162,12 +163,30 @@ export default function Home() {
 
               {/* Right Column: Communities & Queue */}
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold hidden lg:block mb-2">Communities & Queue</h2>
+                <h2 className="text-xl font-semibold hidden lg:block mb-2">Subreddits & Queue</h2>
 
                 {/* Communities Section */}
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle>Communities & Flairs</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <CardTitle>Subreddits</CardTitle>
+                      {/* 
+                          NOTE: The "Manage" button is required to allow users to navigate to the 
+                          Settings page where they can organize their subreddits into categories,
+                          reorder them, and fetch the latest flair data from Reddit.
+                          Without this, users would have to manually find the settings link in the 
+                          user menu, which is less discoverable.
+                      */}
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => router.push('/settings')}
+                        className="h-8 px-2 text-xs font-medium cursor-pointer"
+                        aria-label="Manage communities and flairs"
+                      >
+                        Manage
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <SubredditFlairPicker
