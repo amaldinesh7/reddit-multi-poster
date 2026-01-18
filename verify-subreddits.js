@@ -18,7 +18,7 @@ const SUBREDDITS = [
   'KeralaFantasy',
   'Bangalorecouples',
   'DelhiGone_Wild',
-  'KochiNSFW',
+  'KochiNSFW', - 
   'Malayali_GoneWild',
   'IndianHornypeople',
   'mumbaiGWild',
@@ -26,12 +26,12 @@ const SUBREDDITS = [
   'desiSlimnStacked',
   'TamilGW',
   'PuneGW',
-  'BangaloreGWild',
+  'BangaloreGWild', -
   'DesiWhoreWife',
-  'DesiExhibitionistGW',
-  'ExhibitionistHotWife',
-  'Exhibitionistfun',
-  'hotwifeindia',
+  'DesiExhibitionistGW', -
+  'ExhibitionistHotWife', -
+  'Exhibitionistfun', -
+  'hotwifeindia', - 
   'BlouselessSaree'
 ];
 

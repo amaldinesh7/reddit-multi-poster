@@ -388,19 +388,28 @@ export async function submitPost(client: AxiosInstance, params: SubmitParams): P
   form.set('sendreplies', 'true');
   
   // Handle different post types
-  if (params.kind === 'self' && params.text) {
+  // Handle different post types
+  if (params.kind === 'self') {
     form.set('kind', 'self');
-    form.set('text', params.text);
-  } else if (params.kind === 'link' && params.url) {
+  } else if (params.kind === 'link') {
     form.set('kind', 'link');
-    form.set('url', params.url);
-  } else if ((params.kind === 'image' || params.kind === 'video') && mediaAssetId) {
+    form.set('url', params.url || '');
+  } else if (params.kind === 'image' || params.kind === 'video') {
     form.set('kind', 'image');
-    form.set('url', `https://reddit-uploaded-media.s3-accelerate.amazonaws.com/${mediaAssetId}`);
+    if (mediaAssetId) {
+      form.set('url', `https://reddit-uploaded-media.s3-accelerate.amazonaws.com/${mediaAssetId}`);
+    }
   } else {
-    // Fallback to self post if no content
+    // Fallback
     form.set('kind', 'self');
-    form.set('text', params.text || '');
+  }
+
+  // Always add text/body if present
+  if (params.text) {
+    form.set('text', params.text);
+  } else if (params.kind === 'self') {
+    // Ensure self posts have at least empty text if missing
+    form.set('text', '');
   }
   
   if (params.flair_id) form.set('flair_id', params.flair_id);
