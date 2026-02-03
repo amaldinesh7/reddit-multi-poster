@@ -10,21 +10,50 @@ services:
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
-      - key: NODE_ENV
-        value: production
-      - key: NEXT_PUBLIC_SENTRY_DSN
+      # ===========================================
+      # Supabase (Required)
+      # ===========================================
+      - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false # Set manually in Render dashboard
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false # Also accepts SUPABASE_SERVICE_ROLE_KEY
+
+      # ===========================================
+      # Reddit OAuth (Required)
+      # ===========================================
       - key: REDDIT_CLIENT_ID
         sync: false
       - key: REDDIT_CLIENT_SECRET
         sync: false
       - key: REDDIT_REDIRECT_URI
+        sync: false # e.g., https://your-app.onrender.com/api/auth/callback
+      - key: REDDIT_USER_AGENT
+        sync: false # e.g., web:reddit-multi-poster:v1.0.0 (by /u/yourusername)
+
+      # ===========================================
+      # Sentry Error Tracking (Required for source maps)
+      # ===========================================
+      - key: NEXT_PUBLIC_SENTRY_DSN
         sync: false
-      - key: NEXT_PUBLIC_SUPABASE_URL
-        sync: false
-      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
-      - key: ENCRYPTION_KEY
-        sync: false
+      - key: SENTRY_ORG
+        sync: false # Your Sentry organization slug
+      - key: SENTRY_PROJECT
+        sync: false # Your Sentry project slug
+      - key: SENTRY_AUTH_TOKEN
+        sync: false # Sentry auth token for source map uploads
+
+      # ===========================================
+      # Environment
+      # ===========================================
+      - key: NODE_ENV
+        value: production
+
+      # ===========================================
+      # Optional
+      # ===========================================
+      # - key: GROQ_API_KEY
+      #   sync: false # For AI-powered title tag parsing
+      # - key: KEEP_ALIVE_SECRET
+      #   sync: false # Optional secret for /api/keep-alive
