@@ -242,7 +242,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
   const showNoResultsMessage = isSearchMode && !hasLocalResults && hasSearched && !isSearching && (!filteredSearchResults || filteredSearchResults.length === 0);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Search Bar */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
@@ -251,13 +251,13 @@ const SubredditFlairPicker: React.FC<Props> = ({
             placeholder="Search subreddits..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="pl-10 pr-8"
+            className="pl-10 pr-8 h-10 sm:h-9"
             aria-label="Search subreddits"
           />
           {query.length > 0 && (
             <button
               onClick={handleClearSearch}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground md:transition-colors cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground active:text-foreground transition-colors cursor-pointer tap-highlight-none p-1"
               aria-label="Clear search"
             >
               <X className="w-4 h-4" />
@@ -265,8 +265,8 @@ const SubredditFlairPicker: React.FC<Props> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground whitespace-nowrap tabular-nums">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap tabular-nums">
             {selected.length}<span className="text-muted-foreground/50">/30</span>
           </span>
 
@@ -276,7 +276,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
               size="sm"
               onClick={handleReload}
               disabled={isReloading}
-              className="h-9 w-9 p-0 rounded-lg cursor-pointer"
+              className="h-9 w-9 p-0 rounded-lg cursor-pointer tap-highlight-none"
               title="Reload flair data"
               aria-label="Reload flair data for selected subreddits"
             >
@@ -290,19 +290,19 @@ const SubredditFlairPicker: React.FC<Props> = ({
       {!isLoaded ? (
         <div className="rounded-md border border-border overflow-hidden animate-pulse">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-border/30 last:border-b-0">
+            <div key={i} className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-border/30 last:border-b-0">
               <div className="w-4 h-4 bg-secondary rounded" />
               <div className="flex-1 h-4 bg-secondary rounded" />
-              <div className="w-24 h-8 bg-secondary rounded" />
+              <div className="w-16 sm:w-24 h-7 sm:h-8 bg-secondary rounded" />
             </div>
           ))}
         </div>
       ) : isSearchMode ? (
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
           {/* Local Results Section */}
           {hasLocalResults && (
             <div>
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
+              <div className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1 sm:py-1.5">
                 Your Subreddits
               </div>
               <div className="rounded-md border border-border overflow-hidden">
@@ -334,46 +334,46 @@ const SubredditFlairPicker: React.FC<Props> = ({
           {/* Reddit Search Results Section */}
           {query.trim().length >= 2 && (
             <div>
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5 flex items-center gap-2">
+              <div className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1 sm:py-1.5 flex items-center gap-2">
                 Search Reddit
                 {isSearching && <Loader2 className="w-3 h-3 animate-spin" />}
               </div>
 
               {isSearching && !hasRedditResults && (
-                <div className="py-4 text-center text-muted-foreground flex items-center justify-center gap-2 text-sm">
+                <div className="py-3 sm:py-4 text-center text-muted-foreground flex items-center justify-center gap-2 text-xs sm:text-sm">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Searching Reddit...
+                  Searching...
                 </div>
               )}
 
               {hasRedditResults && (
                 <div className="rounded-md border border-border divide-y divide-border overflow-hidden">
                   {filteredSearchResults?.map((sub) => (
-                    <div key={sub.name} className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors">
+                    <div key={sub.name} className="flex items-center justify-between p-2.5 sm:p-3 hover:bg-muted/50 active:bg-muted/70 transition-colors">
                       <div className="flex flex-col overflow-hidden min-w-0 flex-1">
-                        <span className="font-medium truncate">r/{sub.name}</span>
-                        <span className="text-xs text-muted-foreground truncate">
+                        <span className="font-medium truncate text-sm">r/{sub.name}</span>
+                        <span className="text-[10px] sm:text-xs text-muted-foreground truncate">
                           {sub.subscribers.toLocaleString()} members
                         </span>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0 ml-3">
+                      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-2 sm:ml-3">
                         <Button
                           size="sm"
                           variant="secondary"
                           onClick={() => handleAddTemporary(sub.name)}
-                          className="h-8 text-xs whitespace-nowrap cursor-pointer"
+                          className="h-7 sm:h-8 text-[10px] sm:text-xs whitespace-nowrap cursor-pointer tap-highlight-none px-2 sm:px-3"
                         >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Add
+                          <Plus className="w-3 h-3 sm:mr-1" />
+                          <span className="hidden sm:inline">Add</span>
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleOpenSaveDialog(sub.name)}
-                          className="h-8 text-xs whitespace-nowrap cursor-pointer"
+                          className="h-7 sm:h-8 text-[10px] sm:text-xs whitespace-nowrap cursor-pointer tap-highlight-none px-2 sm:px-3"
                         >
-                          <Save className="w-3 h-3 mr-1" />
-                          Save
+                          <Save className="w-3 h-3 sm:mr-1" />
+                          <span className="hidden sm:inline">Save</span>
                         </Button>
                       </div>
                     </div>
@@ -382,7 +382,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
               )}
 
               {hasSearched && !isSearching && !hasRedditResults && (
-                <div className="px-4 py-3 text-sm text-muted-foreground text-center border border-border rounded-md">
+                <div className="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-muted-foreground text-center border border-border rounded-md">
                   No new subreddits found for &quot;{query}&quot;
                 </div>
               )}
@@ -391,7 +391,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
 
           {/* No Results At All */}
           {showNoResultsMessage && (
-            <div className="px-4 py-8 text-center text-sm text-muted-foreground border border-border rounded-md">
+            <div className="px-3 sm:px-4 py-6 sm:py-8 text-center text-xs sm:text-sm text-muted-foreground border border-border rounded-md">
               No subreddits found matching &quot;{query}&quot;
             </div>
           )}

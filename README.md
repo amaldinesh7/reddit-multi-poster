@@ -134,6 +134,18 @@ npx supabase link --project-ref YOUR_PROJECT_ID
 npx supabase db push
 ```
 
+### Preventing Supabase from Pausing
+
+Supabase free tier projects pause after 7 days of inactivity. To keep your instance active:
+
+1. **Quick Setup**: See [KEEP_ALIVE_SETUP.md](./KEEP_ALIVE_SETUP.md) for detailed instructions
+2. **Available Options**:
+   - Vercel Cron Jobs (if using Vercel)
+   - GitHub Actions (already configured in `.github/workflows/keep-alive.yml`)
+   - External cron services (cron-job.org, EasyCron, etc.)
+
+The keep-alive endpoint is available at `/api/keep-alive` and performs a lightweight database query to prevent pausing.
+
 ---
 
 ## Perfect For

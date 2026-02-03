@@ -1,0 +1,38 @@
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    # Run every 6 days at 2 AM UTC to prevent Supabase from pausing
+    # Supabase free tier pauses after 7 days of inactivity
+    - cron: '0 2 */6 * *'
+  workflow_dispatch: # Allows manual triggering from GitHub UI
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Keep-Alive Endpoint
+        run: |
+          if [ -z "${{ secrets.KEEP_ALIVE_URL }}" ]; then
+            echo "Error: KEEP_ALIVE_URL secret is not set"
+            exit 1
+          fi
+          
+          SECRET_PARAM=""
+          if [ -n "${{ secrets.KEEP_ALIVE_SECRET }}" ]; then
+            SECRET_PARAM="?secret=${{ secrets.KEEP_ALIVE_SECRET }}"
+          fi
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "${{ secrets.KEEP_ALIVE_URL }}$SECRET_PARAM")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "Response: $BODY"
+          echo "HTTP Status: $HTTP_CODE"
+          
+          if [ "$HTTP_CODE" -eq 200 ]; then
+            echo "✅ Keep-alive successful!"
+          else
+            echo "❌ Keep-alive failed with status $HTTP_CODE"
+            exit 1
+          fi

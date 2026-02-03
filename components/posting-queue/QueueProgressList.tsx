@@ -23,20 +23,21 @@ const QueueProgressList: React.FC<QueueProgressListProps> = ({
 
   return (
     <div className="rounded-md border border-border overflow-hidden">
-      <div className="px-3 py-2 border-b border-border bg-secondary">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Progress</span>
-          <div className="flex items-center gap-2 text-xs">
-            {/* Unselect success button */}
+      <div className="px-2.5 sm:px-3 py-1.5 sm:py-2 border-b border-border bg-secondary">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs sm:text-sm font-medium">Progress</span>
+          <div className="flex items-center gap-2 text-[10px] sm:text-xs">
+            {/* Unselect success button - icon only on mobile */}
             {successCount > 0 && onUnselectSuccess && !running && (
               <button
                 onClick={onUnselectSuccess}
-                className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                className="flex items-center gap-1 text-muted-foreground hover:text-foreground active:text-foreground transition-colors cursor-pointer tap-highlight-none p-1 -m-1 rounded"
                 title="Unselect successful posts"
                 aria-label={`Unselect ${successCount} successful posts`}
               >
-                <RotateCcw className="h-3 w-3" />
-                <span>Unselect Successful Posts ({successCount})</span>
+                <RotateCcw className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                <span className="hidden sm:inline">Unselect Successful ({successCount})</span>
+                <span className="sm:hidden">({successCount})</span>
               </button>
             )}
             {errorCount > 0 && (
@@ -49,11 +50,11 @@ const QueueProgressList: React.FC<QueueProgressListProps> = ({
         </div>
       </div>
       
-      <div className="max-h-64 overflow-y-auto">
+      <div className="max-h-48 sm:max-h-64 overflow-y-auto touch-scroll mobile-hide-scrollbar custom-scrollbar">
         {logs.length === 0 && running && (
-          <div className="text-center py-6">
-            <Loader2 className="w-5 h-5 mx-auto mb-2 animate-spin text-primary" aria-label="Starting" />
-            <p className="text-sm text-muted-foreground">Starting...</p>
+          <div className="text-center py-4 sm:py-6">
+            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-2 animate-spin text-primary" aria-label="Starting" />
+            <p className="text-xs sm:text-sm text-muted-foreground">Starting...</p>
           </div>
         )}
         

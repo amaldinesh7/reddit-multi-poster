@@ -2,6 +2,7 @@ import React from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import axios from 'axios';
+import * as Sentry from '@sentry/nextjs';
 import MediaUpload from '../components/MediaUpload';
 import SubredditFlairPicker from '../components/SubredditFlairPicker';
 import PostComposer from '../components/PostComposer';
@@ -68,6 +69,14 @@ export default function Home() {
           router.replace('/login');
           return;
         }
+
+        // Set Sentry user context for better error tracking
+        if (data.me) {
+          Sentry.setUser({
+            id: data.me.id || data.userId,
+            username: data.me.name,
+          });
+        }
       } catch {
         setAuth({ authenticated: false });
         router.replace('/login');
@@ -80,6 +89,8 @@ export default function Home() {
 
   const handleLogout = async () => {
     await axios.post('/api/auth/logout');
+    // Clear Sentry user context on logout
+    Sentry.setUser(null);
     router.replace('/login');
   };
 
@@ -120,22 +131,22 @@ export default function Home() {
           <PwaOnboarding />
 
           {/* Main Content */}
-          <main className="container mx-auto px-4 py-6 max-w-2xl lg:max-w-7xl">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 items-start">
+          <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-2xl lg:max-w-7xl safe-area-inset-bottom">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
 
               {/* Left Column: Create Post */}
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Create Post</h2>
+              <div className="space-y-4 sm:space-y-6">
+                <h2 className="text-lg sm:text-xl font-semibold hidden lg:block lg:mb-2">Create Post</h2>
 
                 {/* Media Section */}
                 <Card>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
+                  <CardHeader className="pb-2 sm:pb-3">
+                    <div className="flex items-center justify-between gap-2">
                       <CardTitle>Media</CardTitle>
-                      <div className="flex rounded-md border border-border overflow-hidden">
+                      <div className="flex rounded-md border border-border overflow-hidden flex-shrink-0">
                         <button
                           onClick={() => setMediaMode('file')}
-                          className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${mediaMode === 'file'
+                          className={`px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium transition-colors cursor-pointer tap-highlight-none ${mediaMode === 'file'
                             ? 'bg-primary text-white'
                             : 'bg-transparent text-muted-foreground hover:text-foreground'
                             }`}
@@ -146,7 +157,7 @@ export default function Home() {
                         </button>
                         <button
                           onClick={() => setMediaMode('url')}
-                          className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${mediaMode === 'url'
+                          className={`px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium transition-colors cursor-pointer tap-highlight-none ${mediaMode === 'url'
                             ? 'bg-primary text-white'
                             : 'bg-transparent text-muted-foreground hover:text-foreground'
                             }`}
@@ -165,7 +176,7 @@ export default function Home() {
 
                 {/* Title Section */}
                 <Card>
-                  <CardHeader className="pb-3">
+                  <CardHeader className="pb-2 sm:pb-3">
                     <CardTitle>Title</CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -182,14 +193,21 @@ export default function Home() {
               </div>
 
               {/* Right Column: Communities & Queue */}
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Subreddits & Queue</h2>
+              <div className="space-y-4 sm:space-y-6">
+                <h2 className="text-lg sm:text-xl font-semibold hidden lg:block lg:mb-2">Subreddits & Queue</h2>
 
                 {/* Communities Section */}
                 <Card>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-2">
-                      <CardTitle>Subreddits</CardTitle>
+                  <CardHeader className="pb-2 sm:pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CardTitle>Subreddits</CardTitle>
+                        {selectedSubs.length > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-primary/20 text-primary lg:hidden">
+                            {selectedSubs.length}
+                          </span>
+                        )}
+                      </div>
                       {/* 
                           NOTE: The "Manage" button is required to allow users to navigate to the 
                           Settings page where they can organize their subreddits into categories,
@@ -201,14 +219,14 @@ export default function Home() {
                         variant="link"
                         size="sm"
                         onClick={() => router.push('/settings')}
-                        className="h-8 px-2 text-xs font-medium cursor-pointer"
+                        className="h-8 px-2 text-xs font-medium cursor-pointer tap-highlight-none"
                         aria-label="Manage communities and flairs"
                       >
                         Manage
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3 sm:space-y-4">
                     <SubredditFlairPicker
                       selected={selectedSubs}
                       onSelectedChange={setSelectedSubs}
@@ -230,7 +248,7 @@ export default function Home() {
                         />
                         <label
                           htmlFor="post-to-profile"
-                          className="text-sm cursor-pointer"
+                          className="text-xs sm:text-sm cursor-pointer select-none"
                         >
                           Also post to my profile (u/{auth.me.name})
                         </label>
@@ -241,11 +259,11 @@ export default function Home() {
 
                 {/* Queue Section */}
                 <Card>
-                  <CardHeader className="pb-3">
+                  <CardHeader className="pb-2 sm:pb-3">
                     <div className="flex items-center gap-2">
                       <CardTitle>Posting Queue</CardTitle>
                       {items.length > 0 && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
+                        <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-primary/20 text-primary">
                           {items.length}
                         </span>
                       )}
@@ -264,10 +282,9 @@ export default function Home() {
                 </Card>
               </div>
             </div>
-          </main >
-        </div >
-      )
-      }
+          </main>
+        </div>
+      )}
     </>
   );
 }

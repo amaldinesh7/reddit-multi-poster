@@ -42,30 +42,33 @@ const SubredditItemComponent: React.FC<SubredditItemComponentProps> = ({
 
   return (
     <div className={`
-      flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/20 border border-border/30 
-      transition-all duration-200 hover:bg-secondary/30
+      flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-secondary/20 border border-border/30 
+      transition-all duration-200 hover:bg-secondary/30 active:bg-secondary/40
       ${isDragging ? 'opacity-50 ring-2 ring-primary/50' : ''}
     `}>
-      <div {...dragHandleProps} className="cursor-grab">
+      <div 
+        {...dragHandleProps} 
+        className="cursor-grab touch-manipulation tap-highlight-none p-1 -m-1"
+      >
         <GripVertical className="w-3 h-3 text-muted-foreground" aria-hidden="true" />
       </div>
       
       {editingSubreddit ? (
-        <div className="flex items-center gap-2 flex-1">
-          <span className="text-xs text-muted-foreground">r/</span>
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+          <span className="text-[10px] sm:text-xs text-muted-foreground">r/</span>
           <Input
             defaultValue={subreddit.subreddit_name}
             onKeyPress={handleKeyPress}
             onBlur={(e) => handleUpdateSubredditName(e.target.value)}
             autoFocus
-            className="h-7 text-xs bg-secondary/50 border-border/50"
+            className="h-7 text-xs bg-secondary/50 border-border/50 flex-1 min-w-0"
             aria-label="Edit subreddit name"
           />
           <Button
             size="sm"
             variant="ghost"
             onClick={() => setEditingSubreddit(false)}
-            className="h-7 w-7 p-0 cursor-pointer"
+            className="h-7 w-7 p-0 cursor-pointer tap-highlight-none flex-shrink-0"
             aria-label="Cancel editing"
           >
             <X className="w-3 h-3" />
@@ -73,20 +76,20 @@ const SubredditItemComponent: React.FC<SubredditItemComponentProps> = ({
         </div>
       ) : (
         <>
-          <div className="flex items-center gap-2 flex-1">
-            <span className="text-sm">r/{subreddit.subreddit_name}</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+            <span className="text-xs sm:text-sm truncate">r/{subreddit.subreddit_name}</span>
             {isLoading && (
-              <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" aria-label="Loading" />
+              <Loader2 className="w-3 h-3 animate-spin text-muted-foreground flex-shrink-0" aria-label="Loading" />
             )}
             {error && (
-              <span className="text-xs text-red-400" title={error} aria-label={`Error: ${error}`}>⚠️</span>
+              <span className="text-[10px] text-red-400 flex-shrink-0" title={error} aria-label={`Error: ${error}`}>⚠️</span>
             )}
           </div>
           <Button
             size="sm"
             variant="ghost"
             onClick={() => setEditingSubreddit(true)}
-            className="h-7 w-7 p-0 hover:bg-secondary cursor-pointer"
+            className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-secondary active:bg-secondary cursor-pointer tap-highlight-none flex-shrink-0"
             aria-label={`Edit r/${subreddit.subreddit_name}`}
           >
             <Edit2 className="w-3 h-3" />
@@ -95,7 +98,7 @@ const SubredditItemComponent: React.FC<SubredditItemComponentProps> = ({
             size="sm"
             variant="ghost"
             onClick={handleDeleteSubreddit}
-            className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
+            className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10 active:bg-red-500/20 cursor-pointer tap-highlight-none flex-shrink-0"
             aria-label={`Delete r/${subreddit.subreddit_name}`}
           >
             <Trash2 className="w-3 h-3" />
