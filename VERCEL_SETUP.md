@@ -1,57 +1,37 @@
-# Vercel Keep-Alive Setup Guide
+# Supabase Keep-Alive Setup (Vercel)
 
-This guide will help you set up the Supabase keep-alive cron job on Vercel.
+Prevents Supabase from pausing after 7 days of inactivity by running a lightweight database query every 6 hours.
 
-## ✅ What's Already Done
+## ✅ What's Included
 
 1. ✅ `vercel.json` - Cron job configuration (runs every 6 hours)
-2. ✅ `/api/keep-alive` - Keep-alive endpoint
-3. ✅ Automatic authentication via Vercel's `x-vercel-cron` header
+2. ✅ `/api/keep-alive` - Keep-alive endpoint with Vercel authentication
+3. ✅ Automatic setup - Vercel detects `vercel.json` and configures the cron job
 
-## 🚀 Next Steps
+## 🚀 Setup (For Already Deployed Projects)
 
-### Step 1: Deploy to Vercel
+### Step 1: Push Code to GitHub
 
-If you haven't already deployed to Vercel:
+The code is already committed. After you push:
+- Vercel will automatically detect the new `vercel.json` file
+- A new deployment will be triggered
+- The cron job will be automatically configured
 
-1. **Install Vercel CLI** (if not already installed):
-   ```bash
-   npm i -g vercel
-   ```
+**No manual action needed** - just push and Vercel handles the rest!
 
-2. **Login to Vercel**:
-   ```bash
-   vercel login
-   ```
+### Step 2: Verify Environment Variables
 
-3. **Deploy your project**:
-   ```bash
-   vercel
-   ```
-   
-   Or connect your GitHub repository:
-   - Go to [vercel.com](https://vercel.com)
-   - Click "Add New Project"
-   - Import your GitHub repository
-   - Vercel will auto-detect Next.js and deploy
+Ensure these environment variables are set in your Vercel project:
+- `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
+- `SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase secret key
 
-### Step 2: Configure Environment Variables
-
-1. Go to your Vercel project dashboard
-2. Navigate to **Settings** → **Environment Variables**
-3. Add your Supabase environment variables (if not already added):
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY`
-   - `KEEP_ALIVE_SECRET` (optional, for additional security)
+**To check/update:**
+1. Go to Vercel Dashboard → Your Project → Settings → Environment Variables
+2. Verify the above variables are present
 
 ### Step 3: Verify Cron Job is Active
 
-After deployment, Vercel will automatically:
-- ✅ Detect the `vercel.json` file
-- ✅ Set up the cron job
-- ✅ Run it every 6 hours
-
-**To verify:**
+**After pushing the code**, verify the cron job is set up:
 
 1. Go to your Vercel project dashboard
 2. Navigate to **Settings** → **Cron Jobs**
@@ -60,7 +40,9 @@ After deployment, Vercel will automatically:
    - **Schedule**: `0 */6 * * *` (every 6 hours)
    - **Status**: Active
 
-### Step 4: Test the Endpoint Manually
+> **Note**: It may take a few minutes after deployment for the cron job to appear.
+
+### Step 4: Test the Endpoint (Optional)
 
 Test that the endpoint works:
 
@@ -156,16 +138,19 @@ You can monitor the keep-alive endpoint by:
    - The endpoint already logs to console
    - Check Vercel function logs for execution details
 
-## ✅ Verification Checklist
+## ✅ Quick Verification
 
-- [ ] Project deployed to Vercel
-- [ ] Environment variables configured
-- [ ] `vercel.json` is in repository root
-- [ ] Cron job appears in Vercel dashboard (Settings → Cron Jobs)
-- [ ] Manual test of `/api/keep-alive` endpoint succeeds
-- [ ] First cron execution completed successfully (check logs)
+After pushing the code:
 
-Once all items are checked, your Supabase instance will stay active! 🎉
+1. **Wait for deployment** (usually 1-2 minutes)
+2. **Check Cron Jobs**: Vercel Dashboard → Settings → Cron Jobs
+   - Should see `/api/keep-alive` with schedule `0 */6 * * *`
+3. **Optional**: Test endpoint manually:
+   ```bash
+   curl https://your-project.vercel.app/api/keep-alive
+   ```
+
+That's it! Your Supabase instance will now stay active. 🎉
 
 ## 💡 Additional Notes
 

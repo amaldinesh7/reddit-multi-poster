@@ -136,15 +136,11 @@ npx supabase db push
 
 ### Preventing Supabase from Pausing
 
-Supabase free tier projects pause after 7 days of inactivity. To keep your instance active:
+Supabase free tier projects pause after 7 days of inactivity. This project includes an automatic keep-alive solution using Vercel Cron Jobs.
 
-1. **Quick Setup**: See [KEEP_ALIVE_SETUP.md](./KEEP_ALIVE_SETUP.md) for detailed instructions
-2. **Available Options**:
-   - Vercel Cron Jobs (if using Vercel)
-   - GitHub Actions (already configured in `.github/workflows/keep-alive.yml`)
-   - External cron services (cron-job.org, EasyCron, etc.)
+**Setup**: See [VERCEL_SETUP.md](./VERCEL_SETUP.md) for complete instructions.
 
-The keep-alive endpoint is available at `/api/keep-alive` and performs a lightweight database query to prevent pausing.
+**What it does**: The `/api/keep-alive` endpoint runs every 6 hours via Vercel Cron to perform a lightweight database query, keeping your Supabase instance active.
 
 ---
 
