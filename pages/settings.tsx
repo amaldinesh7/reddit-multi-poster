@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { ArrowLeft, Loader2, Search, FolderPlus, Sparkles, RefreshCw, GripVertical, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, FolderPlus, Sparkles, RefreshCw, GripVertical, FlaskConical } from 'lucide-react';
 import { useSubreddits } from '../hooks/useSubreddits';
 import { useSubredditCache } from '../hooks/useSubredditCache';
 import { useAuth } from '../hooks/useAuth';
@@ -136,13 +136,6 @@ export default function Settings() {
     }
   };
 
-  // Clear search
-  const handleClearSearch = () => {
-    setSearchQuery('');
-    setShowSearchResults(false);
-    setSearchResults([]);
-  };
-
   // Debounced search
   React.useEffect(() => {
     if (!searchQuery.trim()) {
@@ -157,13 +150,90 @@ export default function Settings() {
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
+  // Dev mode: Load NSFW subreddits
+  const [isLoadingDev, setIsLoadingDev] = React.useState(false);
+  const isDev = process.env.NODE_ENV === 'development';
+
+  const DEV_NSFW_SUBREDDITS = [
+    'indiansgetlaid',
+    'DesiNSFWSubs',
+    'Bangaloresluts',
+    'DesiStree',
+    'DesiSlutGW',
+    'KeralaGW',
+    'Bangalorecouples',
+    'DelhiGone_Wild',
+    'KochiNSFW',
+    'Malayali_GoneWild',
+    'IndianHornypeople',
+    'mumbaiGWild',
+    'BengalisGoneWild',
+    'desiSlimnStacked',
+    'TamilGW',
+    'PuneGW',
+    'BangaloreGWild',
+    'DesiWhoreWife',
+    'DesiExhibitionistGW',
+    'hotwifeindia',
+  ];
+
+  const handleLoadDevSubreddits = async () => {
+    if (!isDev || isLoadingDev) return;
+
+    setIsLoadingDev(true);
+    try {
+      // Find or create "Dev NSFW" category
+      let categoryId = data.categories.find(c => c.name === 'Dev NSFW')?.id;
+      
+      if (!categoryId) {
+        const newCategory = await createCategory('Dev NSFW');
+        if (newCategory) {
+          categoryId = newCategory.id;
+        }
+      }
+
+      if (!categoryId) {
+        console.error('Failed to create/find Dev NSFW category');
+        return;
+      }
+
+      // Get existing subreddits to avoid duplicates
+      const existingSubreddits = new Set(
+        data.categories.flatMap(c => c.user_subreddits.map(s => s.subreddit_name.toLowerCase()))
+      );
+
+      // Add subreddits one by one
+      for (const subreddit of DEV_NSFW_SUBREDDITS) {
+        if (!existingSubreddits.has(subreddit.toLowerCase())) {
+          const result = await addSubreddit(categoryId, subreddit);
+          if (result) {
+            try {
+              await fetchAndCache(subreddit);
+            } catch {
+              // Ignore cache errors
+            }
+          }
+          // Small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      // Refresh to show all added subreddits
+      await refresh();
+    } catch (error) {
+      console.error('Failed to load dev subreddits:', error);
+    } finally {
+      setIsLoadingDev(false);
+    }
+  };
+
   // Show loading state
   if (authLoading || !isLoaded) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground text-sm">Loading settings...</p>
+          <p className="text-muted-foreground">Loading settings...</p>
         </div>
       </div>
     );
@@ -190,62 +260,82 @@ export default function Settings() {
 
         <div className="min-h-screen bg-background">
           {/* Header */}
-          <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl safe-area-inset-top">
-            <div className="container mx-auto px-3 sm:px-6">
-              <div className="flex h-14 sm:h-16 items-center gap-2 sm:gap-4">
+          <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
+            <div className="container mx-auto px-4 sm:px-6">
+              <div className="flex h-16 items-center gap-4">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => router.push('/')}
-                  className="p-2 rounded-lg hover:bg-secondary active:bg-secondary cursor-pointer tap-highlight-none"
+                  className="p-2 rounded-lg hover:bg-secondary cursor-pointer"
                   aria-label="Go back to home"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
-                <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center">
                     <Sparkles className="w-4 h-4 text-white" />
                   </div>
-                  <div className="min-w-0">
-                    <h1 className="text-base sm:text-lg font-semibold truncate">Settings</h1>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">Manage your subreddits</p>
+                  <div>
+                    <h1 className="text-lg font-semibold">Settings</h1>
+                    <p className="text-xs text-muted-foreground hidden sm:block">Manage your subreddits</p>
                   </div>
                 </div>
 
                 {/* Refresh button */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => refresh()}
-                  disabled={isLoading}
-                  className="p-2 cursor-pointer tap-highlight-none"
-                  aria-label="Refresh categories"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                </Button>
+                <div className="ml-auto">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => refresh()}
+                    disabled={isLoading}
+                    className="p-2 cursor-pointer"
+                    aria-label="Refresh categories"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
               </div>
             </div>
           </header>
 
           {/* Main Content */}
-          <main className="container mx-auto px-3 sm:px-6 py-4 sm:py-6 max-w-3xl safe-area-inset-bottom">
-            <div className="space-y-4 sm:space-y-6">
+          <main className="container mx-auto px-4 sm:px-6 py-6 max-w-3xl">
+            <div className="space-y-6">
               {/* Actions */}
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   onClick={handleAddCategory}
-                  className="flex-1 sm:flex-none rounded-xl h-10 cursor-pointer tap-highlight-none text-sm"
+                  className="flex-1 sm:flex-none rounded-xl h-10 cursor-pointer"
                   aria-label="Add new category"
                 >
                   <FolderPlus className="w-4 h-4 mr-2" />
                   Add Category
                 </Button>
+
+                {/* Dev-only: Load NSFW subreddits */}
+                {isDev && (
+                  <Button
+                    onClick={handleLoadDevSubreddits}
+                    disabled={isLoadingDev}
+                    variant="outline"
+                    className="flex-1 sm:flex-none rounded-xl h-10 cursor-pointer border-amber-600/50 text-amber-500 hover:bg-amber-600/10"
+                    aria-label="Load 20 NSFW subreddits for testing"
+                  >
+                    {isLoadingDev ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <FlaskConical className="w-4 h-4 mr-2" />
+                    )}
+                    {isLoadingDev ? 'Loading...' : 'Load 20 NSFW (Dev)'}
+                  </Button>
+                )}
               </div>
 
               {/* Search */}
-              <div className="space-y-2 sm:space-y-3">
+              <div className="space-y-3">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
                   <Input
                     placeholder="Search Reddit for subreddits..."
                     value={searchQuery}
@@ -253,18 +343,11 @@ export default function Settings() {
                     className="pl-10 pr-10 h-11 rounded-xl bg-secondary/30 border-border/50"
                     aria-label="Search subreddits"
                   />
-                  {searchQuery && (
-                    <button
-                      onClick={handleClearSearch}
-                      className="absolute right-10 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground active:text-foreground p-1 cursor-pointer tap-highlight-none"
-                      aria-label="Clear search"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                  {isSearching && (
-                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" aria-label="Searching" />
-                  )}
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center">
+                    {isSearching && (
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" aria-label="Searching" />
+                    )}
+                  </div>
                 </div>
 
                 {/* Search Results */}
@@ -291,7 +374,7 @@ export default function Settings() {
                   items={data.categories.map(c => c.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  <div className="space-y-3 sm:space-y-4">
+                  <div className="space-y-4">
                     {data.categories.map((category) => (
                       <SortableCategory
                         key={category.id}
@@ -301,8 +384,8 @@ export default function Settings() {
                     ))}
 
                     {data.categories.length === 0 && (
-                      <div className="text-center py-10 sm:py-12 text-muted-foreground">
-                        <FolderPlus className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 opacity-50" />
+                      <div className="text-center py-12 text-muted-foreground">
+                        <FolderPlus className="w-12 h-12 mx-auto mb-4 opacity-50" />
                         <p className="text-sm">No categories yet.</p>
                         <p className="text-xs mt-1">Create your first category above.</p>
                       </div>

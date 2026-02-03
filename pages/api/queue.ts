@@ -1,10 +1,65 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { redditClient, refreshAccessToken, submitPost, addSmartPrefixesToTitle, getSubredditRules } from '../../utils/reddit';
 import { applyRateLimit, postingRateLimit } from '../../lib/rateLimit';
+import { 
+  QUEUE_LIMITS,
+  formatFileSize,
+} from '../../lib/queueLimits';
 import formidable from 'formidable';
 import fs from 'fs';
 
 export const config = { api: { bodyParser: false } }; // Disable default body parser for file uploads
+
+// ============================================================================
+// Validation Helpers
+// ============================================================================
+
+interface ValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
+const validateBatchLimits = (
+  items: unknown[],
+  files: Record<string, unknown>
+): ValidationResult => {
+  // Check item count
+  if (items.length > QUEUE_LIMITS.MAX_ITEMS_PER_BATCH) {
+    return {
+      valid: false,
+      error: `Batch exceeds maximum of ${QUEUE_LIMITS.MAX_ITEMS_PER_BATCH} items. Received ${items.length}. Please split into smaller batches.`,
+    };
+  }
+
+  // Check individual file sizes only (no batch size limit)
+  const maxSingleFileSizeBytes = QUEUE_LIMITS.MAX_SINGLE_FILE_SIZE_MB * 1024 * 1024;
+
+  for (const key of Object.keys(files)) {
+    const fileArr = files[key];
+    const fileList = Array.isArray(fileArr) ? fileArr : [fileArr];
+    
+    for (const file of fileList) {
+      if (file && typeof file === 'object' && 'size' in file) {
+        const fileSize = (file as { size: number }).size;
+        
+        // Check individual file size
+        if (fileSize > maxSingleFileSizeBytes) {
+          const fileName = (file as { originalFilename?: string }).originalFilename || 'unknown';
+          return {
+            valid: false,
+            error: `File "${fileName}" (${formatFileSize(fileSize)}) exceeds maximum size of ${QUEUE_LIMITS.MAX_SINGLE_FILE_SIZE_MB}MB.`,
+          };
+        }
+      }
+    }
+  }
+
+  return { valid: true };
+};
+
+// ============================================================================
+// API Handler
+// ============================================================================
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -16,15 +71,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   
   // Check if it's a file upload (multipart) or JSON
   const contentType = req.headers['content-type'] || '';
-  let items: any[], caption: string, prefixes: any;
-  let files: any = {};
-  let fields: any = {};
+  let items: { 
+    subreddit: string;
+    flairId?: string;
+    titleSuffix?: string;
+    kind: string;
+    url?: string;
+    text?: string;
+  }[];
+  let caption: string;
+  let prefixes: { f?: boolean; c?: boolean };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let files: Record<string, any> = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let fields: Record<string, any> = {};
   
   if (contentType.includes('multipart/form-data')) {
     // Parse form data (including files)
     const form = formidable({ multiples: true });
     const [parsedFields, uploadedFiles] = await form.parse(req);
-    fields = parsedFields;
+    fields = parsedFields as Record<string, string | string[]>;
     
     console.log('Received form fields:', Object.keys(fields));
     console.log('Received files:', Object.keys(uploadedFiles));
@@ -46,6 +112,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       subreddit: item.subreddit, 
       kind: item.kind 
     })));
+
+    // Validate batch limits for file uploads
+    const validation = validateBatchLimits(items, files);
+    if (!validation.valid) {
+      return res.status(400).json({ 
+        error: validation.error,
+        code: 'BATCH_LIMIT_EXCEEDED',
+      });
+    }
   } else {
     // Parse JSON body (fallback for URL-only posts)
     console.log('Raw req.body:', req.body);
@@ -77,6 +152,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     console.log('Extracted items:', items);
     console.log('Items length:', items.length);
+
+    // Validate batch limits for JSON requests (item count only, no files)
+    if (items.length > QUEUE_LIMITS.MAX_ITEMS_PER_BATCH) {
+      return res.status(400).json({ 
+        error: `Batch exceeds maximum of ${QUEUE_LIMITS.MAX_ITEMS_PER_BATCH} items. Received ${items.length}. Please split into smaller batches.`,
+        code: 'BATCH_LIMIT_EXCEEDED',
+      });
+    }
   }
   
   if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: 'No items' });
@@ -176,7 +259,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
         
         // Determine post kind based on number of files
-        let postKind = item.kind;
+        let postKind: 'self' | 'link' | 'image' | 'video' | 'gallery' = item.kind as 'self' | 'link' | 'image' | 'video' | 'gallery';
         if (itemFiles.length > 1) {
           postKind = 'gallery';
         }
@@ -231,4 +314,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const msg = e instanceof Error ? e.message : 'Error';
     res.status(500).end(JSON.stringify({ error: msg }));
   }
-} 
+}

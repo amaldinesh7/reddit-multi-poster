@@ -6,7 +6,7 @@ import { createServerSupabaseClient } from '@/lib/supabase';
  * This endpoint performs a lightweight query to keep the database active.
  * 
  * Configured to run via Vercel Cron Jobs (see vercel.json).
- * Schedule: Every 6 hours (0 */6 * * *) to ensure Supabase stays active.
+ * Schedule: Every 6 hours (cron: 0 0,6,12,18 * * *) to ensure Supabase stays active.
  * 
  * Security: 
  * - Vercel cron jobs are automatically authenticated via x-vercel-cron header

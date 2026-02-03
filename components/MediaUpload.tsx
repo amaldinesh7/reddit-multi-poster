@@ -75,17 +75,16 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
     <div>
       {mode === 'file' ? (
         <div>
-          {/* Drop Zone - Touch optimized */}
+          {/* Drop Zone */}
           <div
             {...getRootProps()}
             className={`
-              relative rounded-lg border-2 border-dashed p-4 sm:p-8 text-center cursor-pointer transition-colors tap-highlight-none
-              active:scale-[0.99] touch-manipulation
+              relative rounded-lg border-2 border-dashed p-8 text-center cursor-pointer transition-colors
               ${isDragActive 
                 ? 'border-primary bg-primary/10' 
                 : selectedFiles.length > 0 
                   ? 'border-primary/50 bg-primary/5' 
-                  : 'border-border hover:border-muted-foreground active:border-primary'
+                  : 'border-border hover:border-muted-foreground'
               }
             `}
           >
@@ -93,16 +92,16 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
             
             {selectedFiles.length > 0 ? (
               <div>
-                <p className="font-medium mb-3 sm:mb-4 text-sm sm:text-base">
+                <p className="font-medium mb-4">
                   {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
                 </p>
                 
-                {/* Files Preview - Responsive grid */}
-                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-3 sm:mb-4 justify-items-center">
+                {/* Files Preview */}
+                <div className="flex flex-wrap justify-center gap-2 mb-4">
                   {selectedFiles.map((file, index) => (
                     <div key={index} className="relative group">
                       {previewUrls[index] && (
-                        <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-md overflow-hidden bg-secondary">
+                        <div className="w-20 h-20 rounded-md overflow-hidden bg-secondary">
                           {file.type.startsWith('video/') ? (
                             <video src={previewUrls[index]} className="w-full h-full object-cover" muted />
                           ) : (
@@ -112,10 +111,9 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
                       )}
                       <button
                         onClick={(e) => { e.stopPropagation(); removeFile(index); }}
-                        className="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-destructive text-white flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity cursor-pointer tap-highlight-none"
-                        aria-label={`Remove ${file.name}`}
+                        className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <X className="w-3 h-3" />
                       </button>
                     </div>
                   ))}
@@ -123,28 +121,28 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
                 
                 <button
                   onClick={(e) => { e.stopPropagation(); clearMedia(); }}
-                  className="text-xs sm:text-sm text-muted-foreground hover:text-foreground active:text-foreground cursor-pointer tap-highlight-none"
+                  className="text-sm text-muted-foreground hover:text-foreground"
                 >
                   Clear all
                 </button>
               </div>
             ) : (
-              <div className="py-2 sm:py-0">
-                <Upload className={`w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 sm:mb-3 ${isDragActive ? 'text-primary' : 'text-muted-foreground'}`} />
-                <p className="font-medium mb-1 text-sm sm:text-base">
+              <div>
+                <Upload className={`w-10 h-10 mx-auto mb-3 ${isDragActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                <p className="font-medium mb-1">
                   {isDragActive ? 'Drop files here' : 'Upload media files'}
                 </p>
-                <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">
-                  Tap to select or drag & drop
+                <p className="text-sm text-muted-foreground mb-3">
+                  Drag & drop or click to select
                 </p>
-                <div className="flex justify-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-muted-foreground">
+                <div className="flex justify-center gap-3 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Image className="w-3 h-3" /> Images
                   </span>
                   <span className="flex items-center gap-1">
                     <Video className="w-3 h-3" /> Videos
                   </span>
-                  <span>Max 10</span>
+                  <span>Max 10 files</span>
                 </div>
               </div>
             )}
@@ -159,15 +157,12 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
               placeholder="Paste image or link URL..."
               value={mediaUrl}
               onChange={(e) => handleUrlChange(e.target.value)}
-              className="pl-10 pr-10 h-11 sm:h-10"
-              type="url"
-              inputMode="url"
+              className="pl-10"
             />
             {mediaUrl && (
               <button
                 onClick={clearMedia}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground active:text-foreground p-1 cursor-pointer tap-highlight-none"
-                aria-label="Clear URL"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -176,7 +171,7 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
           
           {mediaUrl && (
             <div className="p-3 rounded-md bg-secondary/50 text-sm">
-              <p className="text-muted-foreground truncate text-xs sm:text-sm">{mediaUrl}</p>
+              <p className="text-muted-foreground truncate">{mediaUrl}</p>
             </div>
           )}
         </div>

@@ -23,22 +23,22 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background safe-area-inset-top">
-      <div className="container mx-auto px-3 sm:px-4">
-        <div className="flex h-12 sm:h-14 items-center justify-between">
+    <header className="sticky top-0 z-50 border-b border-border bg-background">
+      <div className="container mx-auto px-4">
+        <div className="flex h-14 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg overflow-hidden flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
               <img src="/logo.png" alt="Reddit Multi Poster" className="w-full h-full object-contain" />
             </div>
-            <span className="font-semibold text-sm sm:text-base">Multi Poster</span>
+            <span className="font-semibold">Multi Poster</span>
           </div>
 
           {/* User Menu */}
           <DropdownMenu
             trigger={
               <button
-                className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-md hover:bg-secondary active:bg-secondary transition-colors cursor-pointer tap-highlight-none"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-secondary transition-colors cursor-pointer"
                 aria-label="User menu"
               >
                 <Avatar
@@ -47,7 +47,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                   fallback={userName || 'U'}
                   size="sm"
                 />
-                <span className="text-xs sm:text-sm font-medium hidden sm:inline max-w-[100px] truncate">
+                <span className="text-sm font-medium hidden sm:inline">
                   u/{userName}
                 </span>
                 <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden="true" />

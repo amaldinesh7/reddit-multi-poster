@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ConfirmDialog, { useConfirmDialog } from '@/components/ui/confirm-dialog';
-import { GripVertical, Edit2, X, Trash2, Plus, Loader2, ChevronDown } from 'lucide-react';
+import { GripVertical, Edit2, X, Trash2, Plus, Loader2 } from 'lucide-react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSettingsContext } from './SettingsContext';
@@ -95,30 +95,30 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
       className={`glass-card rounded-xl overflow-hidden transition-all duration-200 ${isDragging ? 'opacity-50 ring-2 ring-primary/50' : ''
         } ${isDropTarget ? 'ring-2 ring-primary bg-primary/5' : ''}`}
     >
-      <CardHeader className="p-3 sm:p-4 bg-secondary/20 border-b border-border/30">
-        <div className="flex items-center gap-2 sm:gap-3">
+      <CardHeader className="p-4 bg-secondary/20 border-b border-border/30">
+        <div className="flex items-center gap-3">
           <div
             {...dragHandleProps}
-            className="cursor-grab hover:text-primary active:text-primary transition-colors tap-highlight-none touch-manipulation p-1 -m-1"
+            className="cursor-grab hover:text-primary transition-colors"
           >
             <GripVertical className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
           </div>
 
           {editingCategory ? (
-            <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-1">
               <Input
                 defaultValue={category.name}
                 onKeyPress={handleKeyPress}
                 onBlur={(e) => handleUpdateCategoryName(e.target.value)}
                 autoFocus
-                className="h-8 bg-secondary/50 border-border/50 text-sm"
+                className="h-8 bg-secondary/50 border-border/50"
                 aria-label="Edit category name"
               />
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => setEditingCategory(false)}
-                className="h-8 w-8 p-0 cursor-pointer tap-highlight-none flex-shrink-0"
+                className="h-8 w-8 p-0 cursor-pointer"
                 aria-label="Cancel editing"
               >
                 <X className="w-4 h-4" />
@@ -126,24 +126,31 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
             </div>
           ) : (
             <>
-              <button
-                className="font-medium flex-1 min-w-0 cursor-pointer hover:text-primary active:text-primary transition-colors text-left flex items-center gap-2 tap-highlight-none"
+              <h3
+                className="font-medium flex-1 cursor-pointer hover:text-primary transition-colors"
                 onClick={handleToggleCategory}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleToggleCategory();
+                  }
+                }}
                 aria-expanded={!category.collapsed}
                 aria-label={`${category.name} category, ${category.user_subreddits?.length || 0} subreddits`}
               >
-                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform flex-shrink-0 ${category.collapsed ? '-rotate-90' : ''}`} />
-                <span className="truncate text-sm sm:text-base">{category.name}</span>
-                <span className="text-muted-foreground text-xs sm:text-sm flex-shrink-0">
+                {category.name}
+                <span className="text-muted-foreground ml-2 text-sm">
                   ({category.user_subreddits?.length || 0})
                 </span>
-              </button>
-              <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+              </h3>
+              <div className="flex items-center gap-1">
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => setEditingCategory(true)}
-                  className="h-8 w-8 p-0 hover:bg-secondary active:bg-secondary cursor-pointer tap-highlight-none"
+                  className="h-8 w-8 p-0 hover:bg-secondary cursor-pointer"
                   aria-label={`Edit ${category.name} category`}
                 >
                   <Edit2 className="w-4 h-4" />
@@ -152,7 +159,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
                   size="sm"
                   variant="ghost"
                   onClick={handleDeleteCategory}
-                  className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10 active:bg-red-500/20 cursor-pointer tap-highlight-none"
+                  className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
                   aria-label={`Delete ${category.name} category`}
                 >
                   <Trash2 className="w-4 h-4" />
@@ -164,7 +171,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
       </CardHeader>
 
       {!category.collapsed && (
-        <CardContent className="p-3 sm:p-4 space-y-2 sm:space-y-3">
+        <CardContent className="p-4 space-y-3">
           {/* Add Subreddit */}
           <div className="flex gap-2">
             <Input
@@ -172,7 +179,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
               value={newSubredditName}
               onChange={(e) => setNewSubredditName(e.target.value)}
               onKeyPress={handleSubredditKeyPress}
-              className="h-9 sm:h-10 bg-secondary/30 border-border/50 text-sm"
+              className="h-9 bg-secondary/30 border-border/50"
               disabled={isAddingSubreddit}
               aria-label="Add new subreddit"
             />
@@ -180,7 +187,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
               size="sm"
               onClick={handleAddSubreddit}
               disabled={!newSubredditName.trim() || isAddingSubreddit}
-              className="h-9 sm:h-10 px-3 cursor-pointer tap-highlight-none"
+              className="h-9 px-3 cursor-pointer"
               aria-label="Add subreddit"
             >
               {isAddingSubreddit ? (
@@ -196,7 +203,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
             items={category.user_subreddits?.map((s: { id: string }) => s.id) || []}
             strategy={verticalListSortingStrategy}
           >
-            <div className="space-y-1.5 sm:space-y-2">
+            <div className="space-y-2">
               {category.user_subreddits?.map((subreddit: any) => (
                 <SortableSubreddit
                   key={subreddit.id}
@@ -207,9 +214,9 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
               ))}
 
               {(!category.user_subreddits || category.user_subreddits.length === 0) && (
-                <div className={`text-center py-4 sm:py-6 border-2 border-dashed rounded-lg transition-colors ${isDropTarget ? 'border-primary bg-primary/5' : 'border-border/30'
+                <div className={`text-center py-6 border-2 border-dashed rounded-lg transition-colors ${isDropTarget ? 'border-primary bg-primary/5' : 'border-border/30'
                   }`}>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {isDropTarget ? 'Drop here to move' : 'No subreddits yet. Add one above or drag here.'}
                   </p>
                 </div>

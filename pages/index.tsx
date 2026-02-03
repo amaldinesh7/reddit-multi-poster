@@ -10,7 +10,6 @@ import PostingQueue from '../components/PostingQueue';
 import { AppLoader } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { AppHeader } from '@/components/layout';
 import { useHomePageState } from '@/hooks/useHomePageState';
 
@@ -131,22 +130,23 @@ export default function Home() {
           <PwaOnboarding />
 
           {/* Main Content */}
-          <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-2xl lg:max-w-7xl safe-area-inset-bottom">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
+          <main className="container mx-auto px-4 py-4 lg:py-6 max-w-2xl lg:max-w-7xl">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-x-6 items-start">
 
               {/* Left Column: Create Post */}
-              <div className="space-y-4 sm:space-y-6">
-                <h2 className="text-lg sm:text-xl font-semibold hidden lg:block lg:mb-2">Create Post</h2>
+              <div className="space-y-6">
+                <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Create Post</h2>
 
                 {/* Media Section */}
-                <Card>
-                  <CardHeader className="pb-2 sm:pb-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <CardTitle>Media</CardTitle>
-                      <div className="flex rounded-md border border-border overflow-hidden flex-shrink-0">
+                <section>
+                  {/* Desktop: Card wrapper */}
+                  <div className="hidden lg:block rounded-lg border border-border bg-card p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold">Media</h3>
+                      <div className="flex rounded-md border border-border overflow-hidden">
                         <button
                           onClick={() => setMediaMode('file')}
-                          className={`px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium transition-colors cursor-pointer tap-highlight-none ${mediaMode === 'file'
+                          className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${mediaMode === 'file'
                             ? 'bg-primary text-white'
                             : 'bg-transparent text-muted-foreground hover:text-foreground'
                             }`}
@@ -157,7 +157,7 @@ export default function Home() {
                         </button>
                         <button
                           onClick={() => setMediaMode('url')}
-                          className={`px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium transition-colors cursor-pointer tap-highlight-none ${mediaMode === 'url'
+                          className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${mediaMode === 'url'
                             ? 'bg-primary text-white'
                             : 'bg-transparent text-muted-foreground hover:text-foreground'
                             }`}
@@ -168,18 +168,47 @@ export default function Home() {
                         </button>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent>
                     <MediaUpload onUrl={setMediaUrl} onFile={setMediaFiles} mode={mediaMode} />
-                  </CardContent>
-                </Card>
+                  </div>
+
+                  {/* Mobile: No card wrapper */}
+                  <div className="lg:hidden">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-base font-semibold">Media</h3>
+                      <div className="flex rounded-md border border-border overflow-hidden">
+                        <button
+                          onClick={() => setMediaMode('file')}
+                          className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${mediaMode === 'file'
+                            ? 'bg-primary text-white'
+                            : 'bg-transparent text-muted-foreground hover:text-foreground'
+                            }`}
+                          aria-pressed={mediaMode === 'file'}
+                          aria-label="Upload file"
+                        >
+                          Upload
+                        </button>
+                        <button
+                          onClick={() => setMediaMode('url')}
+                          className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${mediaMode === 'url'
+                            ? 'bg-primary text-white'
+                            : 'bg-transparent text-muted-foreground hover:text-foreground'
+                            }`}
+                          aria-pressed={mediaMode === 'url'}
+                          aria-label="Enter URL"
+                        >
+                          URL
+                        </button>
+                      </div>
+                    </div>
+                    <MediaUpload onUrl={setMediaUrl} onFile={setMediaFiles} mode={mediaMode} />
+                  </div>
+                </section>
 
                 {/* Title Section */}
-                <Card>
-                  <CardHeader className="pb-2 sm:pb-3">
-                    <CardTitle>Title</CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                <section>
+                  {/* Desktop: Card wrapper */}
+                  <div className="hidden lg:block rounded-lg border border-border bg-card p-6">
+                    <h3 className="text-lg font-semibold mb-4">Title</h3>
                     <PostComposer
                       value={caption}
                       onChange={setCaption}
@@ -188,88 +217,132 @@ export default function Home() {
                       prefixes={prefixes}
                       onPrefixesChange={setPrefixes}
                     />
-                  </CardContent>
-                </Card>
+                  </div>
+
+                  {/* Mobile: No card wrapper */}
+                  <div className="lg:hidden">
+                    <h3 className="text-base font-semibold mb-3">Title</h3>
+                    <PostComposer
+                      value={caption}
+                      onChange={setCaption}
+                      body={body}
+                      onBodyChange={setBody}
+                      prefixes={prefixes}
+                      onPrefixesChange={setPrefixes}
+                    />
+                  </div>
+                </section>
               </div>
 
               {/* Right Column: Communities & Queue */}
-              <div className="space-y-4 sm:space-y-6">
-                <h2 className="text-lg sm:text-xl font-semibold hidden lg:block lg:mb-2">Subreddits & Queue</h2>
+              <div className="space-y-6">
+                <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Subreddits & Queue</h2>
 
                 {/* Communities Section */}
-                <Card>
-                  <CardHeader className="pb-2 sm:pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CardTitle>Subreddits</CardTitle>
-                        {selectedSubs.length > 0 && (
-                          <span className="px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-primary/20 text-primary lg:hidden">
-                            {selectedSubs.length}
-                          </span>
-                        )}
-                      </div>
-                      {/* 
-                          NOTE: The "Manage" button is required to allow users to navigate to the 
-                          Settings page where they can organize their subreddits into categories,
-                          reorder them, and fetch the latest flair data from Reddit.
-                          Without this, users would have to manually find the settings link in the 
-                          user menu, which is less discoverable.
-                      */}
+                <section>
+                  {/* Desktop: Card wrapper */}
+                  <div className="hidden lg:block rounded-lg border border-border bg-card p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <h3 className="text-lg font-semibold">Subreddits</h3>
                       <Button
                         variant="link"
                         size="sm"
                         onClick={() => router.push('/settings')}
-                        className="h-8 px-2 text-xs font-medium cursor-pointer tap-highlight-none"
+                        className="h-8 px-2 text-xs font-medium cursor-pointer"
                         aria-label="Manage communities and flairs"
                       >
                         Manage
                       </Button>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3 sm:space-y-4">
-                    <SubredditFlairPicker
-                      selected={selectedSubs}
-                      onSelectedChange={setSelectedSubs}
-                      flairValue={flairs}
-                      onFlairChange={setFlairs}
-                      titleSuffixValue={titleSuffixes}
-                      onTitleSuffixChange={setTitleSuffixes}
-                      onValidationChange={handleValidationChange}
-                      showValidationErrors={showValidationErrors}
-                    />
+                    <div className="space-y-4">
+                      <SubredditFlairPicker
+                        selected={selectedSubs}
+                        onSelectedChange={setSelectedSubs}
+                        flairValue={flairs}
+                        onFlairChange={setFlairs}
+                        titleSuffixValue={titleSuffixes}
+                        onTitleSuffixChange={setTitleSuffixes}
+                        onValidationChange={handleValidationChange}
+                        showValidationErrors={showValidationErrors}
+                      />
 
-                    {/* Post to Profile */}
-                    {auth.authenticated && auth.me?.name && (
-                      <div className="flex items-center gap-2 pt-3 border-t border-border">
-                        <Checkbox
-                          id="post-to-profile"
-                          checked={postToProfile}
-                          onCheckedChange={(checked) => setPostToProfile(checked === true)}
-                        />
-                        <label
-                          htmlFor="post-to-profile"
-                          className="text-xs sm:text-sm cursor-pointer select-none"
-                        >
-                          Also post to my profile (u/{auth.me.name})
-                        </label>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                      {/* Post to Profile */}
+                      {auth.authenticated && auth.me?.name && (
+                        <div className="flex items-center gap-2 pt-3 border-t border-border">
+                          <Checkbox
+                            id="post-to-profile-desktop"
+                            checked={postToProfile}
+                            onCheckedChange={(checked) => setPostToProfile(checked === true)}
+                          />
+                          <label
+                            htmlFor="post-to-profile-desktop"
+                            className="text-sm cursor-pointer"
+                          >
+                            Also post to my profile (u/{auth.me.name})
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Mobile: No card wrapper */}
+                  <div className="lg:hidden">
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-base font-semibold">Subreddits</h3>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => router.push('/settings')}
+                        className="h-8 px-2 text-xs font-medium cursor-pointer"
+                        aria-label="Manage communities and flairs"
+                      >
+                        Manage
+                      </Button>
+                    </div>
+                    <div className="space-y-4">
+                      <SubredditFlairPicker
+                        selected={selectedSubs}
+                        onSelectedChange={setSelectedSubs}
+                        flairValue={flairs}
+                        onFlairChange={setFlairs}
+                        titleSuffixValue={titleSuffixes}
+                        onTitleSuffixChange={setTitleSuffixes}
+                        onValidationChange={handleValidationChange}
+                        showValidationErrors={showValidationErrors}
+                      />
+
+                      {/* Post to Profile */}
+                      {auth.authenticated && auth.me?.name && (
+                        <div className="flex items-center gap-2 pt-3 border-t border-border">
+                          <Checkbox
+                            id="post-to-profile-mobile"
+                            checked={postToProfile}
+                            onCheckedChange={(checked) => setPostToProfile(checked === true)}
+                          />
+                          <label
+                            htmlFor="post-to-profile-mobile"
+                            className="text-sm cursor-pointer"
+                          >
+                            Also post to my profile (u/{auth.me.name})
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </section>
 
                 {/* Queue Section */}
-                <Card>
-                  <CardHeader className="pb-2 sm:pb-3">
-                    <div className="flex items-center gap-2">
-                      <CardTitle>Posting Queue</CardTitle>
+                <section>
+                  {/* Desktop: Card wrapper */}
+                  <div className="hidden lg:block rounded-lg border border-border bg-card p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <h3 className="text-lg font-semibold">Posting Queue</h3>
                       {items.length > 0 && (
-                        <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-primary/20 text-primary">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
                           {items.length}
                         </span>
                       )}
                     </div>
-                  </CardHeader>
-                  <CardContent>
                     <PostingQueue
                       items={items}
                       caption={caption}
@@ -278,8 +351,28 @@ export default function Home() {
                       onPostAttempt={handlePostAttempt}
                       onUnselectSuccessItems={handleUnselectSuccessItems}
                     />
-                  </CardContent>
-                </Card>
+                  </div>
+
+                  {/* Mobile: No card wrapper */}
+                  <div className="lg:hidden">
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-base font-semibold">Posting Queue</h3>
+                      {items.length > 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
+                          {items.length}
+                        </span>
+                      )}
+                    </div>
+                    <PostingQueue
+                      items={items}
+                      caption={caption}
+                      prefixes={prefixes}
+                      hasFlairErrors={hasFlairErrors}
+                      onPostAttempt={handlePostAttempt}
+                      onUnselectSuccessItems={handleUnselectSuccessItems}
+                    />
+                  </div>
+                </section>
               </div>
             </div>
           </main>

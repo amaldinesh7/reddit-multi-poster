@@ -131,8 +131,7 @@ const SubredditRow = React.memo(({
       {/* Main Row */}
       <div
         className={`
-          flex items-center gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 transition-colors cursor-pointer tap-highlight-none
-          active:bg-secondary/70 touch-manipulation
+          flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 transition-colors cursor-pointer
           ${hasError ? 'bg-red-500/20 border-l-2 border-red-500' : 'hover:bg-secondary/50'}
         `}
         onClick={handleRowClick}
@@ -146,28 +145,27 @@ const SubredditRow = React.memo(({
           }
         }}
       >
-        <div className="flex items-center flex-shrink-0" onClick={handleCheckboxContainerClick}>
+        <div className="flex items-center" onClick={handleCheckboxContainerClick}>
           <Checkbox
             id={checkboxId}
             checked={isSelected}
             onCheckedChange={() => onToggle(name)}
-            className="h-5 w-5 sm:h-4 sm:w-4"
           />
         </div>
 
-        <div className="flex-1 min-w-0 flex items-center gap-1 sm:gap-1.5">
+        <div className="flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2">
           {hasError && (
-            <AlertTriangle className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-red-500 flex-shrink-0" aria-hidden="true" />
+            <AlertTriangle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" aria-hidden="true" />
           )}
           <span
-            className={`text-xs sm:text-sm truncate select-none font-medium ${hasError ? 'text-red-400' : ''}`}
+            className={`text-sm truncate select-none font-medium ${hasError ? 'text-red-400' : ''}`}
           >
             r/{name}
           </span>
 
           {/* Loading indicator */}
           {isLoading && (
-            <div className="w-3 h-3 border-2 border-muted border-t-primary rounded-full animate-spin flex-shrink-0" aria-label="Loading" />
+            <div className="w-3 h-3 border-2 border-muted border-t-primary rounded-full animate-spin" aria-label="Loading" />
           )}
 
           {/* Inline Requirement Badges (Desktop) */}
@@ -175,8 +173,8 @@ const SubredditRow = React.memo(({
             <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
               {/* Flair Required Badge */}
               {flairRequired && (
-                <Badge variant="destructive" className="text-[10px] px-1.5 h-4">
-                  Flair*
+                <Badge variant="destructive" className="text-[10px] px-1.5">
+                  Required Flair
                 </Badge>
               )}
 
@@ -196,22 +194,22 @@ const SubredditRow = React.memo(({
             </div>
           )}
 
-          {/* Mobile indicators - always visible on mobile */}
+          {/* Mobile indicators */}
           {!isLoading && isSelected && (
-            <div className="flex sm:hidden items-center gap-0.5 flex-shrink-0">
-              {flairRequired && <span className="text-red-500 text-[10px] font-bold">🏷️</span>}
-              {hasRequiredStrings && <span className="text-amber-500 text-[10px]">#</span>}
+            <div className="flex sm:hidden items-center gap-0.5">
+              {flairRequired && <span className="text-red-500 text-xs font-bold">🏷️</span>}
+              {hasRequiredStrings && <span className="text-amber-500 text-xs">#</span>}
             </div>
           )}
         </div>
 
         {/* Controls */}
-        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0" onClick={handleControlsClick}>
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0" onClick={handleControlsClick}>
           {/* Expand Button */}
           {canExpand && (
             <button
               onClick={handleExpandClick}
-              className="expand-trigger h-8 w-8 sm:h-7 sm:w-7 flex items-center justify-center rounded hover:bg-muted active:bg-muted transition-colors cursor-pointer tap-highlight-none"
+              className="expand-trigger h-7 w-7 flex items-center justify-center rounded hover:bg-muted transition-colors cursor-pointer"
               aria-label="Show details"
               aria-expanded={isExpanded}
             >
@@ -228,7 +226,7 @@ const SubredditRow = React.memo(({
                   onValueChange={handleSuffixSelectChange}
                 >
                   <SelectTrigger
-                    className="h-8 sm:h-7 w-14 sm:w-20 text-[10px] sm:text-xs cursor-pointer"
+                    className="h-7 w-16 sm:w-20 text-xs cursor-pointer"
                     aria-label={`Title tag for r/${name}`}
                   >
                     <SelectValue placeholder="Tag" />
@@ -244,7 +242,7 @@ const SubredditRow = React.memo(({
               ) : (
                 <div className="flex items-center gap-1">
                   <Input
-                    className="h-8 sm:h-7 w-12 sm:w-16 text-[10px] sm:text-xs px-1.5"
+                    className="h-7 w-14 sm:w-16 text-xs px-1.5"
                     placeholder="Tag"
                     value={titleSuffix || ''}
                     onChange={(e) => onTitleSuffixChange(name, e.target.value)}
@@ -253,7 +251,7 @@ const SubredditRow = React.memo(({
                   />
                   <button
                     onClick={() => setShowCustomInput(false)}
-                    className="text-xs text-muted-foreground hover:text-foreground active:text-foreground cursor-pointer tap-highlight-none p-1"
+                    className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
                     aria-label="Switch to dropdown"
                   >
                     ✕
@@ -270,7 +268,7 @@ const SubredditRow = React.memo(({
               onValueChange={(value) => onFlairChange(name, value === '__none__' ? '' : value)}
             >
               <SelectTrigger
-                className={`h-8 sm:h-7 w-16 sm:w-28 text-[10px] sm:text-xs cursor-pointer ${
+                className={`h-7 w-20 sm:w-28 text-xs cursor-pointer ${
                   hasError
                     ? 'border-red-500 bg-red-500/10 text-red-400'
                     : ''
@@ -292,12 +290,12 @@ const SubredditRow = React.memo(({
 
       {/* Expanded Details Section */}
       {isExpanded && isSelected && (
-        <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-muted/30 border-t border-border/30 space-y-2 animate-in slide-in-from-top-2 duration-200">
+        <div className="px-4 py-3 bg-muted/30 border-t border-border/30 space-y-2 animate-in slide-in-from-top-2 duration-200">
           {/* Guidelines */}
           {hasGuidelines && (
             <div className="text-xs">
               <span className="font-medium text-foreground">📝 Guidelines:</span>
-              <p className="mt-1 text-muted-foreground whitespace-pre-wrap break-words text-[11px] sm:text-xs leading-relaxed">
+              <p className="mt-1 text-muted-foreground whitespace-pre-wrap break-words">
                 {postRequirements?.guidelines_text}
               </p>
             </div>
@@ -307,7 +305,7 @@ const SubredditRow = React.memo(({
           {subredditRules?.submitText && !hasGuidelines && (
             <div className="text-xs">
               <span className="font-medium text-foreground">📝 Posting Rules:</span>
-              <p className="mt-1 text-muted-foreground whitespace-pre-wrap break-words text-[11px] sm:text-xs leading-relaxed">
+              <p className="mt-1 text-muted-foreground whitespace-pre-wrap break-words">
                 {subredditRules.submitText}
               </p>
             </div>
@@ -343,9 +341,9 @@ const SubredditRow = React.memo(({
 
           {/* Title Length Details */}
           {hasTitleLengthConstraint && (
-            <div className="text-xs flex items-center gap-2 flex-wrap">
+            <div className="text-xs flex items-center gap-2">
               <span className="font-medium text-foreground">📏 Title Length:</span>
-              <span className="text-muted-foreground text-[11px] sm:text-xs">
+              <span className="text-muted-foreground">
                 {titleMinLength || 0} - {titleMaxLength || 'unlimited'} characters
               </span>
             </div>
