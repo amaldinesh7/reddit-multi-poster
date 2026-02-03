@@ -1,0 +1,30 @@
+# Render Blueprint - https://render.com/docs/blueprint-spec
+# Deploy with: render blueprint apply
+
+services:
+  - type: web
+    name: reddit-multi-poster
+    runtime: node
+    plan: free # or starter, standard, etc.
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_SENTRY_DSN
+        sync: false # Set manually in Render dashboard
+      - key: REDDIT_CLIENT_ID
+        sync: false
+      - key: REDDIT_CLIENT_SECRET
+        sync: false
+      - key: REDDIT_REDIRECT_URI
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
