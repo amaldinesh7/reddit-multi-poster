@@ -6,7 +6,7 @@ services:
     name: reddit-multi-poster
     runtime: node
     plan: free # or starter, standard, etc.
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
