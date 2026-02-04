@@ -530,6 +530,7 @@ async function submitGalleryPost(
       spoiler: params.spoiler || false,
       flair_id: params.flair_id || undefined,
       validate_on_submit: false,
+      text: params.text || undefined,
     };
     
     console.log('Trying /api/submit_gallery_post.json endpoint...');
