@@ -1,0 +1,499 @@
+/**
+ * useQueueJob Hook
+ * 
+ * Manages the lifecycle of a queue job:
+ * - Submit items to queue
+ * - Subscribe to Realtime updates
+ * - Poll the process endpoint to drive processing
+ * - Handle cancellation
+ */
+
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from '@/lib/supabase';
+import {
+  QueueJob,
+  QueueJobItem,
+  QueueJobResult,
+  QueueJobStatus,
+  JobProgressUpdate,
+  QUEUE_JOB_CONSTANTS,
+} from '@/lib/queueJob';
+import { RealtimeChannel } from '@supabase/supabase-js';
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface QueueJobState {
+  jobId: string | null;
+  status: QueueJobStatus | null;
+  items: QueueJobItem[];
+  results: QueueJobResult[];
+  currentIndex: number;
+  error: string | null;
+  isSubmitting: boolean;
+  isProcessing: boolean;
+  isConnected: boolean;
+  waitingSeconds: number | null;
+}
+
+export interface QueueJobSubmission {
+  items: Array<{
+    subreddit: string;
+    flairId?: string;
+    titleSuffix?: string;
+    kind: 'self' | 'link' | 'image' | 'video' | 'gallery';
+    url?: string;
+    text?: string;
+    file?: File;
+    files?: File[];
+  }>;
+  caption: string;
+  prefixes: { f?: boolean; c?: boolean };
+}
+
+export interface UseQueueJobReturn {
+  state: QueueJobState;
+  submit: (submission: QueueJobSubmission) => Promise<string | null>;
+  cancel: () => Promise<boolean>;
+  reset: () => void;
+  resumeJob: (jobId: string) => Promise<void>;
+}
+
+// ============================================================================
+// Initial State
+// ============================================================================
+
+const initialState: QueueJobState = {
+  jobId: null,
+  status: null,
+  items: [],
+  results: [],
+  currentIndex: 0,
+  error: null,
+  isSubmitting: false,
+  isProcessing: false,
+  isConnected: false,
+  waitingSeconds: null,
+};
+
+// ============================================================================
+// Hook Implementation
+// ============================================================================
+
+export function useQueueJob(): UseQueueJobReturn {
+  const [state, setState] = useState<QueueJobState>(initialState);
+  
+  // Refs for cleanup
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isProcessingRef = useRef(false);
+
+  // ============================================================================
+  // Realtime Subscription
+  // ============================================================================
+
+  const subscribeToJob = useCallback((jobId: string) => {
+    // Clean up existing subscription
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+    }
+
+    const channel = supabase
+      .channel(`queue_job:${jobId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'queue_jobs',
+          filter: `id=eq.${jobId}`,
+        },
+        (payload) => {
+          const job = payload.new as QueueJob;
+          setState(prev => ({
+            ...prev,
+            status: job.status,
+            currentIndex: job.current_index,
+            results: job.results,
+            error: job.error,
+            isProcessing: job.status === 'processing',
+          }));
+
+          // Stop polling if job is done
+          if (['completed', 'failed', 'cancelled'].includes(job.status)) {
+            stopPolling();
+          }
+        }
+      )
+      .subscribe((status) => {
+        setState(prev => ({
+          ...prev,
+          isConnected: status === 'SUBSCRIBED',
+        }));
+      });
+
+    channelRef.current = channel;
+  }, []);
+
+  const unsubscribeFromJob = useCallback(() => {
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+  }, []);
+
+  // ============================================================================
+  // Polling for Processing
+  // ============================================================================
+
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    isProcessingRef.current = false;
+  }, []);
+
+  const processJob = useCallback(async (jobId: string) => {
+    if (isProcessingRef.current) {
+      return; // Already processing
+    }
+
+    isProcessingRef.current = true;
+    abortControllerRef.current = new AbortController();
+
+    try {
+      const response = await fetch(`/api/queue/process?jobId=${jobId}`, {
+        method: 'POST',
+        signal: abortControllerRef.current.signal,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to process job');
+      }
+
+      if (!response.body) {
+        throw new Error('No response body');
+      }
+
+      // Read streaming response
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n');
+        buffer = parts.pop() || '';
+
+        for (const line of parts) {
+          if (!line.trim()) continue;
+          
+          try {
+            const update: JobProgressUpdate = JSON.parse(line);
+            
+            switch (update.type) {
+              case 'status':
+                setState(prev => ({
+                  ...prev,
+                  status: update.status || prev.status,
+                  currentIndex: update.currentIndex ?? prev.currentIndex,
+                  isProcessing: update.status === 'processing',
+                }));
+                break;
+              
+              case 'progress':
+                setState(prev => ({
+                  ...prev,
+                  currentIndex: update.currentIndex ?? prev.currentIndex,
+                  waitingSeconds: null,
+                }));
+                break;
+              
+              case 'result':
+                if (update.result) {
+                  setState(prev => ({
+                    ...prev,
+                    results: [...prev.results, update.result!],
+                    currentIndex: (update.result!.index || 0) + 1,
+                    waitingSeconds: null,
+                  }));
+                }
+                break;
+              
+              case 'waiting':
+                setState(prev => ({
+                  ...prev,
+                  waitingSeconds: update.waitSeconds || null,
+                }));
+                break;
+              
+              case 'complete':
+                setState(prev => ({
+                  ...prev,
+                  status: 'completed',
+                  isProcessing: false,
+                  waitingSeconds: null,
+                }));
+                stopPolling();
+                break;
+              
+              case 'error':
+                setState(prev => ({
+                  ...prev,
+                  error: update.error || 'Unknown error',
+                  isProcessing: false,
+                }));
+                break;
+            }
+          } catch (parseError) {
+            console.error('Failed to parse update:', line, parseError);
+          }
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return; // Cancelled, ignore
+      }
+      console.error('Process job error:', error);
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Failed to process job',
+        isProcessing: false,
+      }));
+    } finally {
+      isProcessingRef.current = false;
+    }
+  }, [stopPolling]);
+
+  const startPolling = useCallback((jobId: string) => {
+    // Process immediately
+    processJob(jobId);
+
+    // Set up polling interval
+    pollingRef.current = setInterval(() => {
+      // Only start new process if not already processing
+      if (!isProcessingRef.current) {
+        processJob(jobId);
+      }
+    }, QUEUE_JOB_CONSTANTS.POLLING_INTERVAL_MS);
+  }, [processJob]);
+
+  // ============================================================================
+  // Submit Job
+  // ============================================================================
+
+  const submit = useCallback(async (submission: QueueJobSubmission): Promise<string | null> => {
+    setState(prev => ({ ...prev, isSubmitting: true, error: null }));
+
+    try {
+      // Build FormData
+      const formData = new FormData();
+      
+      // Add items (without File objects)
+      const itemsForServer = submission.items.map(item => ({
+        subreddit: item.subreddit,
+        flairId: item.flairId,
+        titleSuffix: item.titleSuffix,
+        kind: item.kind,
+        url: item.url,
+        text: item.text,
+      }));
+      formData.append('items', JSON.stringify(itemsForServer));
+      formData.append('caption', submission.caption);
+      formData.append('prefixes', JSON.stringify(submission.prefixes));
+
+      // Add files
+      submission.items.forEach((item, index) => {
+        if (item.files && item.files.length > 0) {
+          item.files.forEach((file, fileIndex) => {
+            formData.append(`file_${index}_${fileIndex}`, file);
+          });
+          formData.append(`fileCount_${index}`, item.files.length.toString());
+        } else if (item.file) {
+          formData.append(`file_${index}`, item.file);
+          formData.append(`fileCount_${index}`, '1');
+        }
+      });
+
+      // Submit to API
+      const response = await fetch('/api/queue/submit', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to submit job');
+      }
+
+      const jobId = data.jobId;
+
+      // Update state with job info
+      setState(prev => ({
+        ...prev,
+        jobId,
+        status: 'pending',
+        items: itemsForServer,
+        results: [],
+        currentIndex: 0,
+        isSubmitting: false,
+        error: null,
+      }));
+
+      // Subscribe to updates and start processing
+      subscribeToJob(jobId);
+      startPolling(jobId);
+
+      return jobId;
+    } catch (error) {
+      console.error('Submit job error:', error);
+      setState(prev => ({
+        ...prev,
+        isSubmitting: false,
+        error: error instanceof Error ? error.message : 'Failed to submit job',
+      }));
+      return null;
+    }
+  }, [subscribeToJob, startPolling]);
+
+  // ============================================================================
+  // Cancel Job
+  // ============================================================================
+
+  const cancel = useCallback(async (): Promise<boolean> => {
+    const { jobId } = state;
+    if (!jobId) return false;
+
+    try {
+      // Stop polling first
+      stopPolling();
+
+      const response = await fetch(`/api/queue/cancel/${jobId}`, {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to cancel job');
+      }
+
+      setState(prev => ({
+        ...prev,
+        status: 'cancelled',
+        isProcessing: false,
+      }));
+
+      return true;
+    } catch (error) {
+      console.error('Cancel job error:', error);
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Failed to cancel job',
+      }));
+      return false;
+    }
+  }, [state.jobId, stopPolling]);
+
+  // ============================================================================
+  // Resume Job (for page refresh)
+  // ============================================================================
+
+  const resumeJob = useCallback(async (jobId: string): Promise<void> => {
+    try {
+      const response = await fetch(`/api/queue/status/${jobId}`);
+      const data = await response.json();
+
+      if (!response.ok || !data.job) {
+        throw new Error(data.error || 'Job not found');
+      }
+
+      const job: QueueJob = data.job;
+
+      setState({
+        jobId: job.id,
+        status: job.status,
+        items: job.items,
+        results: job.results,
+        currentIndex: job.current_index,
+        error: job.error,
+        isSubmitting: false,
+        isProcessing: job.status === 'processing',
+        isConnected: false,
+        waitingSeconds: null,
+      });
+
+      // If job is still active, subscribe and start polling
+      if (['pending', 'processing'].includes(job.status)) {
+        subscribeToJob(jobId);
+        startPolling(jobId);
+      }
+    } catch (error) {
+      console.error('Resume job error:', error);
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Failed to resume job',
+      }));
+    }
+  }, [subscribeToJob, startPolling]);
+
+  // ============================================================================
+  // Reset
+  // ============================================================================
+
+  const reset = useCallback(() => {
+    stopPolling();
+    unsubscribeFromJob();
+    setState(initialState);
+  }, [stopPolling, unsubscribeFromJob]);
+
+  // ============================================================================
+  // Cleanup on Unmount
+  // ============================================================================
+
+  useEffect(() => {
+    return () => {
+      stopPolling();
+      unsubscribeFromJob();
+    };
+  }, [stopPolling, unsubscribeFromJob]);
+
+  // ============================================================================
+  // Countdown timer for waiting
+  // ============================================================================
+
+  useEffect(() => {
+    if (!state.waitingSeconds || state.waitingSeconds <= 0) return;
+
+    const timer = setInterval(() => {
+      setState(prev => {
+        if (!prev.waitingSeconds || prev.waitingSeconds <= 1) {
+          return { ...prev, waitingSeconds: null };
+        }
+        return { ...prev, waitingSeconds: prev.waitingSeconds - 1 };
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [state.waitingSeconds]);
+
+  return {
+    state,
+    submit,
+    cancel,
+    reset,
+    resumeJob,
+  };
+}

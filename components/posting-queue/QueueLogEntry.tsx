@@ -9,7 +9,11 @@ interface QueueLogEntryProps {
 }
 
 const QueueLogEntry: React.FC<QueueLogEntryProps> = ({ entry, currentWait }) => {
-  const isWaiting = currentWait?.index === entry.index && entry.status === 'success';
+  // Check if this entry is currently waiting (after success, before next post)
+  const isWaitingAfterSuccess = currentWait?.index === entry.index && entry.status === 'success';
+  // Check if this entry is the one being waited on (status is 'waiting')
+  const isWaitingStatus = entry.status === 'waiting';
+  const isWaiting = isWaitingAfterSuccess || isWaitingStatus;
   const isError = entry.status === 'error';
 
   const getStatusIcon = () => {
@@ -23,6 +27,8 @@ const QueueLogEntry: React.FC<QueueLogEntryProps> = ({ entry, currentWait }) => 
         return <AlertCircle className="w-4 h-4 text-red-500" aria-label="Error" />;
       case 'posting':
         return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" aria-label="Posting" />;
+      case 'waiting':
+        return <Loader2 className="w-4 h-4 text-amber-500 animate-spin" aria-label="Waiting" />;
       default:
         return <Clock className="w-4 h-4 text-muted-foreground/50" aria-label="Queued" />;
     }
