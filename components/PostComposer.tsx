@@ -69,7 +69,7 @@ export default function PostComposer({ value, onChange, body, onBodyChange, pref
             />
             <div className="flex justify-between mt-1">
               <span className="text-xs text-muted-foreground">
-                Used for self/text posts only
+                Optional body text
               </span>
               <span className={`text-xs ${(body?.length || 0) > bodyLimit * 0.9 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
                 {body?.length || 0}/{bodyLimit}
