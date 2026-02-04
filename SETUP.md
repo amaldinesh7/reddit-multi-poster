@@ -56,6 +56,7 @@ Posts will be submitted with 15-minute delays between each subreddit.
 - `REDDIT_REDIRECT_URI`: Where Reddit sends users after OAuth (must match Reddit app settings)
 - `REDDIT_USER_AGENT`: Identifies your app to Reddit's API
 - `SESSION_SECRET`: Used for secure session handling (change for production)
+- `ADMIN_REDDIT_USERNAME`: (Optional) Reddit username for analytics dashboard access
 
 ## Troubleshooting
 

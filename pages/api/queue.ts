@@ -5,6 +5,8 @@ import {
   QUEUE_LIMITS,
   formatFileSize,
 } from '../../lib/queueLimits';
+import { getUserId } from '../../lib/apiAuth';
+import { logPostAttempt, classifyPostError } from '../../lib/supabase';
 import formidable from 'formidable';
 import fs from 'fs';
 
@@ -180,6 +182,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let access = req.cookies['reddit_access'];
   const refresh = req.cookies['reddit_refresh'];
+  
+  // Get user ID for analytics logging (non-blocking)
+  let userId: string | null = null;
+  try {
+    userId = await getUserId(req, res);
+  } catch {
+    // Don't block posting if user ID lookup fails
+    console.warn('Failed to get user ID for analytics');
+  }
+  
   try {
     if (!access && refresh) {
       const t = await refreshAccessToken(refresh);
@@ -284,6 +296,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         console.log(`Post result for r/${item.subreddit}:`, result);
         
+        // Log success for analytics (non-blocking, privacy-first)
+        if (userId) {
+          logPostAttempt({
+            user_id: userId,
+            subreddit_name: item.subreddit,
+            post_kind: postKind,
+            reddit_post_url: result.url || null,
+            status: 'success',
+          }).catch(() => {}); // Fire and forget
+        }
+        
         write({ 
           index: i, 
           status: 'success', 
@@ -295,6 +318,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'Failed';
         console.error(`Error posting to r/${item.subreddit}:`, e);
+        
+        // Log error for analytics (non-blocking, privacy-first)
+        if (userId) {
+          logPostAttempt({
+            user_id: userId,
+            subreddit_name: item.subreddit,
+            post_kind: item.kind,
+            status: 'error',
+            error_code: classifyPostError(msg),
+          }).catch(() => {}); // Fire and forget
+        }
+        
         write({ index: i, status: 'error', subreddit: item.subreddit, error: msg });
       }
 

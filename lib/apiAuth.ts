@@ -1,7 +1,52 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { upsertUser } from './supabase';
+import { upsertUser, getUserByRedditId, type SupabaseUser } from './supabase';
 import { redditClient, getIdentity, refreshAccessToken } from '../utils/reddit';
 import { serialize } from 'cookie';
+
+/**
+ * Check if a user is an admin based on their Reddit username.
+ * Uses ADMIN_REDDIT_USERNAME environment variable.
+ */
+export const isAdmin = (redditUsername: string): boolean => {
+  const adminUsername = process.env.ADMIN_REDDIT_USERNAME;
+  if (!adminUsername) return false;
+  return adminUsername.toLowerCase() === redditUsername.toLowerCase();
+};
+
+/**
+ * Get user details from request (including username for admin check).
+ * Returns both user ID and full user object.
+ */
+export async function getUserDetails(req: NextApiRequest, res: NextApiResponse): Promise<{
+  userId: string | null;
+  user: SupabaseUser | null;
+  redditUsername: string | null;
+}> {
+  const userId = await getUserId(req, res);
+  if (!userId) {
+    return { userId: null, user: null, redditUsername: null };
+  }
+
+  // Try to get username from cookie first (faster)
+  const redditUsername = req.cookies['reddit_username'];
+  if (redditUsername) {
+    return { userId, user: null, redditUsername };
+  }
+
+  // Fallback: get from Reddit API
+  const access = req.cookies['reddit_access'];
+  if (access) {
+    try {
+      const client = redditClient(access);
+      const redditUser = await getIdentity(client);
+      return { userId, user: null, redditUsername: redditUser.name };
+    } catch {
+      // Ignore errors, return without username
+    }
+  }
+
+  return { userId, user: null, redditUsername: null };
+}
 
 /**
  * Get or create user ID from request.

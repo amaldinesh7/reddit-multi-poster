@@ -27,6 +27,7 @@ export default function Home() {
   const router = useRouter();
   const [auth, setAuth] = React.useState<MeResponse>({ authenticated: false });
   const [loading, setLoading] = React.useState(true);
+  const [isAdmin, setIsAdmin] = React.useState(false);
 
   const {
     selectedSubs,
@@ -75,6 +76,14 @@ export default function Home() {
             id: data.me.id || data.userId,
             username: data.me.name,
           });
+        }
+        
+        // Check admin status (non-blocking)
+        try {
+          const adminRes = await axios.get<{ isAdmin: boolean }>('/api/admin-check');
+          setIsAdmin(adminRes.data.isAdmin);
+        } catch {
+          // Ignore admin check failures
         }
       } catch {
         setAuth({ authenticated: false });
@@ -125,6 +134,7 @@ export default function Home() {
             userName={auth.me?.name}
             userAvatar={auth.me?.icon_img}
             onLogout={handleLogout}
+            isAdmin={isAdmin}
           />
 
           <PwaOnboarding />

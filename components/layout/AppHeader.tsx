@@ -1,18 +1,20 @@
 import React from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { ChevronDown, User, Settings, LogOut } from 'lucide-react';
+import { ChevronDown, User, Settings, LogOut, BarChart3 } from 'lucide-react';
 
 interface AppHeaderProps {
   userName?: string;
   userAvatar?: string;
   onLogout: () => void;
+  isAdmin?: boolean;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({
   userName,
   userAvatar,
   onLogout,
+  isAdmin = false,
 }) => {
   const handleViewProfile = () => {
     window.open(`https://reddit.com/user/${userName}`, '_blank');
@@ -20,6 +22,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
   const handleSettings = () => {
     window.location.href = '/settings';
+  };
+
+  const handleAnalytics = () => {
+    window.location.href = '/analytics';
   };
 
   return (
@@ -62,6 +68,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               <Settings className="h-4 w-4 mr-2" aria-hidden="true" />
               Settings
             </DropdownMenuItem>
+            {isAdmin && (
+              <DropdownMenuItem onClick={handleAnalytics}>
+                <BarChart3 className="h-4 w-4 mr-2" aria-hidden="true" />
+                Analytics
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={onLogout} className="text-red-400">
               <LogOut className="h-4 w-4 mr-2" aria-hidden="true" />
               Logout
