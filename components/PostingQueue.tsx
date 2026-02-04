@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Send,
@@ -10,12 +10,7 @@ import {
   RefreshCw,
   WifiOff,
   LogIn,
-  Info,
   Layers,
-  CloudOff,
-  Cloud,
-  Copy,
-  Check,
 } from 'lucide-react';
 import { useQueueJob } from '../hooks/useQueueJob';
 import { QueueProgressList } from './posting-queue';
@@ -142,88 +137,6 @@ const BatchProgress: React.FC<BatchProgressProps> = ({
 };
 
 // ============================================================================
-// Job Status Banner (shows when job is queued)
-// ============================================================================
-
-interface JobStatusBannerProps {
-  jobId: string;
-  status: string;
-  isConnected: boolean;
-}
-
-const JobStatusBanner: React.FC<JobStatusBannerProps> = ({
-  jobId,
-  status,
-  isConnected,
-}) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopyJobId = async () => {
-    try {
-      await navigator.clipboard.writeText(jobId);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = jobId;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  return (
-    <div className="rounded-md bg-blue-600/15 border border-blue-600/30 p-3 space-y-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-blue-400">
-          <Cloud className="h-4 w-4" aria-hidden="true" />
-          <span className="text-sm font-medium">Job Queued</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {isConnected ? (
-            <span className="text-xs text-green-400 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-              Live
-            </span>
-          ) : (
-            <span className="text-xs text-yellow-400 flex items-center gap-1">
-              <CloudOff className="h-3 w-3" />
-              Reconnecting...
-            </span>
-          )}
-        </div>
-      </div>
-
-      <p className="text-xs text-blue-300/80">
-        Your posts are being processed in the cloud. You can close this tab and come back later.
-      </p>
-
-      <div className="flex items-center gap-2 text-xs text-zinc-500">
-        <span>Job ID:</span>
-        <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400 font-mono text-[10px]">
-          {jobId.slice(0, 8)}...
-        </code>
-        <button
-          onClick={handleCopyJobId}
-          className="text-zinc-400 hover:text-zinc-300 transition-colors"
-          title="Copy job ID"
-        >
-          {copied ? (
-            <Check className="h-3 w-3 text-green-400" />
-          ) : (
-            <Copy className="h-3 w-3" />
-          )}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// ============================================================================
 // Main Component
 // ============================================================================
 
@@ -271,14 +184,22 @@ const PostingQueue: React.FC<Props> = ({
   const cancelled = state.status === 'cancelled';
   const failed = state.status === 'failed';
   // Build error object with proper typing
-  const error: { message: string; code: string; recoverable: boolean; details?: string; batchIndex?: number } | null = state.error ? {
-    message: state.error,
-    code: state.error.includes('Unauthorized') ? 'AUTH_ERROR' :
-      state.error.includes('network') ? 'NETWORK_ERROR' : 'UNKNOWN_ERROR',
-    recoverable: !state.error.includes('Unauthorized'),
-    details: undefined,
-    batchIndex: undefined,
-  } : null;
+  // Detect limit errors to filter them out from display
+  const isLimitError = state.error && (
+    state.error.includes('plan allows') ||
+    state.error.includes('subreddits at once') ||
+    state.error.includes('Upgrade for unlimited')
+  );
+  
+  const error: { message: string; code: string; recoverable: boolean; details?: string; batchIndex?: number } | null = 
+    state.error && !isLimitError ? {
+      message: state.error,
+      code: state.error.includes('Unauthorized') ? 'AUTH_ERROR' :
+        state.error.includes('network') ? 'NETWORK_ERROR' : 'UNKNOWN_ERROR',
+      recoverable: !state.error.includes('Unauthorized'),
+      details: undefined,
+      batchIndex: undefined,
+    } : null;
 
   // Current wait for progress display
   const currentWait = state.waitingSeconds ? {
@@ -371,18 +292,6 @@ const PostingQueue: React.FC<Props> = ({
       )}
 
       
-
-      {/* Job Status Banner (shows when job is queued/processing) */}
-      {state.jobId && (running || state.status === 'pending') && (
-        <div className="hidden lg:block">
-          <JobStatusBanner
-            jobId={state.jobId}
-            status={state.status || 'pending'}
-            isConnected={state.isConnected}
-          />
-        </div>
-      )}
-
       {/* Error Banner - Mobile Friendly (Keep visible on mobile as it's important) */}
       {error && (
         <div
