@@ -9,26 +9,36 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- Policy: Allow authenticated users to upload files
+-- Policy: Allow authenticated users to upload files to their own folder
+-- Files must be uploaded to paths like: {user_id}/filename.ext
 CREATE POLICY "Authenticated users can upload queue files"
 ON storage.objects
 FOR INSERT
 TO authenticated
-WITH CHECK (bucket_id = 'queue-files');
+WITH CHECK (
+  bucket_id = 'queue-files' 
+  AND auth.uid()::text = (storage.foldername(name))[1]
+);
 
 -- Policy: Allow authenticated users to read their own files
 CREATE POLICY "Authenticated users can read queue files"
 ON storage.objects
 FOR SELECT
 TO authenticated
-USING (bucket_id = 'queue-files');
+USING (
+  bucket_id = 'queue-files' 
+  AND auth.uid()::text = (storage.foldername(name))[1]
+);
 
 -- Policy: Allow authenticated users to delete their own files
 CREATE POLICY "Authenticated users can delete queue files"
 ON storage.objects
 FOR DELETE
 TO authenticated
-USING (bucket_id = 'queue-files');
+USING (
+  bucket_id = 'queue-files' 
+  AND auth.uid()::text = (storage.foldername(name))[1]
+);
 
 -- Policy: Allow public read access (for sharing media)
 CREATE POLICY "Public can read queue files"

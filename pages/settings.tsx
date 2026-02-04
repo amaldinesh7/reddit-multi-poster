@@ -66,14 +66,22 @@ export default function Settings() {
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
 
-  const FREE_LIMIT = 5;
+  // Use limits from auth (for paid users, maxSubreddits is MAX_SAFE_INTEGER)
+  const maxSubreddits = limits.maxSubreddits;
 
   const handleUpgrade = React.useCallback(async () => {
     if (upgradeLoading) return;
     setUpgradeLoading(true);
     try {
       const { data } = await axios.post<{ checkout_url: string }>('/api/checkout/create-session');
-      if (data?.checkout_url) window.location.href = data.checkout_url;
+      if (data?.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        console.error('Checkout session creation failed: no URL returned');
+      }
+    } catch (error) {
+      console.error('Failed to create checkout session:', error);
+      // Keep user on page; they can retry via the modal
     } finally {
       setUpgradeLoading(false);
     }
@@ -103,22 +111,22 @@ export default function Settings() {
 
   // Calculate current subreddit count
   const currentSubredditCount = data.categories.reduce((sum, c) => sum + c.user_subreddits.length, 0);
-  const isAtFreeLimit = entitlement === 'free' && currentSubredditCount >= FREE_LIMIT;
+  const isAtFreeLimit = entitlement === 'free' && currentSubredditCount >= maxSubreddits;
 
   // Wrapper for addSubreddit that checks free user limit
   const addSubredditWithLimitCheck = React.useCallback(async (categoryId: string, subredditName: string) => {
     // Check if free user is at limit
-    if (entitlement === 'free' && currentSubredditCount >= FREE_LIMIT) {
+    if (entitlement === 'free' && currentSubredditCount >= maxSubreddits) {
       setUpgradeModalContext({
         title: 'Subreddit limit reached',
-        message: `Free plan supports up to ${FREE_LIMIT} saved subreddits. Upgrade for unlimited.`,
+        message: `Free plan supports up to ${maxSubreddits} saved subreddits. Upgrade for unlimited.`,
       });
       setShowUpgradeModal(true);
       return null;
     }
     // Otherwise proceed with normal add
     return addSubreddit(categoryId, subredditName);
-  }, [entitlement, currentSubredditCount, addSubreddit]);
+  }, [entitlement, currentSubredditCount, maxSubreddits, addSubreddit]);
 
   // DnD Kit sensors
   const sensors = useSensors(
@@ -324,7 +332,7 @@ export default function Settings() {
                   {/* Only show limit counter for FREE users - paid users have no limit */}
                   {entitlement === 'free' && (
                     <span className="text-xs text-muted-foreground tabular-nums">
-                      {currentSubredditCount}/{FREE_LIMIT} subreddits
+                      {currentSubredditCount}/{maxSubreddits} subreddits
                     </span>
                   )}
                   <Button

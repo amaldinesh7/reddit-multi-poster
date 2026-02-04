@@ -41,8 +41,6 @@ export default function Home() {
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
 
-  const FREE_LIMIT = 5;
-
   const {
     selectedSubs,
     setSelectedSubs,
@@ -121,9 +119,14 @@ export default function Home() {
     setUpgradeLoading(true);
     try {
       const { data } = await axios.post<{ checkout_url: string }>('/api/checkout/create-session');
-      if (data?.checkout_url) window.location.href = data.checkout_url;
-    } catch {
-      // Keep user on page; they can retry
+      if (data?.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        console.error('Checkout session creation failed: no URL returned');
+      }
+    } catch (error) {
+      console.error('Failed to create checkout session:', error);
+      // Keep user on page; they can retry via the modal
     } finally {
       setUpgradeLoading(false);
     }
@@ -131,18 +134,19 @@ export default function Home() {
 
   // Wrapper for post attempt that checks free user limit
   const handlePostWithLimitCheck = React.useCallback(() => {
-    // Check if free user is trying to post to more than 5 subreddits
-    if (auth.entitlement === 'free' && selectedSubs.length > FREE_LIMIT) {
+    const maxPostItems = auth.limits?.maxPostItems ?? 5;
+    // Check if free user is trying to post to more subreddits than their limit
+    if (auth.entitlement === 'free' && selectedSubs.length > maxPostItems) {
       setUpgradeModalContext({
         title: `You've selected ${selectedSubs.length} subreddits`,
-        message: `Free plan supports up to ${FREE_LIMIT} subreddits per post. Upgrade for unlimited.`,
+        message: `Free plan supports up to ${maxPostItems} subreddits per post. Upgrade for unlimited.`,
       });
       setShowUpgradeModal(true);
       return;
     }
     // Otherwise proceed with normal post attempt
     handlePostAttempt();
-  }, [auth.entitlement, selectedSubs.length, handlePostAttempt]);
+  }, [auth.entitlement, auth.limits?.maxPostItems, selectedSubs.length, handlePostAttempt]);
 
   return (
     <>

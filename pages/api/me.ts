@@ -3,6 +3,10 @@ import { getIdentity, listMySubreddits, redditClient, refreshAccessToken } from 
 import { serialize } from 'cookie';
 import { getEntitlement, getLimits } from '../../lib/entitlement';
 
+/** Normalize non-finite values for JSON serialization (Infinity becomes MAX_SAFE_INTEGER) */
+const normalizeForJson = (value: number): number => 
+  Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const access = req.cookies['reddit_access'];
   const refresh = req.cookies['reddit_refresh'];
@@ -43,8 +47,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         userId: supabaseUserId || null,
         entitlement,
         limits: {
-          maxSubreddits: limits.maxSubreddits,
-          maxPostItems: limits.maxPostItems,
+          maxSubreddits: normalizeForJson(limits.maxSubreddits),
+          maxPostItems: normalizeForJson(limits.maxPostItems),
           temporarySelectionEnabled: limits.temporarySelectionEnabled,
         },
       });
@@ -76,8 +80,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           userId: supabaseUserId || null,
           entitlement,
           limits: {
-            maxSubreddits: limits.maxSubreddits,
-            maxPostItems: limits.maxPostItems,
+            maxSubreddits: normalizeForJson(limits.maxSubreddits),
+            maxPostItems: normalizeForJson(limits.maxPostItems),
             temporarySelectionEnabled: limits.temporarySelectionEnabled,
           },
         });

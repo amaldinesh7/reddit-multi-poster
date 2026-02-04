@@ -95,6 +95,19 @@ const SubredditFlairPicker: React.FC<Props> = ({
     ];
   }, [categorizedSubreddits, temporarySubreddits, temporarySelectionEnabled]);
 
+  // Clear temporary selections when temporarySelectionEnabled is toggled off
+  React.useEffect(() => {
+    if (!temporarySelectionEnabled && temporarySubreddits.length > 0) {
+      // Remove temporary subreddits from selection
+      const filtered = selected.filter(s => !temporarySubreddits.includes(s));
+      if (filtered.length !== selected.length) {
+        onSelectedChange(filtered);
+      }
+      // Clear the temporary subreddits list
+      setTemporarySubreddits([]);
+    }
+  }, [temporarySelectionEnabled, temporarySubreddits, selected, onSelectedChange]);
+
   const handleToggle = useCallback((name: string) => {
     const exists = selected.includes(name);
     if (exists) {
@@ -357,7 +370,6 @@ const SubredditFlairPicker: React.FC<Props> = ({
             <div>
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5 flex items-center gap-2">
                 Search Reddit
-                {isSearching && <Loader2 className="w-3 h-3 animate-spin" />}
               </div>
 
               {isSearching && !hasRedditResults && (

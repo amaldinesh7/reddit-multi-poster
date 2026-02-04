@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -72,6 +72,13 @@ const SubredditRow = React.memo(({
     return suffixOptions.length > 0 && !suffixOptions.includes(titleSuffix);
   }, [titleSuffix, suffixOptions]);
 
+  // Auto-show custom input when a custom suffix is persisted
+  useEffect(() => {
+    if (isCustomSuffix) {
+      setShowCustomInput(true);
+    }
+  }, [isCustomSuffix]);
+
   // Title length constraints
   const titleMinLength = postRequirements?.title_text_min_length;
   const titleMaxLength = postRequirements?.title_text_max_length;
@@ -105,7 +112,10 @@ const SubredditRow = React.memo(({
   const handleSuffixSelectChange = (value: string) => {
     if (value === '__custom__') {
       setShowCustomInput(true);
-      onTitleSuffixChange(name, '');
+      // Don't clear existing custom value when switching to custom mode
+      if (!isCustomSuffix) {
+        onTitleSuffixChange(name, '');
+      }
     } else if (value === '__none__') {
       setShowCustomInput(false);
       onTitleSuffixChange(name, '');

@@ -35,20 +35,62 @@ function getRawBody(req: NextApiRequest): Promise<string> {
   });
 }
 
+/** Maximum age for webhook timestamps (5 minutes) to prevent replay attacks */
+const WEBHOOK_TOLERANCE_SECONDS = 300;
+
 function verifySignature(
   rawBody: string,
   webhookId: string,
   webhookTimestamp: string,
   webhookSignature: string,
   secret: string
-): boolean {
+): { valid: boolean; error?: string } {
+  // Check timestamp freshness to prevent replay attacks
+  const timestampSeconds = parseInt(webhookTimestamp, 10);
+  if (isNaN(timestampSeconds)) {
+    return { valid: false, error: 'Invalid timestamp format' };
+  }
+  
+  const now = Math.floor(Date.now() / 1000);
+  if (Math.abs(now - timestampSeconds) > WEBHOOK_TOLERANCE_SECONDS) {
+    return { valid: false, error: 'Timestamp too old or in future' };
+  }
+
+  // Standard Webhooks format: "v1,<base64_signature>" (may have multiple space-separated entries)
+  // Extract the base64 signature from the v1 entry
+  const signatures = webhookSignature.split(' ');
+  let sig: string | undefined;
+  
+  for (const entry of signatures) {
+    const trimmed = entry.trim();
+    if (trimmed.startsWith('v1,')) {
+      sig = trimmed.substring(3); // Remove "v1," prefix
+      break;
+    }
+  }
+  
+  if (!sig) {
+    // Fallback: try comma-split for single entry format
+    const parts = webhookSignature.split(',');
+    sig = parts.length > 1 ? parts[1]?.trim() : webhookSignature.trim();
+  }
+
+  if (!sig) {
+    return { valid: false, error: 'Could not extract signature' };
+  }
+
   const signedPayload = `${webhookId}.${webhookTimestamp}.${rawBody}`;
-  const expected = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
-  const sig = webhookSignature.includes(',') ? webhookSignature.split(',').pop()?.trim() ?? webhookSignature : webhookSignature;
+  const expectedBuffer = crypto.createHmac('sha256', secret).update(signedPayload).digest();
+  
   try {
-    return crypto.timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'));
+    const sigBuffer = Buffer.from(sig, 'base64');
+    if (sigBuffer.length !== expectedBuffer.length) {
+      return { valid: false, error: 'Signature length mismatch' };
+    }
+    const isValid = crypto.timingSafeEqual(sigBuffer, expectedBuffer);
+    return { valid: isValid, error: isValid ? undefined : 'Signature mismatch' };
   } catch {
-    return false;
+    return { valid: false, error: 'Signature verification failed' };
   }
 }
 
@@ -72,7 +114,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Missing webhook headers' });
   }
 
-  if (!verifySignature(rawBody, webhookId, webhookTimestamp, webhookSignature, secret)) {
+  const signatureResult = verifySignature(rawBody, webhookId, webhookTimestamp, webhookSignature, secret);
+  if (!signatureResult.valid) {
+    console.warn('Dodo webhook: signature verification failed', signatureResult.error);
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
@@ -97,11 +141,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const supabase = createServerSupabaseClient();
 
-  const { data: existing } = await supabase
+  const { data: existing, error: fetchError } = await supabase
     .from('users')
     .select('id, entitlement, dodo_payment_id')
     .eq('id', userId)
     .single();
+
+  // Handle DB errors (not "not found") - return 500 to trigger webhook retry
+  if (fetchError && fetchError.code !== 'PGRST116') {
+    console.error('Dodo webhook: DB query failed', { userId, error: fetchError.message });
+    return res.status(500).json({ error: 'Database error' });
+  }
 
   if (!existing) {
     console.warn('Dodo webhook: user not found', userId);

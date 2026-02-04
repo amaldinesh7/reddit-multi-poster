@@ -61,7 +61,7 @@ export default function PostComposer({ value, onChange, body, onBodyChange, pref
         {showBody && onBodyChange && (
           <div className="mt-2">
             <Textarea
-              placeholder="Optional body text for self posts..."
+              placeholder="Optional body text..."
               value={body || ''}
               onChange={(e) => handleBodyChange(e.target.value)}
               className="resize-none min-h-[120px]"

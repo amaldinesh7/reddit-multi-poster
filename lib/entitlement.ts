@@ -34,6 +34,9 @@ export async function getEntitlement(userId: string): Promise<Entitlement> {
     .single();
 
   if (error || !data) {
+    if (error) {
+      console.warn('getEntitlement: DB query failed, defaulting to free', { userId, error: error.message });
+    }
     return 'free';
   }
 

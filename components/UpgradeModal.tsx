@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from './ui/button';
-import { X, Crown, Zap, Infinity, Check, Loader2 } from 'lucide-react';
+import { X, Crown, Zap, Infinity as InfinityIcon, Check, Loader2 } from 'lucide-react';
 
 interface UpgradeModalProps {
   open: boolean;
@@ -131,7 +131,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
                 <li key={i} className="flex items-center gap-3">
                   <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600">
                     {benefit.includes('Unlimited') ? (
-                      <Infinity className="h-3 w-3 text-white" />
+                      <InfinityIcon className="h-3 w-3 text-white" />
                     ) : (
                       <Check className="h-3 w-3 text-white" />
                     )}

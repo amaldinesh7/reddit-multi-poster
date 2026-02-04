@@ -1,6 +1,6 @@
 import React from 'react';
-import { useDropzone } from 'react-dropzone';
-import { Upload, Image, Video, Link, X } from 'lucide-react';
+import { useDropzone, FileRejection } from 'react-dropzone';
+import { Upload, Image, Video, Link, X, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 interface Props {
@@ -13,6 +13,32 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
   const [mediaUrl, setMediaUrl] = React.useState('');
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = React.useState<string[]>([]);
+  const [rejectionError, setRejectionError] = React.useState<string | null>(null);
+
+  const handleDropRejected = React.useCallback((fileRejections: FileRejection[]) => {
+    const errors: string[] = [];
+    
+    fileRejections.forEach((rejection) => {
+      rejection.errors.forEach((error) => {
+        if (error.code === 'file-too-large') {
+          errors.push(`"${rejection.file.name}" is too large (max 25MB)`);
+        } else if (error.code === 'too-many-files') {
+          errors.push('Too many files selected (max 10)');
+        } else if (error.code === 'file-invalid-type') {
+          errors.push(`"${rejection.file.name}" is not a supported file type`);
+        } else {
+          errors.push(error.message);
+        }
+      });
+    });
+    
+    // Dedupe errors and show
+    const uniqueErrors = [...new Set(errors)];
+    setRejectionError(uniqueErrors.join('. '));
+    
+    // Auto-clear error after 5 seconds
+    setTimeout(() => setRejectionError(null), 5000);
+  }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
@@ -23,10 +49,12 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
     maxFiles: 10,
     maxSize: 25 * 1024 * 1024, // 25MB
     onDrop: (acceptedFiles) => {
+      setRejectionError(null);
       if (acceptedFiles.length > 0) {
         handleFilesSelect(acceptedFiles);
       }
-    }
+    },
+    onDropRejected: handleDropRejected,
   });
 
   const handleFilesSelect = (files: File[]) => {
@@ -148,6 +176,14 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
               </div>
             )}
           </div>
+
+          {/* Rejection Error Message */}
+          {rejectionError && (
+            <div className="mt-2 flex items-start gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-3">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>{rejectionError}</span>
+            </div>
+          )}
         </div>
       ) : (
         /* URL Input */
