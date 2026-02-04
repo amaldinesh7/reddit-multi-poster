@@ -221,3 +221,138 @@ export async function upsertUser(userData: {
   
   return user;
 }
+
+// ============================================================================
+// Storage Helpers (for Queue Files)
+// ============================================================================
+
+const QUEUE_FILES_BUCKET = 'queue-files';
+
+/**
+ * Upload a file to Supabase Storage for queue processing.
+ * @param jobId - The queue job ID
+ * @param itemIndex - Index of the item in the queue
+ * @param fileIndex - Index of the file within the item (for galleries)
+ * @param file - The file buffer to upload
+ * @param fileName - Original file name
+ * @param mimeType - MIME type of the file
+ * @returns The storage path of the uploaded file
+ */
+export async function uploadQueueFile(
+  jobId: string,
+  itemIndex: number,
+  fileIndex: number,
+  file: Buffer,
+  fileName: string,
+  mimeType: string
+): Promise<string> {
+  const client = createServerSupabaseClient();
+  const storagePath = `${jobId}/${itemIndex}_${fileIndex}_${fileName}`;
+  
+  const { error } = await client.storage
+    .from(QUEUE_FILES_BUCKET)
+    .upload(storagePath, file, {
+      contentType: mimeType,
+      upsert: true,
+    });
+  
+  if (error) {
+    console.error('Failed to upload queue file:', error);
+    throw new Error(`Failed to upload file: ${error.message}`);
+  }
+  
+  return storagePath;
+}
+
+/**
+ * Download a file from Supabase Storage.
+ * @param storagePath - The storage path of the file
+ * @returns The file as a Blob
+ */
+export async function downloadQueueFile(storagePath: string): Promise<Blob> {
+  const client = createServerSupabaseClient();
+  
+  const { data, error } = await client.storage
+    .from(QUEUE_FILES_BUCKET)
+    .download(storagePath);
+  
+  if (error) {
+    console.error('Failed to download queue file:', error);
+    throw new Error(`Failed to download file: ${error.message}`);
+  }
+  
+  return data;
+}
+
+/**
+ * Delete a single file from Supabase Storage.
+ * @param storagePath - The storage path of the file
+ */
+export async function deleteQueueFile(storagePath: string): Promise<void> {
+  const client = createServerSupabaseClient();
+  
+  const { error } = await client.storage
+    .from(QUEUE_FILES_BUCKET)
+    .remove([storagePath]);
+  
+  if (error) {
+    console.error('Failed to delete queue file:', error);
+    // Don't throw - cleanup failures shouldn't break the flow
+  }
+}
+
+/**
+ * Delete all files for a queue job.
+ * @param jobId - The queue job ID
+ */
+export async function deleteQueueJobFiles(jobId: string): Promise<void> {
+  const client = createServerSupabaseClient();
+  
+  // List all files in the job folder
+  const { data: files, error: listError } = await client.storage
+    .from(QUEUE_FILES_BUCKET)
+    .list(jobId);
+  
+  if (listError) {
+    console.error('Failed to list queue job files:', listError);
+    return;
+  }
+  
+  if (!files || files.length === 0) {
+    return;
+  }
+  
+  // Delete all files
+  const filePaths = files.map(f => `${jobId}/${f.name}`);
+  const { error: deleteError } = await client.storage
+    .from(QUEUE_FILES_BUCKET)
+    .remove(filePaths);
+  
+  if (deleteError) {
+    console.error('Failed to delete queue job files:', deleteError);
+  }
+}
+
+/**
+ * Get a signed URL for temporary file access.
+ * @param storagePath - The storage path of the file
+ * @param expiresIn - Expiration time in seconds (default 60)
+ * @returns Signed URL
+ */
+export async function getQueueFileSignedUrl(
+  storagePath: string,
+  expiresIn: number = 60
+): Promise<string> {
+  const client = createServerSupabaseClient();
+  
+  const { data, error } = await client.storage
+    .from(QUEUE_FILES_BUCKET)
+    .createSignedUrl(storagePath, expiresIn);
+  
+  if (error) {
+    console.error('Failed to create signed URL:', error);
+    throw new Error(`Failed to create signed URL: ${error.message}`);
+  }
+  
+  return data.signedUrl;
+}
