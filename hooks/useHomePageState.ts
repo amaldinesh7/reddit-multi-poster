@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { QueueItem } from '@/types';
+import { usePersistentState } from './usePersistentState';
 
 interface MeData {
   name: string;
@@ -13,11 +14,11 @@ interface UseHomePageStateProps {
 
 interface UseHomePageStateReturn {
   selectedSubs: string[];
-  setSelectedSubs: React.Dispatch<React.SetStateAction<string[]>>;
+  setSelectedSubs: (value: string[] | ((val: string[]) => string[])) => void;
   caption: string;
-  setCaption: React.Dispatch<React.SetStateAction<string>>;
+  setCaption: (value: string | ((val: string) => string)) => void;
   body: string;
-  setBody: React.Dispatch<React.SetStateAction<string>>;
+  setBody: (value: string | ((val: string) => string)) => void;
   prefixes: { f: boolean; c: boolean };
   setPrefixes: React.Dispatch<React.SetStateAction<{ f: boolean; c: boolean }>>;
   mediaUrl: string;
@@ -45,9 +46,9 @@ interface UseHomePageStateReturn {
 }
 
 export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePageStateReturn => {
-  const [selectedSubs, setSelectedSubs] = useState<string[]>([]);
-  const [caption, setCaption] = useState('');
-  const [body, setBody] = useState('');
+  const [selectedSubs, setSelectedSubs] = usePersistentState<string[]>('rmp_selected_subs', []);
+  const [caption, setCaption] = usePersistentState<string>('rmp_caption', '');
+  const [body, setBody] = usePersistentState<string>('rmp_body', '');
   const [prefixes, setPrefixes] = useState({ f: false, c: false });
   const [mediaUrl, setMediaUrl] = useState<string>('');
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);

@@ -77,7 +77,7 @@ export default function Home() {
             username: data.me.name,
           });
         }
-        
+
         // Check admin status (non-blocking)
         try {
           const adminRes = await axios.get<{ isAdmin: boolean }>('/api/admin-check');
@@ -153,26 +153,24 @@ export default function Home() {
                   <div className="hidden lg:block rounded-lg border border-border bg-card p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold">Media</h3>
-                      <div className="flex rounded-md border border-border overflow-hidden">
+                      <div className="inline-flex items-center rounded-lg border border-border bg-card p-1 text-muted-foreground">
                         <button
                           onClick={() => setMediaMode('file')}
-                          className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${mediaMode === 'file'
-                            ? 'bg-primary text-white'
-                            : 'bg-transparent text-muted-foreground hover:text-foreground'
+                          className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${mediaMode === 'file'
+                            ? 'bg-secondary text-foreground shadow-sm'
+                            : 'hover:bg-muted/50'
                             }`}
                           aria-pressed={mediaMode === 'file'}
-                          aria-label="Upload file"
                         >
                           Upload
                         </button>
                         <button
                           onClick={() => setMediaMode('url')}
-                          className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${mediaMode === 'url'
-                            ? 'bg-primary text-white'
-                            : 'bg-transparent text-muted-foreground hover:text-foreground'
+                          className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${mediaMode === 'url'
+                            ? 'bg-secondary text-foreground shadow-sm'
+                            : 'hover:bg-muted/50'
                             }`}
                           aria-pressed={mediaMode === 'url'}
-                          aria-label="Enter URL"
                         >
                           URL
                         </button>
@@ -185,26 +183,24 @@ export default function Home() {
                   <div className="lg:hidden">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-base font-semibold">Media</h3>
-                      <div className="flex rounded-md border border-border overflow-hidden">
+                      <div className="inline-flex items-center rounded-lg border border-border bg-card p-1 text-muted-foreground">
                         <button
                           onClick={() => setMediaMode('file')}
-                          className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${mediaMode === 'file'
-                            ? 'bg-primary text-white'
-                            : 'bg-transparent text-muted-foreground hover:text-foreground'
+                          className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${mediaMode === 'file'
+                            ? 'bg-secondary text-foreground shadow-sm'
+                            : 'hover:bg-muted/50'
                             }`}
                           aria-pressed={mediaMode === 'file'}
-                          aria-label="Upload file"
                         >
                           Upload
                         </button>
                         <button
                           onClick={() => setMediaMode('url')}
-                          className={`px-3 py-1 text-sm font-medium transition-colors cursor-pointer ${mediaMode === 'url'
-                            ? 'bg-primary text-white'
-                            : 'bg-transparent text-muted-foreground hover:text-foreground'
+                          className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${mediaMode === 'url'
+                            ? 'bg-secondary text-foreground shadow-sm'
+                            : 'hover:bg-muted/50'
                             }`}
                           aria-pressed={mediaMode === 'url'}
-                          aria-label="Enter URL"
                         >
                           URL
                         </button>
@@ -345,14 +341,7 @@ export default function Home() {
                 <section>
                   {/* Desktop: Card wrapper */}
                   <div className="hidden lg:block rounded-lg border border-border bg-card p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <h3 className="text-lg font-semibold">Posting Queue</h3>
-                      {items.length > 0 && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
-                          {items.length}
-                        </span>
-                      )}
-                    </div>
+
                     <PostingQueue
                       items={items}
                       caption={caption}
@@ -365,14 +354,7 @@ export default function Home() {
 
                   {/* Mobile: No card wrapper */}
                   <div className="lg:hidden">
-                    <div className="flex items-center gap-2 mb-3">
-                      <h3 className="text-base font-semibold">Posting Queue</h3>
-                      {items.length > 0 && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
-                          {items.length}
-                        </span>
-                      )}
-                    </div>
+
                     <PostingQueue
                       items={items}
                       caption={caption}

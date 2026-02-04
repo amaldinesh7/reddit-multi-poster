@@ -40,6 +40,21 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             <span className="font-semibold">Multi Poster</span>
           </div>
 
+          {/* Docs Button */}
+          <div className="flex items-center gap-2 md:gap-4 ml-auto mr-2 md:mr-4">
+            <button
+              onClick={() => window.open('https://github.com/amaldinesh7/reddit-multi-poster#readme', '_blank')}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-secondary transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
+              aria-label="Documentation"
+              title="Documentation"
+            >
+              <div className="flex items-center justify-center w-5 h-5">
+                <span className="text-lg font-bold">?</span>
+              </div>
+              <span className="text-sm font-medium hidden sm:inline">Docs</span>
+            </button>
+          </div>
+
           {/* User Menu */}
           <DropdownMenu
             trigger={

@@ -5,94 +5,158 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const PwaOnboarding = () => {
     const [showPrompt, setShowPrompt] = useState(false);
+    const [showBanner, setShowBanner] = useState(false);
     const [platform, setPlatform] = useState<'ios' | 'android' | 'other'>('other');
+    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
     useEffect(() => {
-        // Check if simplified prompt has been seen
-        const hasSeenPrompt = localStorage.getItem('pwa_prompt_seen');
-        if (hasSeenPrompt) return;
+        // Capture install prompt
+        const handleBeforeInstallPrompt = (e: any) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+            checkStatus();
+        };
 
-        // Detect Platform
-        const userAgent = window.navigator.userAgent.toLowerCase();
-        const isIOS = /iphone|ipad|ipod/.test(userAgent);
-        const isAndroid = /android/.test(userAgent);
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-        // Check if running in standalone mode (already installed)
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-            (window.navigator as any).standalone === true;
+        // Check status
+        const checkStatus = () => {
+            const promptSeen = localStorage.getItem('pwa_prompt_seen');
+            const bannerClosed = localStorage.getItem('pwa_banner_closed');
 
-        if (isStandalone) return;
+            // Detect Platform
+            const userAgent = window.navigator.userAgent.toLowerCase();
+            const isIOS = /iphone|ipad|ipod/.test(userAgent);
+            const isAndroid = /android/.test(userAgent);
+            const isMobile = isIOS || isAndroid;
 
-        if (isIOS) {
-            setPlatform('ios');
-            setShowPrompt(true);
-        } else if (isAndroid) {
-            setPlatform('android');
-            setShowPrompt(true);
-        }
+            // Check standalone
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                (window.navigator as any).standalone === true;
+
+            if (isStandalone) return;
+
+            if (isIOS) setPlatform('ios');
+            else if (isAndroid) setPlatform('android');
+
+            // Logic
+            if (!promptSeen && isMobile) {
+                setShowPrompt(true);
+            } else if (!bannerClosed) {
+                // Show banner if prompt was seen/dismissed but banner isn't closed
+                // And it's not standalone
+                setShowBanner(true);
+            }
+        };
+
+        checkStatus();
+
+        return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     }, []);
 
-    const handleDismiss = () => {
+    const handlePromptDismiss = () => {
         setShowPrompt(false);
         localStorage.setItem('pwa_prompt_seen', 'true');
+        setShowBanner(true); // Show banner after dismissing prompt
     };
 
-    if (!showPrompt) return null;
+    const handleBannerDismiss = () => {
+        setShowBanner(false);
+        localStorage.setItem('pwa_banner_closed', 'true');
+    };
+
+    const handleInstallClick = async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                setDeferredPrompt(null);
+                setShowPrompt(false);
+                setShowBanner(false);
+            }
+        } else if (platform === 'ios') {
+            // iOS instructions are in the prompt
+            if (!showPrompt) setShowPrompt(true);
+        }
+    };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-            <Card className="w-full max-w-md shadow-2xl bg-card border-primary/20 animate-in slide-in-from-bottom duration-300">
-                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                    <CardTitle className="text-lg font-bold text-primary">Install App</CardTitle>
-                    <Button variant="ghost" size="icon" onClick={handleDismiss} className="h-8 w-8 -mr-2">
-                        <X className="w-4 h-4" />
-                    </Button>
-                </CardHeader>
-                <CardContent className="space-y-4 pt-2">
-                    <p className="text-sm text-muted-foreground">
-                        Install this app on your home screen for the best experience.
-                    </p>
+        <>
+            {/* Full Screen Prompt */}
+            {showPrompt && (
+                <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+                    <Card className="w-full max-w-md shadow-2xl bg-card border-primary/20 animate-in slide-in-from-bottom duration-300">
+                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                            <CardTitle className="text-lg font-bold text-primary">Install App</CardTitle>
+                            <Button variant="ghost" size="icon" onClick={handlePromptDismiss} className="h-8 w-8 -mr-2">
+                                <X className="w-4 h-4" />
+                            </Button>
+                        </CardHeader>
+                        <CardContent className="space-y-4 pt-2">
+                            <p className="text-sm text-muted-foreground">
+                                Install Reddit Multi-Poster for the best experience.
+                            </p>
 
-                    <div className="bg-secondary/50 rounded-lg p-4 space-y-3">
-                        {platform === 'ios' ? (
-                            <div className="space-y-3 text-sm">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex items-center justify-center w-8 h-8 rounded-md bg-background border border-border">
-                                        <Share className="w-4 h-4 text-primary" />
+                            <div className="bg-secondary/50 rounded-lg p-4 space-y-3">
+                                {platform === 'ios' ? (
+                                    <div className="space-y-3 text-sm">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center justify-center w-8 h-8 rounded-md bg-background border border-border">
+                                                <Share className="w-4 h-4 text-primary" />
+                                            </div>
+                                            <span>Tap <strong>Share</strong></span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center justify-center w-8 h-8 rounded-md bg-background border border-border">
+                                                <PlusSquare className="w-4 h-4 text-primary" />
+                                            </div>
+                                            <span><strong>Add to Home Screen</strong></span>
+                                        </div>
                                     </div>
-                                    <span>Tap the <strong>Share</strong> button in the navigation bar.</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <div className="flex items-center justify-center w-8 h-8 rounded-md bg-background border border-border">
-                                        <PlusSquare className="w-4 h-4 text-primary" />
+                                ) : (
+                                    <div className="space-y-3 text-sm">
+                                        <p>Tap <strong>Install</strong> below to add to your home screen.</p>
                                     </div>
-                                    <span>Scroll down and tap <strong>Add to Home Screen</strong>.</span>
-                                </div>
+                                )}
                             </div>
-                        ) : (
-                            <div className="space-y-3 text-sm">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex items-center justify-center w-8 h-8 rounded-md bg-background border border-border">
-                                        <MoreVertical className="w-4 h-4 text-primary" />
-                                    </div>
-                                    <span>Tap the <strong>Menu</strong> icon (3 dots) in the browser.</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <div className="flex items-center justify-center w-8 h-8 rounded-md bg-background border border-border">
-                                        <Download className="w-4 h-4 text-primary" />
-                                    </div>
-                                    <span>Tap <strong>Install App</strong> or <strong>Add to Home screen</strong>.</span>
-                                </div>
+
+                            <Button onClick={platform === 'ios' ? handlePromptDismiss : handleInstallClick} className="w-full font-semibold">
+                                {platform === 'ios' ? 'Got it' : 'Install App'}
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* Persistent Top Banner */}
+            {showBanner && !showPrompt && (
+                <div className="fixed top-0 left-0 right-0 z-40 bg-primary/10 border-b border-primary/20 backdrop-blur-md">
+                    <div className="container max-w-md mx-auto flex items-center justify-between px-4 py-2">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-primary/20 p-1.5 rounded-md">
+                                <Download className="w-4 h-4 text-primary" />
                             </div>
-                        )}
+                            <span className="text-xs font-medium">Install App</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {(platform !== 'ios' && deferredPrompt) && (
+                                <Button size="sm" variant="default" className="h-7 text-xs px-2" onClick={handleInstallClick}>
+                                    Install
+                                </Button>
+                            )}
+                            {platform === 'ios' && (
+                                <Button size="sm" variant="ghost" className="h-7 text-xs px-2" onClick={() => setShowPrompt(true)}>
+                                    How?
+                                </Button>
+                            )}
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleBannerDismiss}>
+                                <X className="w-3 h-3" />
+                            </Button>
+                        </div>
                     </div>
-
-                    <Button onClick={handleDismiss} className="w-full font-semibold">
-                        Got it
-                    </Button>
-                </CardContent>
-            </Card>
-        </div>
+                </div>
+            )}
+        </>
     );
 };
 

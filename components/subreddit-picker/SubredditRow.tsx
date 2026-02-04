@@ -168,54 +168,34 @@ const SubredditRow = React.memo(({
             <div className="w-3 h-3 border-2 border-muted border-t-primary rounded-full animate-spin" aria-label="Loading" />
           )}
 
-          {/* Inline Requirement Badges (Desktop) */}
+          {/* Info/Status Line (Mobile & Desktop) */}
           {!isLoading && isSelected && (
-            <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
-              {/* Flair Required Badge */}
+            <div className="flex items-center gap-2 mt-1 w-full basis-full sm:basis-auto sm:w-auto sm:mt-0">
+              {/* Info Trigger (Mobile/Desktop) */}
+              {canExpand && (
+                <button
+                  onClick={handleExpandClick}
+                  className="bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer"
+                  aria-label="Show posting rules"
+                  title="View posting rules"
+                >
+                  <span className="font-serif font-bold italic text-xs">i</span>
+                </button>
+              )}
+
+              {/* Flair Required - Prominent */}
               {flairRequired && (
-                <Badge variant="destructive" className="text-[10px] px-1.5">
-                  Required Flair
+                <Badge variant="destructive" className="h-5 px-1.5 text-[10px] uppercase font-bold tracking-wider shadow-sm" title="Flair selection is required">
+                  Flair Req
                 </Badge>
               )}
-
-              {/* Has Required Tags Badge */}
-              {hasRequiredStrings && (
-                <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-amber-500/50 text-amber-600 dark:text-amber-400">
-                  <Hash className="w-2.5 h-2.5" />
-                </Badge>
-              )}
-
-              {/* Has Guidelines Badge */}
-              {hasGuidelines && (
-                <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-blue-500/50 text-blue-600 dark:text-blue-400">
-                  <FileText className="w-2.5 h-2.5" />
-                </Badge>
-              )}
-            </div>
-          )}
-
-          {/* Mobile indicators */}
-          {!isLoading && isSelected && (
-            <div className="flex sm:hidden items-center gap-0.5">
-              {flairRequired && <span className="text-red-500 text-xs font-bold">🏷️</span>}
-              {hasRequiredStrings && <span className="text-amber-500 text-xs">#</span>}
             </div>
           )}
         </div>
 
         {/* Controls */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0" onClick={handleControlsClick}>
-          {/* Expand Button */}
-          {canExpand && (
-            <button
-              onClick={handleExpandClick}
-              className="expand-trigger h-7 w-7 flex items-center justify-center rounded hover:bg-muted transition-colors cursor-pointer"
-              aria-label="Show details"
-              aria-expanded={isExpanded}
-            >
-              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-            </button>
-          )}
+          {/* Title Suffix */}
 
           {/* Title Suffix - Only show when required strings exist */}
           {showTagControls && (
@@ -268,11 +248,10 @@ const SubredditRow = React.memo(({
               onValueChange={(value) => onFlairChange(name, value === '__none__' ? '' : value)}
             >
               <SelectTrigger
-                className={`h-7 w-20 sm:w-28 text-xs cursor-pointer ${
-                  hasError
-                    ? 'border-red-500 bg-red-500/10 text-red-400'
-                    : ''
-                }`}
+                className={`h-7 w-20 sm:w-28 text-xs cursor-pointer ${hasError
+                  ? 'border-red-500 bg-red-500/10 text-red-400'
+                  : ''
+                  }`}
                 aria-label={`Select flair for r/${name}`}
               >
                 <SelectValue placeholder={flairRequired ? 'Flair*' : 'Flair'} />

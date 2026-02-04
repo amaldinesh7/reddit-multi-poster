@@ -48,15 +48,15 @@ const QueueProgressList: React.FC<QueueProgressListProps> = ({
           </div>
         </div>
       </div>
-      
-      <div className="max-h-64 overflow-y-auto">
+
+      <div className="">
         {logs.length === 0 && running && (
           <div className="text-center py-6">
             <Loader2 className="w-5 h-5 mx-auto mb-2 animate-spin text-primary" aria-label="Starting" />
             <p className="text-sm text-muted-foreground">Starting...</p>
           </div>
         )}
-        
+
         {logs.map((entry) => (
           <QueueLogEntry
             key={entry.index}
