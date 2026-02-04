@@ -431,7 +431,7 @@ export default function Settings() {
                     </div>
                   </div>
                   <span className="text-xs text-violet-500 font-medium group-hover:underline">
-                    Get lifetime access
+                    Get unlimited lifetime access
                   </span>
                 </button>
               )}

@@ -4,6 +4,7 @@ import AddToCategoryDialog from './AddToCategoryDialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Search, Plus, Save, Loader2, X } from 'lucide-react';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useSubredditFlairData } from '../hooks/useSubredditFlairData';
 import { SubredditCategoryList } from './subreddit-picker';
 import SubredditRow from './subreddit-picker/SubredditRow';
@@ -305,17 +306,18 @@ const SubredditFlairPicker: React.FC<Props> = ({
           </span>
 
           {selected.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleReload}
-              disabled={isReloading}
-              className="h-9 w-9 p-0 rounded-lg cursor-pointer"
-              title="Refresh flairs"
-              aria-label="Refresh flairs for chosen communities"
-            >
-              <RefreshCw className={`h-4 w-4 ${isReloading ? 'animate-spin' : ''}`} />
-            </Button>
+            <Tooltip content="Sync flair & rules from Reddit" side="bottom">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReload}
+                disabled={isReloading}
+                className="h-9 w-9 p-0 rounded-lg cursor-pointer"
+                aria-label="Refresh flairs for chosen communities"
+              >
+                <RefreshCw className={`h-4 w-4 ${isReloading ? 'animate-spin' : ''}`} />
+              </Button>
+            </Tooltip>
           )}
         </div>
       </div>
