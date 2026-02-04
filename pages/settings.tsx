@@ -1,14 +1,16 @@
 import React from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { ArrowLeft, Loader2, Search, FolderPlus, Sparkles, RefreshCw, GripVertical, FlaskConical } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, FolderPlus, Sparkles, RefreshCw, GripVertical, FlaskConical, Crown } from 'lucide-react';
 import { useSubreddits } from '../hooks/useSubreddits';
 import { useSubredditCache } from '../hooks/useSubredditCache';
 import { useAuth } from '../hooks/useAuth';
 import { useSettingsDnd } from '../hooks/useSettingsDnd';
 import { searchSubreddits as searchSubredditsAPI } from '../lib/api/reddit';
+import UpgradeModal from '../components/UpgradeModal';
 
 import {
   DndContext,
@@ -33,7 +35,7 @@ import {
 
 export default function Settings() {
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, entitlement, limits } = useAuth();
   const {
     data,
     isLoaded,
@@ -60,6 +62,22 @@ export default function Settings() {
   }>>([]);
   const [isSearching, setIsSearching] = React.useState(false);
   const [showSearchResults, setShowSearchResults] = React.useState(false);
+  const [upgradeLoading, setUpgradeLoading] = React.useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
+  const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
+
+  const FREE_LIMIT = 5;
+
+  const handleUpgrade = React.useCallback(async () => {
+    if (upgradeLoading) return;
+    setUpgradeLoading(true);
+    try {
+      const { data } = await axios.post<{ checkout_url: string }>('/api/checkout/create-session');
+      if (data?.checkout_url) window.location.href = data.checkout_url;
+    } finally {
+      setUpgradeLoading(false);
+    }
+  }, [upgradeLoading]);
 
   // DnD handling
   const {
@@ -82,6 +100,25 @@ export default function Settings() {
       router.replace('/login');
     }
   }, [authLoading, isAuthenticated, router]);
+
+  // Calculate current subreddit count
+  const currentSubredditCount = data.categories.reduce((sum, c) => sum + c.user_subreddits.length, 0);
+  const isAtFreeLimit = entitlement === 'free' && currentSubredditCount >= FREE_LIMIT;
+
+  // Wrapper for addSubreddit that checks free user limit
+  const addSubredditWithLimitCheck = React.useCallback(async (categoryId: string, subredditName: string) => {
+    // Check if free user is at limit
+    if (entitlement === 'free' && currentSubredditCount >= FREE_LIMIT) {
+      setUpgradeModalContext({
+        title: 'Subreddit limit reached',
+        message: `Free plan supports up to ${FREE_LIMIT} saved subreddits. Upgrade for unlimited.`,
+      });
+      setShowUpgradeModal(true);
+      return null;
+    }
+    // Otherwise proceed with normal add
+    return addSubreddit(categoryId, subredditName);
+  }, [entitlement, currentSubredditCount, addSubreddit]);
 
   // DnD Kit sensors
   const sensors = useSensors(
@@ -126,7 +163,7 @@ export default function Settings() {
 
   // Add subreddit from search
   const addSubredditFromSearch = async (categoryId: string, subredditName: string) => {
-    const result = await addSubreddit(categoryId, subredditName);
+    const result = await addSubredditWithLimitCheck(categoryId, subredditName);
     if (result) {
       try {
         await fetchAndCache(subredditName);
@@ -184,7 +221,7 @@ export default function Settings() {
     try {
       // Find or create "Dev NSFW" category
       let categoryId = data.categories.find(c => c.name === 'Dev NSFW')?.id;
-      
+
       if (!categoryId) {
         const newCategory = await createCategory('Dev NSFW');
         if (newCategory) {
@@ -241,7 +278,7 @@ export default function Settings() {
 
   return (
     <SettingsContext.Provider value={{
-      addSubreddit,
+      addSubreddit: addSubredditWithLimitCheck,
       updateCategory,
       deleteCategory,
       updateSubreddit,
@@ -283,7 +320,13 @@ export default function Settings() {
                 </div>
 
                 {/* Refresh button */}
-                <div className="ml-auto">
+                <div className="ml-auto flex items-center gap-3">
+                  {/* Only show limit counter for FREE users - paid users have no limit */}
+                  {entitlement === 'free' && (
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {currentSubredditCount}/{FREE_LIMIT} subreddits
+                    </span>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -312,7 +355,6 @@ export default function Settings() {
                   <FolderPlus className="w-4 h-4 mr-2" />
                   Add Category
                 </Button>
-
                 {/* Dev-only: Load NSFW subreddits */}
                 {isDev && (
                   <Button
@@ -362,6 +404,30 @@ export default function Settings() {
                 )}
               </div>
 
+              {/* Subtle upgrade banner when at free limit */}
+              {isAtFreeLimit && (
+                <button
+                  onClick={() => {
+                    setUpgradeModalContext(undefined);
+                    setShowUpgradeModal(true);
+                  }}
+                  className="w-full rounded-xl border border-violet-500/20 bg-violet-500/5 p-3 flex items-center justify-between gap-3 hover:bg-violet-500/10 transition-colors cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                      <Crown className="w-4 h-4 text-violet-500" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-foreground">You&apos;ve reached the free limit</p>
+                      <p className="text-xs text-muted-foreground">Upgrade for unlimited subreddits</p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-violet-500 font-medium group-hover:underline">
+                    Get lifetime access
+                  </span>
+                </button>
+              )}
+
               {/* Categories */}
               <DndContext
                 sensors={sensors}
@@ -380,6 +446,7 @@ export default function Settings() {
                         key={category.id}
                         category={category}
                         isActive={activeId === category.id}
+                        canDelete={data.categories.length > 1}
                       />
                     ))}
 
@@ -409,6 +476,15 @@ export default function Settings() {
             </div>
           </main>
         </div>
+
+        {/* Upgrade Modal */}
+        <UpgradeModal
+          open={showUpgradeModal}
+          onOpenChange={setShowUpgradeModal}
+          onUpgrade={handleUpgrade}
+          upgradeLoading={upgradeLoading}
+          context={upgradeModalContext}
+        />
       </>
     </SettingsContext.Provider>
   );

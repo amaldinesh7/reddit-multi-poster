@@ -14,12 +14,14 @@ interface CategoryCardProps {
   category: Category;
   dragHandleProps: Record<string, unknown>;
   isDragging: boolean;
+  canDelete: boolean;
 }
 
 const CategoryCard: React.FC<CategoryCardProps> = ({
   category,
   dragHandleProps,
-  isDragging
+  isDragging,
+  canDelete
 }) => {
   const [editingCategory, setEditingCategory] = React.useState(false);
   const [newSubredditName, setNewSubredditName] = React.useState('');
@@ -155,15 +157,17 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
                 >
                   <Edit2 className="w-4 h-4" />
                 </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleDeleteCategory}
-                  className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
-                  aria-label={`Delete ${category.name} category`}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                {canDelete && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleDeleteCategory}
+                    className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
+                    aria-label={`Delete ${category.name} category`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             </>
           )}

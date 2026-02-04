@@ -12,6 +12,7 @@ interface Props {
     onPostClick: () => void;
     onResetClick: () => void;
     onStopClick?: () => void;
+    onClearClick?: () => void;
 }
 
 export const MobileStickyQueue: React.FC<Props> = ({
@@ -21,7 +22,8 @@ export const MobileStickyQueue: React.FC<Props> = ({
     hasErrors,
     onPostClick,
     onResetClick,
-    onStopClick
+    onStopClick,
+    onClearClick
 }) => {
     if (items.length === 0 && !isCompleted) return null;
 
@@ -40,30 +42,44 @@ export const MobileStickyQueue: React.FC<Props> = ({
                     )}
                 </div>
 
-                {isCompleted ? (
-                    <Button onClick={onResetClick} size="sm" className="bg-green-600 hover:bg-green-700">
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Done
-                    </Button>
-                ) : isPosting ? (
-                    <Button
-                        onClick={onStopClick}
-                        variant="destructive"
-                        size="sm"
-                    >
-                        <X className="w-4 h-4 mr-2" />
-                        Stop
-                    </Button>
-                ) : (
-                    <Button
-                        onClick={onPostClick}
-                        disabled={hasErrors || items.length === 0}
-                        size="sm"
-                    >
-                        <Send className="w-4 h-4 mr-2" />
-                        Post All
-                    </Button>
-                )}
+                <div className="flex items-center gap-2">
+                    {!isPosting && !isCompleted && onClearClick && items.length > 0 && (
+                        <Button
+                            onClick={onClearClick}
+                            variant="ghost"
+                            size="sm"
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            title="Clear selection"
+                        >
+                            Clear All
+                        </Button>
+                    )}
+
+                    {isCompleted ? (
+                        <Button onClick={onResetClick} size="sm" className="bg-green-600 hover:bg-green-700">
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Done
+                        </Button>
+                    ) : isPosting ? (
+                        <Button
+                            onClick={onStopClick}
+                            variant="destructive"
+                            size="sm"
+                        >
+                            <X className="w-4 h-4 mr-2" />
+                            Stop
+                        </Button>
+                    ) : (
+                        <Button
+                            onClick={onPostClick}
+                            disabled={hasErrors || items.length === 0}
+                            size="sm"
+                        >
+                            <Send className="w-4 h-4 mr-2" />
+                            Post All
+                        </Button>
+                    )}
+                </div>
             </div>
         </div>
     );

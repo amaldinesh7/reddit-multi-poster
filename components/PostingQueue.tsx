@@ -41,79 +41,15 @@ interface Props {
   hasFlairErrors?: boolean;
   onPostAttempt?: () => void;
   onUnselectSuccessItems?: (subreddits: string[]) => void;
+  onClearAll?: () => void;
+  /** Max items allowed (e.g. 5 for paid). Falls back to QUEUE_LIMITS.MAX_TOTAL_ITEMS */
+  maxItems?: number;
 }
 
 // ============================================================================
 // Sub-Components
 // ============================================================================
 
-interface QueueLimitsBannerProps {
-  itemCount: number;
-  totalFileSize: number;
-  batchCount: number;
-  validationError?: string;
-}
-
-const QueueLimitsBanner: React.FC<QueueLimitsBannerProps> = ({
-  itemCount,
-  totalFileSize,
-  batchCount,
-  validationError,
-}) => {
-  const hasFiles = totalFileSize > 0;
-  const itemProgress = (itemCount / QUEUE_LIMITS.MAX_TOTAL_ITEMS) * 100;
-
-  if (validationError) {
-    return (
-      <div
-        className="rounded-md bg-red-600/15 border border-red-600/30 p-3"
-        role="alert"
-      >
-        <div className="flex items-start gap-2 text-red-400">
-          <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" aria-hidden="true" />
-          <span className="text-sm">{validationError}</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (itemCount === 0) return null;
-
-  return (
-    <div className="rounded-md bg-zinc-800/50 border border-zinc-700/50 p-3 space-y-2">
-      {/* Item Count Progress */}
-      <div className="space-y-1">
-        <div className="flex items-center justify-between text-xs text-zinc-400">
-          <span>Items</span>
-          <span>{itemCount} / {QUEUE_LIMITS.MAX_TOTAL_ITEMS}</span>
-        </div>
-        <div className="h-1.5 bg-zinc-700 rounded-full overflow-hidden">
-          <div
-            className={`h-full transition-all duration-300 ${itemProgress > 80 ? 'bg-yellow-500' : 'bg-blue-500'
-              }`}
-            style={{ width: `${Math.min(itemProgress, 100)}%` }}
-          />
-        </div>
-      </div>
-
-      {/* File Size Info (only if files present) */}
-      {hasFiles && (
-        <div className="flex items-center justify-between text-xs text-zinc-400">
-          <span>Total Files</span>
-          <span>{formatFileSize(totalFileSize)}</span>
-        </div>
-      )}
-
-      {/* Batch Info */}
-      {batchCount > 1 && (
-        <div className="flex items-center gap-2 pt-1 text-xs text-zinc-500">
-          <Info className="h-3 w-3" aria-hidden="true" />
-          <span>Will be processed in {batchCount} batches</span>
-        </div>
-      )}
-    </div>
-  );
-};
 
 interface BatchProgressProps {
   batchStates: Array<{
@@ -297,8 +233,11 @@ const PostingQueue: React.FC<Props> = ({
   prefixes,
   hasFlairErrors,
   onPostAttempt,
-  onUnselectSuccessItems
+  onUnselectSuccessItems,
+  onClearAll,
+  maxItems: maxItemsProp,
 }) => {
+  const maxItems = maxItemsProp ?? QUEUE_LIMITS.MAX_TOTAL_ITEMS;
   const {
     state,
     submit,
@@ -353,9 +292,9 @@ const PostingQueue: React.FC<Props> = ({
   const totalBatches = Math.ceil(items.length / QUEUE_LIMITS.MAX_ITEMS_PER_BATCH);
   const batchInfo = {
     totalBatches,
-    canProceed: items.length > 0 && items.length <= QUEUE_LIMITS.MAX_TOTAL_ITEMS,
-    validationError: items.length > QUEUE_LIMITS.MAX_TOTAL_ITEMS
-      ? `Maximum ${QUEUE_LIMITS.MAX_TOTAL_ITEMS} items allowed`
+    canProceed: items.length > 0 && items.length <= maxItems,
+    validationError: items.length > maxItems
+      ? `You can add up to ${maxItems} communities per post. Remove some to continue.`
       : undefined,
   };
 
@@ -431,17 +370,7 @@ const PostingQueue: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Queue Limits Banner */}
-      {!running && !completed && !cancelled && !state.jobId && (
-        <div className="hidden lg:block">
-          <QueueLimitsBanner
-            itemCount={items.length}
-            totalFileSize={totalFileSize}
-            batchCount={batchInfo.totalBatches}
-            validationError={batchInfo.validationError}
-          />
-        </div>
-      )}
+      
 
       {/* Job Status Banner (shows when job is queued/processing) */}
       {state.jobId && (running || state.status === 'pending') && (
@@ -590,6 +519,20 @@ const PostingQueue: React.FC<Props> = ({
             Stop
           </Button>
         )}
+
+        {/* Clear Selection Button (Desktop) */}
+        {!running && !completed && items.length > 0 && onClearAll && (
+          <Button
+            onClick={onClearAll}
+            variant="ghost"
+            className="cursor-pointer text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            aria-label="Clear selection"
+            title="Clear all selected subreddits"
+          >
+            <span className="font-serif mr-2 text-lg">🗑️</span>
+            Clear
+          </Button>
+        )}
       </div>
 
       {/* Empty State */}
@@ -653,6 +596,7 @@ const PostingQueue: React.FC<Props> = ({
         onPostClick={handleButtonClick}
         onResetClick={reset}
         onStopClick={handleCancel}
+        onClearClick={onClearAll}
       />
     </div>
   );

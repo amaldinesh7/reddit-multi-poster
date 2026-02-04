@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServerSupabaseClient } from '../../../lib/supabase';
 import { getUserId } from '../../../lib/apiAuth';
+import { getEntitlement, FREE_MAX_SUBREDDITS } from '../../../lib/entitlement';
 
 interface ApiResponse {
   success: boolean;
@@ -58,6 +59,32 @@ export default async function handler(
             success: false,
             error: { code: 'FORBIDDEN', message: 'Access denied' },
           });
+        }
+
+        // Only enforce limit for FREE users - paid users have no limit
+        const entitlement = await getEntitlement(userId);
+        if (entitlement === 'free') {
+          const { data: userCategoryIds } = await supabase
+            .from('categories')
+            .select('id')
+            .eq('user_id', userId);
+          const categoryIds = (userCategoryIds || []).map((c) => c.id);
+          if (categoryIds.length > 0) {
+            const { count: subredditCount } = await supabase
+              .from('user_subreddits')
+              .select('id', { count: 'exact', head: true })
+              .in('category_id', categoryIds);
+
+            if (subredditCount !== null && subredditCount >= FREE_MAX_SUBREDDITS) {
+              return res.status(403).json({
+                success: false,
+                error: {
+                  code: 'LIMIT_REACHED',
+                  message: `Free plan allows ${FREE_MAX_SUBREDDITS} saved subreddits. Upgrade for unlimited.`,
+                },
+              });
+            }
+          }
         }
 
         // Get the next position if not provided

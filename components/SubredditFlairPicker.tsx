@@ -24,6 +24,8 @@ interface Props {
   onTitleSuffixChange: (v: Record<string, string | undefined>) => void;
   onValidationChange?: (hasErrors: boolean, missingFlairs: string[]) => void;
   showValidationErrors?: boolean;
+  /** If false, hide search and temporary subreddits. Default true */
+  temporarySelectionEnabled?: boolean;
 }
 
 const SubredditFlairPicker: React.FC<Props> = ({
@@ -34,7 +36,8 @@ const SubredditFlairPicker: React.FC<Props> = ({
   titleSuffixValue,
   onTitleSuffixChange,
   onValidationChange,
-  showValidationErrors
+  showValidationErrors,
+  temporarySelectionEnabled = true,
 }) => {
   const {
     allSubreddits,
@@ -85,17 +88,20 @@ const SubredditFlairPicker: React.FC<Props> = ({
   }, [searchResults, mergedSubreddits]);
 
   const displayCategories = useMemo(() => {
-    if (temporarySubreddits.length === 0) return categorizedSubreddits;
+    if (!temporarySelectionEnabled || temporarySubreddits.length === 0) return categorizedSubreddits;
     return [
       { categoryName: 'Temporary', subreddits: temporarySubreddits },
       ...categorizedSubreddits
     ];
-  }, [categorizedSubreddits, temporarySubreddits]);
+  }, [categorizedSubreddits, temporarySubreddits, temporarySelectionEnabled]);
 
   const handleToggle = useCallback((name: string) => {
     const exists = selected.includes(name);
-    const next = exists ? selected.filter(s => s !== name) : (selected.length < 30 ? [...selected, name] : selected);
-    onSelectedChange(next);
+    if (exists) {
+      onSelectedChange(selected.filter(s => s !== name));
+    } else {
+      onSelectedChange([...selected, name]);
+    }
   }, [selected, onSelectedChange]);
 
   const handleToggleCategory = useCallback((categoryName: string) => {
@@ -107,10 +113,8 @@ const SubredditFlairPicker: React.FC<Props> = ({
   }, []);
 
   const handleSelectAllInCategory = useCallback((subreddits: string[]) => {
-    const newSelected = [...new Set([...selected, ...subreddits])];
-    if (newSelected.length <= 30) {
-      onSelectedChange(newSelected);
-    }
+    const combined = [...new Set([...selected, ...subreddits])];
+    onSelectedChange(combined);
   }, [selected, onSelectedChange]);
 
   const handleFlairChange = useCallback((sr: string, id: string) => {
@@ -185,7 +189,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
       setTemporarySubreddits(prev => [...prev, subredditName]);
     }
 
-    if (!selected.includes(subredditName) && selected.length < 30) {
+    if (!selected.includes(subredditName)) {
       const newSelected = [...selected, subredditName];
       onSelectedChange(newSelected);
       reloadSelectedData(newSelected);
@@ -206,7 +210,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
       // Remove from temporary if it was there
       setTemporarySubreddits(prev => prev.filter(s => s !== subredditToSave));
 
-      if (!selected.includes(subredditToSave) && selected.length < 30) {
+      if (!selected.includes(subredditToSave)) {
         onSelectedChange([...selected, subredditToSave]);
       }
 
@@ -241,33 +245,50 @@ const SubredditFlairPicker: React.FC<Props> = ({
   const hasRedditResults = filteredSearchResults && filteredSearchResults.length > 0;
   const showNoResultsMessage = isSearchMode && !hasLocalResults && hasSearched && !isSearching && (!filteredSearchResults || filteredSearchResults.length === 0);
 
+  const showSearchUi = temporarySelectionEnabled;
+  const showSearchResults = temporarySelectionEnabled && isSearchMode;
+
   return (
     <div className="space-y-4">
-      {/* Search Bar */}
+      {/* Search Bar (hidden for paid: temporary selection disabled) */}
       <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-          <Input
-            placeholder="Search subreddits..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pl-10 pr-8"
-            aria-label="Search subreddits"
-          />
-          {query.length > 0 && (
-            <button
-              onClick={handleClearSearch}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground md:transition-colors cursor-pointer"
-              aria-label="Clear search"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+        {showSearchUi ? (
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Input
+              placeholder="Search subreddits..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="pl-10 pr-8"
+              aria-label="Search subreddits"
+            />
+            {query.length > 0 && (
+              <button
+                onClick={handleClearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground md:transition-colors cursor-pointer"
+                aria-label="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex-1" />
+        )}
 
         <div className="flex items-center gap-2">
+          {selected.length > 0 && (
+            <button
+              onClick={() => onSelectedChange([])}
+              className="text-xs text-muted-foreground hover:text-red-500 transition-colors cursor-pointer mr-1"
+              aria-label="Clear all selections"
+            >
+              Clear
+            </button>
+          )}
+
           <span className="text-sm text-muted-foreground whitespace-nowrap tabular-nums">
-            {selected.length}<span className="text-muted-foreground/50">/30</span>
+            {selected.length} selected
           </span>
 
           {selected.length > 0 && (
@@ -297,7 +318,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
             </div>
           ))}
         </div>
-      ) : isSearchMode ? (
+      ) : showSearchResults ? (
         <div className="space-y-3">
           {/* Local Results Section */}
           {hasLocalResults && (

@@ -5,40 +5,48 @@
 @layer base {
   :root {
     /* Dark Theme - Reddit Inspired */
-    --background: 220 13% 10%;           /* #16181c - Dark background */
-    --foreground: 210 20% 98%;           /* #f8fafc - White text */
-    
-    --card: 220 13% 14%;                 /* #1e2128 - Card background */
+    --background: 220 13% 10%;
+    /* #16181c - Dark background */
+    --foreground: 210 20% 98%;
+    /* #f8fafc - White text */
+
+    --card: 220 13% 14%;
+    /* #1e2128 - Card background */
     --card-foreground: 210 20% 98%;
-    
+
     --popover: 220 13% 16%;
     --popover-foreground: 210 20% 98%;
-    
+
     /* Reddit Orange as Primary */
-    --primary: 16 100% 50%;              /* #FF4500 - Reddit Orange */
+    --primary: 16 100% 50%;
+    /* #FF4500 - Reddit Orange */
     --primary-foreground: 0 0% 100%;
-    
+
     /* Secondary */
-    --secondary: 220 13% 20%;            /* Slightly lighter than card */
+    --secondary: 220 13% 20%;
+    /* Slightly lighter than card */
     --secondary-foreground: 210 20% 95%;
-    
+
     /* Accent */
     --accent: 16 100% 50%;
     --accent-foreground: 0 0% 100%;
-    
+
     /* Muted */
     --muted: 220 13% 22%;
-    --muted-foreground: 215 15% 60%;     /* Readable gray text */
-    
+    --muted-foreground: 215 15% 60%;
+    /* Readable gray text */
+
     /* States */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    
+
     /* Borders and inputs */
-    --border: 220 13% 25%;               /* Visible borders */
-    --input: 220 13% 18%;                /* Input background */
+    --border: 220 13% 25%;
+    /* Visible borders */
+    --input: 220 13% 18%;
+    /* Input background */
     --ring: 16 100% 50%;
-    
+
     --radius: 0.5rem;
   }
 }
@@ -47,12 +55,12 @@
   * {
     @apply border-border;
   }
-  
+
   html {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     color-scheme: dark;
   }
-  
+
   body {
     background-color: hsl(220 13% 10%);
     color: hsl(210 20% 98%);
@@ -65,11 +73,11 @@
   .dragging {
     user-select: none;
   }
-  
+
   [draggable="true"] {
     cursor: grab;
   }
-  
+
   [draggable="true"]:active {
     cursor: grabbing;
   }

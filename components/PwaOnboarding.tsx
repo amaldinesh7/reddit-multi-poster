@@ -128,10 +128,10 @@ export const PwaOnboarding = () => {
                 </div>
             )}
 
-            {/* Persistent Top Banner */}
+            {/* Persistent Top Banner - Changed to block/static positioning */}
             {showBanner && !showPrompt && (
-                <div className="fixed top-0 left-0 right-0 z-40 bg-primary/10 border-b border-primary/20 backdrop-blur-md">
-                    <div className="container max-w-md mx-auto flex items-center justify-between px-4 py-2">
+                <div className="w-full bg-primary/10 border-b border-primary/20 backdrop-blur-md mb-4 rounded-md">
+                    <div className="container mx-auto flex items-center justify-between px-4 py-2">
                         <div className="flex items-center gap-3">
                             <div className="bg-primary/20 p-1.5 rounded-md">
                                 <Download className="w-4 h-4 text-primary" />
@@ -149,7 +149,7 @@ export const PwaOnboarding = () => {
                                     How?
                                 </Button>
                             )}
-                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleBannerDismiss}>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 cursor-pointer" onClick={handleBannerDismiss}>
                                 <X className="w-3 h-3" />
                             </Button>
                         </div>

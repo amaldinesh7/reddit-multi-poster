@@ -8,6 +8,9 @@ interface AppHeaderProps {
   userAvatar?: string;
   onLogout: () => void;
   isAdmin?: boolean;
+  entitlement?: 'free' | 'paid';
+  onUpgrade?: () => void;
+  upgradeLoading?: boolean;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({
@@ -15,7 +18,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   userAvatar,
   onLogout,
   isAdmin = false,
+  entitlement,
+  onUpgrade,
+  upgradeLoading = false,
 }) => {
+  const showUpgrade = entitlement !== 'paid' && onUpgrade;
   const handleViewProfile = () => {
     window.open(`https://reddit.com/user/${userName}`, '_blank');
   };
@@ -40,23 +47,20 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             <span className="font-semibold">Multi Poster</span>
           </div>
 
-          {/* Docs Button */}
-          <div className="flex items-center gap-2 md:gap-4 ml-auto mr-2 md:mr-4">
-            <button
-              onClick={() => window.open('https://github.com/amaldinesh7/reddit-multi-poster#readme', '_blank')}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-secondary transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
-              aria-label="Documentation"
-              title="Documentation"
-            >
-              <div className="flex items-center justify-center w-5 h-5">
-                <span className="text-lg font-bold">?</span>
-              </div>
-              <span className="text-sm font-medium hidden sm:inline">Docs</span>
-            </button>
-          </div>
 
-          {/* User Menu */}
-          <DropdownMenu
+          <div className="flex items-center gap-2">
+            {showUpgrade && (
+              <button
+                type="button"
+                onClick={onUpgrade}
+                disabled={upgradeLoading}
+                className="text-sm text-violet-500 hover:text-violet-400 cursor-pointer disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded px-2 py-1 font-medium border border-violet-500/30 hover:border-violet-400/50 transition-colors"
+                aria-label="Get lifetime access"
+              >
+                {upgradeLoading ? 'Taking you to checkout…' : 'Get lifetime access'}
+              </button>
+            )}
+            <DropdownMenu
             trigger={
               <button
                 className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-secondary transition-colors cursor-pointer"
@@ -94,6 +98,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               Logout
             </DropdownMenuItem>
           </DropdownMenu>
+          </div>
         </div>
       </div>
     </header>

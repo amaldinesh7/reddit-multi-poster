@@ -7,17 +7,26 @@ import MediaUpload from '../components/MediaUpload';
 import SubredditFlairPicker from '../components/SubredditFlairPicker';
 import PostComposer from '../components/PostComposer';
 import PostingQueue from '../components/PostingQueue';
+import UpgradeModal from '../components/UpgradeModal';
 import { AppLoader } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { AppHeader } from '@/components/layout';
 import { useHomePageState } from '@/hooks/useHomePageState';
 
+interface PlanLimits {
+  maxSubreddits: number;
+  maxPostItems: number;
+  temporarySelectionEnabled: boolean;
+}
+
 interface MeResponse {
   authenticated: boolean;
   me?: { name: string; icon_img?: string; id?: string };
   subs?: string[];
   userId?: string;
+  entitlement?: 'free' | 'paid';
+  limits?: PlanLimits;
 }
 
 import { PwaOnboarding } from '@/components/PwaOnboarding';
@@ -28,6 +37,11 @@ export default function Home() {
   const [auth, setAuth] = React.useState<MeResponse>({ authenticated: false });
   const [loading, setLoading] = React.useState(true);
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [upgradeLoading, setUpgradeLoading] = React.useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
+  const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
+
+  const FREE_LIMIT = 5;
 
   const {
     selectedSubs,
@@ -56,6 +70,7 @@ export default function Home() {
     handleValidationChange,
     handlePostAttempt,
     handleUnselectSuccessItems,
+    clearSelection,
   } = useHomePageState({ authMe: auth.me });
 
   React.useEffect(() => {
@@ -97,10 +112,37 @@ export default function Home() {
 
   const handleLogout = async () => {
     await axios.post('/api/auth/logout');
-    // Clear Sentry user context on logout
     Sentry.setUser(null);
     router.replace('/login');
   };
+
+  const handleUpgrade = React.useCallback(async () => {
+    if (upgradeLoading) return;
+    setUpgradeLoading(true);
+    try {
+      const { data } = await axios.post<{ checkout_url: string }>('/api/checkout/create-session');
+      if (data?.checkout_url) window.location.href = data.checkout_url;
+    } catch {
+      // Keep user on page; they can retry
+    } finally {
+      setUpgradeLoading(false);
+    }
+  }, [upgradeLoading]);
+
+  // Wrapper for post attempt that checks free user limit
+  const handlePostWithLimitCheck = React.useCallback(() => {
+    // Check if free user is trying to post to more than 5 subreddits
+    if (auth.entitlement === 'free' && selectedSubs.length > FREE_LIMIT) {
+      setUpgradeModalContext({
+        title: `You've selected ${selectedSubs.length} subreddits`,
+        message: `Free plan supports up to ${FREE_LIMIT} subreddits per post. Upgrade for unlimited.`,
+      });
+      setShowUpgradeModal(true);
+      return;
+    }
+    // Otherwise proceed with normal post attempt
+    handlePostAttempt();
+  }, [auth.entitlement, selectedSubs.length, handlePostAttempt]);
 
   return (
     <>
@@ -135,6 +177,12 @@ export default function Home() {
             userAvatar={auth.me?.icon_img}
             onLogout={handleLogout}
             isAdmin={isAdmin}
+            entitlement={auth.entitlement}
+            onUpgrade={() => {
+              setUpgradeModalContext(undefined);
+              setShowUpgradeModal(true);
+            }}
+            upgradeLoading={upgradeLoading}
           />
 
           <PwaOnboarding />
@@ -248,7 +296,7 @@ export default function Home() {
                 <section>
                   {/* Desktop: Card wrapper */}
                   <div className="hidden lg:block rounded-lg border border-border bg-card p-6">
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className="flex items-center gap-2 mb-4 flex-wrap">
                       <h3 className="text-lg font-semibold">Subreddits</h3>
                       <Button
                         variant="link"
@@ -270,6 +318,7 @@ export default function Home() {
                         onTitleSuffixChange={setTitleSuffixes}
                         onValidationChange={handleValidationChange}
                         showValidationErrors={showValidationErrors}
+                        temporarySelectionEnabled={auth.limits?.temporarySelectionEnabled ?? true}
                       />
 
                       {/* Post to Profile */}
@@ -293,7 +342,7 @@ export default function Home() {
 
                   {/* Mobile: No card wrapper */}
                   <div className="lg:hidden">
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
                       <h3 className="text-base font-semibold">Subreddits</h3>
                       <Button
                         variant="link"
@@ -315,6 +364,7 @@ export default function Home() {
                         onTitleSuffixChange={setTitleSuffixes}
                         onValidationChange={handleValidationChange}
                         showValidationErrors={showValidationErrors}
+                        temporarySelectionEnabled={auth.limits?.temporarySelectionEnabled ?? true}
                       />
 
                       {/* Post to Profile */}
@@ -347,7 +397,7 @@ export default function Home() {
                       caption={caption}
                       prefixes={prefixes}
                       hasFlairErrors={hasFlairErrors}
-                      onPostAttempt={handlePostAttempt}
+                      onPostAttempt={handlePostWithLimitCheck}
                       onUnselectSuccessItems={handleUnselectSuccessItems}
                     />
                   </div>
@@ -360,7 +410,7 @@ export default function Home() {
                       caption={caption}
                       prefixes={prefixes}
                       hasFlairErrors={hasFlairErrors}
-                      onPostAttempt={handlePostAttempt}
+                      onPostAttempt={handlePostWithLimitCheck}
                       onUnselectSuccessItems={handleUnselectSuccessItems}
                     />
                   </div>
@@ -370,6 +420,15 @@ export default function Home() {
           </main>
         </div>
       )}
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        open={showUpgradeModal}
+        onOpenChange={setShowUpgradeModal}
+        onUpgrade={handleUpgrade}
+        upgradeLoading={upgradeLoading}
+        context={upgradeModalContext}
+      />
     </>
   );
 }

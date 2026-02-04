@@ -22,15 +22,15 @@ interface UseHomePageStateReturn {
   prefixes: { f: boolean; c: boolean };
   setPrefixes: React.Dispatch<React.SetStateAction<{ f: boolean; c: boolean }>>;
   mediaUrl: string;
-  setMediaUrl: React.Dispatch<React.SetStateAction<string>>;
+  setMediaUrl: (value: string | ((val: string) => string)) => void;
   mediaFiles: File[];
   setMediaFiles: React.Dispatch<React.SetStateAction<File[]>>;
   mediaMode: 'file' | 'url';
-  setMediaMode: React.Dispatch<React.SetStateAction<'file' | 'url'>>;
+  setMediaMode: (value: 'file' | 'url' | ((val: 'file' | 'url') => 'file' | 'url')) => void;
   flairs: Record<string, string | undefined>;
-  setFlairs: React.Dispatch<React.SetStateAction<Record<string, string | undefined>>>;
+  setFlairs: (value: Record<string, string | undefined> | ((val: Record<string, string | undefined>) => Record<string, string | undefined>)) => void;
   titleSuffixes: Record<string, string | undefined>;
-  setTitleSuffixes: React.Dispatch<React.SetStateAction<Record<string, string | undefined>>>;
+  setTitleSuffixes: (value: Record<string, string | undefined> | ((val: Record<string, string | undefined>) => Record<string, string | undefined>)) => void;
   customTitles: Record<string, string>;
   setCustomTitles: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   postToProfile: boolean;
@@ -43,6 +43,8 @@ interface UseHomePageStateReturn {
   handleValidationChange: (hasErrors: boolean) => void;
   handlePostAttempt: () => void;
   handleUnselectSuccessItems: (subreddits: string[]) => void;
+  clearSelection: () => void;
+  clearAllState: () => void;
 }
 
 export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePageStateReturn => {
@@ -50,11 +52,11 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
   const [caption, setCaption] = usePersistentState<string>('rmp_caption', '');
   const [body, setBody] = usePersistentState<string>('rmp_body', '');
   const [prefixes, setPrefixes] = useState({ f: false, c: false });
-  const [mediaUrl, setMediaUrl] = useState<string>('');
+  const [mediaUrl, setMediaUrl] = usePersistentState<string>('rmp_media_url', '');
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
-  const [mediaMode, setMediaMode] = useState<'file' | 'url'>('file');
-  const [flairs, setFlairs] = useState<Record<string, string | undefined>>({});
-  const [titleSuffixes, setTitleSuffixes] = useState<Record<string, string | undefined>>({});
+  const [mediaMode, setMediaMode] = usePersistentState<'file' | 'url'>('rmp_media_mode', 'file');
+  const [flairs, setFlairs] = usePersistentState<Record<string, string | undefined>>('rmp_flairs', {});
+  const [titleSuffixes, setTitleSuffixes] = usePersistentState<Record<string, string | undefined>>('rmp_title_suffixes', {});
   const [postToProfile, setPostToProfile] = useState(false);
   const [hasFlairErrors, setHasFlairErrors] = useState(false);
   const [customTitles, setCustomTitles] = useState<Record<string, string>>({});
@@ -70,6 +72,26 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
 
   const handleUnselectSuccessItems = useCallback((subreddits: string[]) => {
     setSelectedSubs(prev => prev.filter(s => !subreddits.includes(s)));
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedSubs([]);
+  }, []);
+
+  const clearAllState = useCallback(() => {
+    setSelectedSubs([]);
+    setCaption('');
+    setBody('');
+    setFlairs({});
+    setTitleSuffixes({});
+    setMediaUrl('');
+    setMediaMode('file');
+    setMediaFiles([]);
+    setPrefixes({ f: false, c: false });
+    setPostToProfile(false);
+    setCustomTitles({});
+    setHasFlairErrors(false);
+    setShowValidationErrors(false);
   }, []);
 
   const items = useMemo(() => {
@@ -162,5 +184,7 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
     handleValidationChange,
     handlePostAttempt,
     handleUnselectSuccessItems,
+    clearSelection,
+    clearAllState,
   };
 };

@@ -21,6 +21,7 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
     },
     multiple: true,
     maxFiles: 10,
+    maxSize: 25 * 1024 * 1024, // 25MB
     onDrop: (acceptedFiles) => {
       if (acceptedFiles.length > 0) {
         handleFilesSelect(acceptedFiles);
@@ -80,22 +81,22 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
             {...getRootProps()}
             className={`
               relative rounded-lg border-2 border-dashed p-8 text-center cursor-pointer transition-colors
-              ${isDragActive 
-                ? 'border-primary bg-primary/10' 
-                : selectedFiles.length > 0 
-                  ? 'border-primary/50 bg-primary/5' 
+              ${isDragActive
+                ? 'border-primary bg-primary/10'
+                : selectedFiles.length > 0
+                  ? 'border-primary/50 bg-primary/5'
                   : 'border-border hover:border-muted-foreground'
               }
             `}
           >
             <input {...getInputProps()} />
-            
+
             {selectedFiles.length > 0 ? (
               <div>
                 <p className="font-medium mb-4">
                   {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
                 </p>
-                
+
                 {/* Files Preview */}
                 <div className="flex flex-wrap justify-center gap-2 mb-4">
                   {selectedFiles.map((file, index) => (
@@ -118,7 +119,7 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
                     </div>
                   ))}
                 </div>
-                
+
                 <button
                   onClick={(e) => { e.stopPropagation(); clearMedia(); }}
                   className="text-sm text-muted-foreground hover:text-foreground"
@@ -142,7 +143,7 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
                   <span className="flex items-center gap-1">
                     <Video className="w-3 h-3" /> Videos
                   </span>
-                  <span>Max 10 files</span>
+                  <span>Max 10 files, 25MB each</span>
                 </div>
               </div>
             )}
@@ -168,7 +169,7 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
               </button>
             )}
           </div>
-          
+
           {mediaUrl && (
             <div className="p-3 rounded-md bg-secondary/50 text-sm">
               <p className="text-muted-foreground truncate">{mediaUrl}</p>

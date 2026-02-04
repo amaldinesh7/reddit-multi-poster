@@ -9,6 +9,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
 import fs from 'fs';
 import { getUserId } from '../../../lib/apiAuth';
+import { getEntitlement, FREE_MAX_POST_ITEMS } from '../../../lib/entitlement';
 import { uploadQueueFile } from '../../../lib/supabase';
 import { createQueueJob } from '../../../lib/queueService';
 import {
@@ -65,11 +66,12 @@ export default async function handler(
       return res.status(400).json({ success: false, error: 'Items must be a non-empty array' });
     }
 
-    // Validate item count
-    if (parsedItems.length > QUEUE_LIMITS.MAX_TOTAL_ITEMS) {
+    // Only enforce limit for FREE users - paid users have no limit
+    const entitlement = await getEntitlement(userId);
+    if (entitlement === 'free' && parsedItems.length > FREE_MAX_POST_ITEMS) {
       return res.status(400).json({
         success: false,
-        error: `Maximum ${QUEUE_LIMITS.MAX_TOTAL_ITEMS} items allowed`,
+        error: `Free plan allows posting to ${FREE_MAX_POST_ITEMS} subreddits at once. Upgrade for unlimited.`,
       });
     }
 
