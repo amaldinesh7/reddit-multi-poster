@@ -51,12 +51,12 @@ const getErrorMessage = (error: unknown, code: QueueErrorCode, batchIndex?: numb
       return {
         message: baseError.message,
         code,
-        details: 'Please fix the validation errors before posting.',
+        details: 'Fix the issues above (e.g. pick a flair where needed), then try again.',
         recoverable: false,
       };
     case 'NETWORK_ERROR':
       return {
-        message: 'Unable to connect. Please check your internet connection and try again.',
+        message: 'Can\'t connect. Check your connection and try again.',
         code,
         details: baseError.message,
         batchIndex,
@@ -64,14 +64,14 @@ const getErrorMessage = (error: unknown, code: QueueErrorCode, batchIndex?: numb
       };
     case 'AUTH_ERROR':
       return {
-        message: 'Your session has expired. Please log in again.',
+        message: 'You\'re signed out. Sign in again to continue.',
         code,
-        details: 'Authentication required',
+        details: 'You need to sign in again.',
         recoverable: false,
       };
     case 'SERVER_ERROR':
       return {
-        message: 'Something went wrong on our end. Please try again in a moment.',
+        message: 'Something went wrong. Try again in a moment.',
         code,
         details: baseError.message,
         batchIndex,
@@ -79,7 +79,7 @@ const getErrorMessage = (error: unknown, code: QueueErrorCode, batchIndex?: numb
       };
     case 'STREAM_ERROR':
       return {
-        message: 'Connection interrupted while posting. Some posts may have been submitted.',
+        message: 'Connection dropped. Some may have already posted.',
         code,
         details: baseError.message,
         batchIndex,
@@ -87,7 +87,7 @@ const getErrorMessage = (error: unknown, code: QueueErrorCode, batchIndex?: numb
       };
     case 'TIMEOUT_ERROR':
       return {
-        message: `Batch timed out. Some posts may have been submitted.`,
+        message: 'Took too long. Some may have already posted.',
         code,
         details: baseError.message,
         batchIndex,
@@ -95,7 +95,7 @@ const getErrorMessage = (error: unknown, code: QueueErrorCode, batchIndex?: numb
       };
     case 'BATCH_ERROR':
       return {
-        message: `Batch ${(batchIndex ?? 0) + 1} failed. Other batches will continue.`,
+        message: 'One round failed. Rest will continue.',
         code,
         details: baseError.message,
         batchIndex,
@@ -103,7 +103,7 @@ const getErrorMessage = (error: unknown, code: QueueErrorCode, batchIndex?: numb
       };
     default:
       return {
-        message: 'An unexpected error occurred. Please try again.',
+        message: 'Something went wrong. Try again.',
         code: 'UNKNOWN_ERROR',
         details: baseError.message,
         batchIndex,

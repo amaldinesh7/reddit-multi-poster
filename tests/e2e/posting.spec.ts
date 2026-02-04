@@ -49,7 +49,7 @@ test.describe('Multi-Subreddit Posting', () => {
     await urlButton.click();
     
     // URL input should now be visible
-    await expect(authenticatedPage.getByPlaceholder(/paste image or link/i)).toBeVisible();
+    await expect(authenticatedPage.getByPlaceholder(/paste image or video/i)).toBeVisible();
   });
 
   test('can enter URL in URL mode', async ({ authenticatedPage }) => {
@@ -59,7 +59,7 @@ test.describe('Multi-Subreddit Posting', () => {
     await authenticatedPage.getByRole('button', { name: /^url$/i }).click();
     
     // Enter URL
-    const urlInput = authenticatedPage.getByPlaceholder(/paste image or link/i);
+    const urlInput = authenticatedPage.getByPlaceholder(/paste image or video/i);
     await urlInput.fill('https://example.com/image.jpg');
     
     await expect(urlInput).toHaveValue('https://example.com/image.jpg');
@@ -69,7 +69,7 @@ test.describe('Multi-Subreddit Posting', () => {
     await authenticatedPage.goto('/');
     
     // Find title input
-    const titleInput = authenticatedPage.getByPlaceholder(/write a title/i);
+    const titleInput = authenticatedPage.getByPlaceholder(/post title/i);
     await titleInput.fill('Test Post Title');
     
     await expect(titleInput).toHaveValue('Test Post Title');
@@ -110,21 +110,21 @@ test.describe('Multi-Subreddit Posting', () => {
   test('post button shows correct label based on selection', async ({ authenticatedPage }) => {
     await authenticatedPage.goto('/');
     
-    // Initially should say "Select Communities"
-    await expect(authenticatedPage.getByRole('button', { name: /select communities/i })).toBeVisible();
+    // Initially should say "Choose communities"
+    await expect(authenticatedPage.getByRole('button', { name: /choose communities/i })).toBeVisible();
     
     // Select one subreddit
     await authenticatedPage.waitForSelector('text=pics', { timeout: 5000 });
     await authenticatedPage.getByRole('checkbox', { name: /pics/i }).check();
     
-    // Button should now say "Post to 1 Subreddit"
-    await expect(authenticatedPage.getByRole('button', { name: /post to 1 subreddit/i })).toBeVisible();
+    // Button should now say "Post to 1 communities"
+    await expect(authenticatedPage.getByRole('button', { name: /post to 1 communit/i })).toBeVisible();
     
     // Select another
     await authenticatedPage.getByRole('checkbox', { name: /images/i }).check();
     
-    // Button should say "Post to 2 Subreddits"
-    await expect(authenticatedPage.getByRole('button', { name: /post to 2 subreddits/i })).toBeVisible();
+    // Button should say "Post to 2 communities"
+    await expect(authenticatedPage.getByRole('button', { name: /post to 2 communit/i })).toBeVisible();
   });
 
   test('post button is disabled without subreddit selection', async ({ authenticatedPage }) => {
@@ -132,11 +132,11 @@ test.describe('Multi-Subreddit Posting', () => {
     
     // Enter title and URL but no subreddit selection
     await authenticatedPage.getByRole('button', { name: /^url$/i }).click();
-    await authenticatedPage.getByPlaceholder(/paste image or link/i).fill('https://example.com/image.jpg');
-    await authenticatedPage.getByPlaceholder(/write a title/i).fill('Test Title');
+    await authenticatedPage.getByPlaceholder(/paste image or video/i).fill('https://example.com/image.jpg');
+    await authenticatedPage.getByPlaceholder(/post title/i).fill('Test Title');
     
-    // Post button should show "Select Communities" and work as indicator
-    const postButton = authenticatedPage.getByRole('button', { name: /select communities/i });
+    // Post button should show "Choose communities" and work as indicator
+    const postButton = authenticatedPage.getByRole('button', { name: /choose communities/i });
     await expect(postButton).toBeVisible();
   });
 });
@@ -151,8 +151,8 @@ test.describe('Posting Queue Flow', () => {
     
     // Setup the form
     await authenticatedPage.getByRole('button', { name: /^url$/i }).click();
-    await authenticatedPage.getByPlaceholder(/paste image or link/i).fill('https://example.com/image.jpg');
-    await authenticatedPage.getByPlaceholder(/write a title/i).fill('Test Post Title');
+    await authenticatedPage.getByPlaceholder(/paste image or video/i).fill('https://example.com/image.jpg');
+    await authenticatedPage.getByPlaceholder(/post title/i).fill('Test Post Title');
     
     // Wait for subreddits and select them
     await authenticatedPage.waitForSelector('text=pics', { timeout: 5000 });
@@ -163,10 +163,10 @@ test.describe('Posting Queue Flow', () => {
     await setupQueueMockSuccess(authenticatedPage, ['pics', 'images']);
     
     // Click post button
-    await authenticatedPage.getByRole('button', { name: /post to 2 subreddits/i }).click();
+    await authenticatedPage.getByRole('button', { name: /post to 2 communit/i }).click();
     
     // Should show completion message
-    await expect(authenticatedPage.getByText(/all posts completed/i)).toBeVisible({ timeout: 10000 });
+    await expect(authenticatedPage.getByText(/all done/i)).toBeVisible({ timeout: 10000 });
   });
 
   test('posting shows individual subreddit progress', async ({ authenticatedPage }) => {
@@ -174,8 +174,8 @@ test.describe('Posting Queue Flow', () => {
     
     // Setup the form
     await authenticatedPage.getByRole('button', { name: /^url$/i }).click();
-    await authenticatedPage.getByPlaceholder(/paste image or link/i).fill('https://example.com/image.jpg');
-    await authenticatedPage.getByPlaceholder(/write a title/i).fill('Test Post Title');
+    await authenticatedPage.getByPlaceholder(/paste image or video/i).fill('https://example.com/image.jpg');
+    await authenticatedPage.getByPlaceholder(/post title/i).fill('Test Post Title');
     
     // Select subreddits
     await authenticatedPage.waitForSelector('text=pics', { timeout: 5000 });
@@ -185,10 +185,10 @@ test.describe('Posting Queue Flow', () => {
     await setupQueueMockSuccess(authenticatedPage, ['pics']);
     
     // Click post button
-    await authenticatedPage.getByRole('button', { name: /post to 1 subreddit/i }).click();
+    await authenticatedPage.getByRole('button', { name: /post to 1 communit/i }).click();
     
     // Should eventually show success
-    await expect(authenticatedPage.getByText(/all posts completed/i)).toBeVisible({ timeout: 10000 });
+    await expect(authenticatedPage.getByText(/all done/i)).toBeVisible({ timeout: 10000 });
   });
 
   test('posting can be cancelled with stop button', async ({ authenticatedPage }) => {
@@ -196,8 +196,8 @@ test.describe('Posting Queue Flow', () => {
     
     // Setup the form
     await authenticatedPage.getByRole('button', { name: /^url$/i }).click();
-    await authenticatedPage.getByPlaceholder(/paste image or link/i).fill('https://example.com/image.jpg');
-    await authenticatedPage.getByPlaceholder(/write a title/i).fill('Test Post Title');
+    await authenticatedPage.getByPlaceholder(/paste image or video/i).fill('https://example.com/image.jpg');
+    await authenticatedPage.getByPlaceholder(/post title/i).fill('Test Post Title');
     
     // Select subreddits
     await authenticatedPage.waitForSelector('text=pics', { timeout: 5000 });
@@ -216,7 +216,7 @@ test.describe('Posting Queue Flow', () => {
     });
     
     // Click post button
-    await authenticatedPage.getByRole('button', { name: /post to 2 subreddits/i }).click();
+    await authenticatedPage.getByRole('button', { name: /post to 2 communit/i }).click();
     
     // Wait for stop button to appear
     const stopButton = authenticatedPage.getByRole('button', { name: /stop/i });
@@ -226,7 +226,7 @@ test.describe('Posting Queue Flow', () => {
     await stopButton.click();
     
     // Should show cancelled message
-    await expect(authenticatedPage.getByText(/posting cancelled/i)).toBeVisible();
+    await expect(authenticatedPage.getByText(/stopped/i)).toBeVisible();
   });
 
   test('mixed results show both successes and failures', async ({ authenticatedPage }) => {
@@ -234,8 +234,8 @@ test.describe('Posting Queue Flow', () => {
     
     // Setup the form
     await authenticatedPage.getByRole('button', { name: /^url$/i }).click();
-    await authenticatedPage.getByPlaceholder(/paste image or link/i).fill('https://example.com/image.jpg');
-    await authenticatedPage.getByPlaceholder(/write a title/i).fill('Test Post Title');
+    await authenticatedPage.getByPlaceholder(/paste image or video/i).fill('https://example.com/image.jpg');
+    await authenticatedPage.getByPlaceholder(/post title/i).fill('Test Post Title');
     
     // Select subreddits
     await authenticatedPage.waitForSelector('text=pics', { timeout: 5000 });
@@ -246,7 +246,7 @@ test.describe('Posting Queue Flow', () => {
     await setupQueueMockMixed(authenticatedPage, ['pics', 'images'], ['success', 'error']);
     
     // Click post button
-    await authenticatedPage.getByRole('button', { name: /post to 2 subreddits/i }).click();
+    await authenticatedPage.getByRole('button', { name: /post to 2 communit/i }).click();
     
     // Wait for completion - the queue should finish processing
     await authenticatedPage.waitForTimeout(2000);
@@ -257,8 +257,8 @@ test.describe('Posting Queue Flow', () => {
     
     // Setup the form
     await authenticatedPage.getByRole('button', { name: /^url$/i }).click();
-    await authenticatedPage.getByPlaceholder(/paste image or link/i).fill('https://example.com/image.jpg');
-    await authenticatedPage.getByPlaceholder(/write a title/i).fill('Test Post Title');
+    await authenticatedPage.getByPlaceholder(/paste image or video/i).fill('https://example.com/image.jpg');
+    await authenticatedPage.getByPlaceholder(/post title/i).fill('Test Post Title');
     
     // Select subreddit
     await authenticatedPage.waitForSelector('text=pics', { timeout: 5000 });
@@ -268,17 +268,17 @@ test.describe('Posting Queue Flow', () => {
     await setupQueueMockSuccess(authenticatedPage, ['pics']);
     
     // Click post button
-    await authenticatedPage.getByRole('button', { name: /post to 1 subreddit/i }).click();
+    await authenticatedPage.getByRole('button', { name: /post to 1 communit/i }).click();
     
     // Wait for completion
-    await expect(authenticatedPage.getByText(/all posts completed/i)).toBeVisible({ timeout: 10000 });
+    await expect(authenticatedPage.getByText(/all done/i)).toBeVisible({ timeout: 10000 });
     
     // Click reset button
-    const resetButton = authenticatedPage.getByRole('button', { name: /reset/i });
+    const resetButton = authenticatedPage.getByRole('button', { name: /post again/i });
     await resetButton.click();
     
     // Completion message should be gone
-    await expect(authenticatedPage.getByText(/all posts completed/i)).not.toBeVisible();
+    await expect(authenticatedPage.getByText(/all done/i)).not.toBeVisible();
   });
 });
 
@@ -292,8 +292,8 @@ test.describe('Posting Error Handling', () => {
     
     // Setup the form
     await authenticatedPage.getByRole('button', { name: /^url$/i }).click();
-    await authenticatedPage.getByPlaceholder(/paste image or link/i).fill('https://example.com/image.jpg');
-    await authenticatedPage.getByPlaceholder(/write a title/i).fill('Test Post Title');
+    await authenticatedPage.getByPlaceholder(/paste image or video/i).fill('https://example.com/image.jpg');
+    await authenticatedPage.getByPlaceholder(/post title/i).fill('Test Post Title');
     
     // Select subreddit
     await authenticatedPage.waitForSelector('text=pics', { timeout: 5000 });
@@ -303,7 +303,7 @@ test.describe('Posting Error Handling', () => {
     await setupQueueMockNetworkError(authenticatedPage);
     
     // Click post button - should handle gracefully
-    await authenticatedPage.getByRole('button', { name: /post to 1 subreddit/i }).click();
+    await authenticatedPage.getByRole('button', { name: /post to 1 communit/i }).click();
     
     // Should not crash - wait a moment
     await authenticatedPage.waitForTimeout(1000);
@@ -317,8 +317,8 @@ test.describe('Posting Error Handling', () => {
     
     // Setup the form
     await authenticatedPage.getByRole('button', { name: /^url$/i }).click();
-    await authenticatedPage.getByPlaceholder(/paste image or link/i).fill('https://example.com/image.jpg');
-    await authenticatedPage.getByPlaceholder(/write a title/i).fill('Test Post Title');
+    await authenticatedPage.getByPlaceholder(/paste image or video/i).fill('https://example.com/image.jpg');
+    await authenticatedPage.getByPlaceholder(/post title/i).fill('Test Post Title');
     
     // Select subreddit
     await authenticatedPage.waitForSelector('text=pics', { timeout: 5000 });
@@ -328,7 +328,7 @@ test.describe('Posting Error Handling', () => {
     await setupQueueMockUnauthorized(authenticatedPage);
     
     // Click post button
-    await authenticatedPage.getByRole('button', { name: /post to 1 subreddit/i }).click();
+    await authenticatedPage.getByRole('button', { name: /post to 1 communit/i }).click();
     
     // Wait and verify no crash
     await authenticatedPage.waitForTimeout(1000);
@@ -353,7 +353,7 @@ test.describe('Flair Handling', () => {
     await authenticatedPage.goto('/');
     
     // Search for askreddit if not in default list
-    const searchInput = authenticatedPage.getByPlaceholder(/search subreddits/i);
+    const searchInput = authenticatedPage.getByPlaceholder(/find communities/i);
     await searchInput.fill('askreddit');
     
     // Wait for search results
@@ -405,7 +405,7 @@ test.describe('Subreddit Search', () => {
     await authenticatedPage.goto('/');
     
     // Find search input
-    const searchInput = authenticatedPage.getByPlaceholder(/search subreddits/i);
+    const searchInput = authenticatedPage.getByPlaceholder(/find communities/i);
     await searchInput.fill('programming');
     
     // Wait for debounced search
@@ -419,7 +419,7 @@ test.describe('Subreddit Search', () => {
     await authenticatedPage.goto('/');
     
     // Search for something
-    const searchInput = authenticatedPage.getByPlaceholder(/search subreddits/i);
+    const searchInput = authenticatedPage.getByPlaceholder(/find communities/i);
     await searchInput.fill('programming');
     
     // Wait for debounced search

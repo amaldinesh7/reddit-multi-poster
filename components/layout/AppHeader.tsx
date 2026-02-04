@@ -57,7 +57,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 className="text-sm text-violet-500 hover:text-violet-400 cursor-pointer disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded px-2 py-1 font-medium border border-violet-500/30 hover:border-violet-400/50 transition-colors"
                 aria-label="Get lifetime access"
               >
-                {upgradeLoading ? 'Taking you to checkout…' : 'Get lifetime access'}
+                {upgradeLoading ? 'Opening checkout…' : 'Get lifetime access'}
               </button>
             )}
             <DropdownMenu

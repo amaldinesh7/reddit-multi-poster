@@ -25,18 +25,18 @@ const QueueProgressList: React.FC<QueueProgressListProps> = ({
     <div className="rounded-md border border-border overflow-hidden">
       <div className="px-3 py-2 border-b border-border bg-secondary">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Progress</span>
+          <span className="text-sm font-medium">{running ? 'Posting' : logs.length > 0 ? 'Results' : 'Progress'}</span>
           <div className="flex items-center gap-2 text-xs">
             {/* Unselect success button */}
             {successCount > 0 && onUnselectSuccess && !running && (
               <button
                 onClick={onUnselectSuccess}
                 className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                title="Unselect successful posts"
-                aria-label={`Unselect ${successCount} successful posts`}
+                title="Deselect successful posts"
+                aria-label={`Deselect ${successCount} that succeeded`}
               >
                 <RotateCcw className="h-3 w-3" />
-                <span>Unselect Successful Posts ({successCount})</span>
+                <span>Clear {successCount} successful</span>
               </button>
             )}
             {errorCount > 0 && (
@@ -52,8 +52,8 @@ const QueueProgressList: React.FC<QueueProgressListProps> = ({
       <div className="">
         {logs.length === 0 && running && (
           <div className="text-center py-6">
-            <Loader2 className="w-5 h-5 mx-auto mb-2 animate-spin text-primary" aria-label="Starting" />
-            <p className="text-sm text-muted-foreground">Starting...</p>
+            <Loader2 className="w-5 h-5 mx-auto mb-2 animate-spin text-primary" aria-label="Preparing" />
+            <p className="text-sm text-muted-foreground">Preparing…</p>
           </div>
         )}
 

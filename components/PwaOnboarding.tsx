@@ -87,14 +87,14 @@ export const PwaOnboarding = () => {
                 <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
                     <Card className="w-full max-w-md shadow-2xl bg-card border-primary/20 animate-in slide-in-from-bottom duration-300">
                         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                            <CardTitle className="text-lg font-bold text-primary">Install App</CardTitle>
+                            <CardTitle className="text-lg font-bold text-primary">Add to home screen</CardTitle>
                             <Button variant="ghost" size="icon" onClick={handlePromptDismiss} className="h-8 w-8 -mr-2">
                                 <X className="w-4 h-4" />
                             </Button>
                         </CardHeader>
                         <CardContent className="space-y-4 pt-2">
                             <p className="text-sm text-muted-foreground">
-                                Install Reddit Multi-Poster for the best experience.
+                                Add to your home screen for quick access.
                             </p>
 
                             <div className="bg-secondary/50 rounded-lg p-4 space-y-3">
@@ -115,13 +115,13 @@ export const PwaOnboarding = () => {
                                     </div>
                                 ) : (
                                     <div className="space-y-3 text-sm">
-                                        <p>Tap <strong>Install</strong> below to add to your home screen.</p>
+                                        <p>Tap <strong>Install</strong> to add to your home screen.</p>
                                     </div>
                                 )}
                             </div>
 
                             <Button onClick={platform === 'ios' ? handlePromptDismiss : handleInstallClick} className="w-full font-semibold">
-                                {platform === 'ios' ? 'Got it' : 'Install App'}
+                                {platform === 'ios' ? 'Got it' : 'Install'}
                             </Button>
                         </CardContent>
                     </Card>
@@ -136,7 +136,7 @@ export const PwaOnboarding = () => {
                             <div className="bg-primary/20 p-1.5 rounded-md">
                                 <Download className="w-4 h-4 text-primary" />
                             </div>
-                            <span className="text-xs font-medium">Install App</span>
+                            <span className="text-xs font-medium">Add to home screen</span>
                         </div>
                         <div className="flex items-center gap-2">
                             {(platform !== 'ios' && deferredPrompt) && (

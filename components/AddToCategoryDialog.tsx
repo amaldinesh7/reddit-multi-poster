@@ -80,7 +80,7 @@ const AddToCategoryDialog: React.FC<AddToCategoryDialogProps> = ({
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
                     <h2 id="add-to-category-title" className="text-lg font-semibold">
-                        Save r/{subredditName}
+                        Add r/{subredditName} to a list
                     </h2>
                     <button
                         onClick={onClose}
@@ -94,7 +94,7 @@ const AddToCategoryDialog: React.FC<AddToCategoryDialogProps> = ({
                 {/* Content */}
                 <div className="p-4 overflow-y-auto min-h-0 flex-1">
                     <p className="text-sm text-muted-foreground mb-4">
-                        Choose a category to save this subreddit to:
+                        Pick a list to save it to:
                     </p>
 
                     <div className="space-y-2">
@@ -106,7 +106,7 @@ const AddToCategoryDialog: React.FC<AddToCategoryDialogProps> = ({
                             </div>
                         ) : data.categories.length === 0 ? (
                             <div className="text-center py-8 text-muted-foreground">
-                                No categories found. Please create one in settings first.
+                                Create a list in Settings first, then come back to add this.
                             </div>
                         ) : (
                             data.categories.map((category) => (
@@ -142,7 +142,7 @@ const AddToCategoryDialog: React.FC<AddToCategoryDialogProps> = ({
                         disabled={!selectedCategory || isSaving}
                         className="cursor-pointer"
                     >
-                        {isSaving ? 'Saving...' : 'Save'}
+                        {isSaving ? 'Saving...' : 'Add to list'}
                     </Button>
                 </div>
             </div>

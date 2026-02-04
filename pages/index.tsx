@@ -138,8 +138,8 @@ export default function Home() {
     // Check if free user is trying to post to more subreddits than their limit
     if (auth.entitlement === 'free' && selectedSubs.length > maxPostItems) {
       setUpgradeModalContext({
-        title: `You've selected ${selectedSubs.length} subreddits`,
-        message: `Free plan supports up to ${maxPostItems} subreddits per post. Upgrade for unlimited.`,
+        title: `You picked ${selectedSubs.length} communities`,
+        message: `Free: up to ${maxPostItems} per post. Go Pro for unlimited.`,
       });
       setShowUpgradeModal(true);
       return;
@@ -152,7 +152,7 @@ export default function Home() {
     <>
       <Head>
         <title>Reddit Multi Poster - Post to Multiple Subreddits</title>
-        <meta name="description" content="Effortlessly post content to multiple subreddits at once. Manage your Reddit marketing, schedule posts, and save time with Reddit Multi Poster." />
+        <meta name="description" content="Post to multiple communities at once. Share to many subreddits in one go with Reddit Multi Poster." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="canonical" href="https://reddit-multi-poster.vercel.app/" />
 
@@ -160,14 +160,14 @@ export default function Home() {
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://reddit-multi-poster.vercel.app/" />
         <meta property="og:title" content="Reddit Multi Poster - Post to Multiple Subreddits" />
-        <meta property="og:description" content="Effortlessly post content to multiple subreddits at once. Manage your Reddit marketing, schedule posts, and save time with Reddit Multi Poster." />
+        <meta property="og:description" content="Post to multiple communities at once. Share to many subreddits in one go with Reddit Multi Poster." />
         <meta property="og:image" content="https://reddit-multi-poster.vercel.app/og-image.png" />
 
         {/* Twitter */}
         <meta property="twitter:card" content="summary_large_image" />
         <meta property="twitter:url" content="https://reddit-multi-poster.vercel.app/" />
         <meta property="twitter:title" content="Reddit Multi Poster - Post to Multiple Subreddits" />
-        <meta property="twitter:description" content="Effortlessly post content to multiple subreddits at once. Manage your Reddit marketing, schedule posts, and save time with Reddit Multi Poster." />
+        <meta property="twitter:description" content="Post to multiple communities at once. Share to many subreddits in one go with Reddit Multi Poster." />
         <meta property="twitter:image" content="https://reddit-multi-poster.vercel.app/og-image.png" />
       </Head>
 
@@ -197,14 +197,14 @@ export default function Home() {
 
               {/* Left Column: Create Post */}
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Create Post</h2>
+                <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Your post</h2>
 
                 {/* Media Section */}
                 <section>
                   {/* Desktop: Card wrapper */}
                   <div className="hidden lg:block rounded-lg border border-border bg-card p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold">Media</h3>
+                      <h3 className="text-lg font-semibold">Image or video</h3>
                       <div className="inline-flex items-center rounded-lg border border-border bg-card p-1 text-muted-foreground">
                         <button
                           onClick={() => setMediaMode('file')}
@@ -234,7 +234,7 @@ export default function Home() {
                   {/* Mobile: No card wrapper */}
                   <div className="lg:hidden">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-base font-semibold">Media</h3>
+                      <h3 className="text-base font-semibold">Image or video</h3>
                       <div className="inline-flex items-center rounded-lg border border-border bg-card p-1 text-muted-foreground">
                         <button
                           onClick={() => setMediaMode('file')}
@@ -294,14 +294,14 @@ export default function Home() {
 
               {/* Right Column: Communities & Queue */}
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Subreddits & Queue</h2>
+                <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Where to post</h2>
 
                 {/* Communities Section */}
                 <section>
                   {/* Desktop: Card wrapper */}
                   <div className="hidden lg:block rounded-lg border border-border bg-card p-6">
                     <div className="flex items-center gap-2 mb-4 flex-wrap">
-                      <h3 className="text-lg font-semibold">Subreddits</h3>
+                      <h3 className="text-lg font-semibold">Communities</h3>
                       <Button
                         variant="link"
                         size="sm"
@@ -309,7 +309,7 @@ export default function Home() {
                         className="h-8 px-2 text-xs font-medium cursor-pointer"
                         aria-label="Manage communities and flairs"
                       >
-                        Manage
+                        Manage list
                       </Button>
                     </div>
                     <div className="space-y-4">
@@ -337,7 +337,7 @@ export default function Home() {
                             htmlFor="post-to-profile-desktop"
                             className="text-sm cursor-pointer"
                           >
-                            Also post to my profile (u/{auth.me.name})
+                            Also post to my profile (u/{auth.me.name}) so it appears on your profile too.
                           </label>
                         </div>
                       )}
@@ -347,7 +347,7 @@ export default function Home() {
                   {/* Mobile: No card wrapper */}
                   <div className="lg:hidden">
                     <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <h3 className="text-base font-semibold">Subreddits</h3>
+                      <h3 className="text-base font-semibold">Communities</h3>
                       <Button
                         variant="link"
                         size="sm"
@@ -355,7 +355,7 @@ export default function Home() {
                         className="h-8 px-2 text-xs font-medium cursor-pointer"
                         aria-label="Manage communities and flairs"
                       >
-                        Manage
+                        Manage list
                       </Button>
                     </div>
                     <div className="space-y-4">
@@ -383,7 +383,7 @@ export default function Home() {
                             htmlFor="post-to-profile-mobile"
                             className="text-sm cursor-pointer"
                           >
-                            Also post to my profile (u/{auth.me.name})
+                            Also post to my profile (u/{auth.me.name}) so it appears on your profile too.
                           </label>
                         </div>
                       )}

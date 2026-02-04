@@ -37,7 +37,7 @@ export const PostRequirements: React.FC<Props> = ({ requirements, loading, selec
                 <div className="flex items-center gap-2">
                     <CardTitle className="text-base flex items-center gap-2">
                         <Info className="w-4 h-4 text-primary" />
-                        Posting Requirements
+                        Rules by community
                     </CardTitle>
                 </div>
             </CardHeader>
@@ -52,7 +52,7 @@ export const PostRequirements: React.FC<Props> = ({ requirements, loading, selec
                                 <summary className="flex cursor-pointer items-center justify-between py-3 px-2 text-sm font-medium hover:bg-muted/50 rounded-t transition-colors marker:text-transparent [&::-webkit-details-marker]:hidden list-none">
                                     <span className="flex items-center gap-2">
                                         r/{sub}
-                                        {isLoading && <span className="text-xs text-muted-foreground font-normal">(loading...)</span>}
+                                        {isLoading && <span className="text-xs text-muted-foreground font-normal">(checking…)</span>}
                                     </span>
                                     <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
                                 </summary>
@@ -61,9 +61,9 @@ export const PostRequirements: React.FC<Props> = ({ requirements, loading, selec
                                         {/* Title Length */}
                                         {(reqs.title_text_min_length !== undefined || reqs.title_text_max_length !== undefined) && (
                                             <div className="flex flex-col gap-1 bg-secondary/30 p-2 rounded">
-                                                <span className="font-semibold text-xs uppercase tracking-wide text-muted-foreground">Title Length</span>
+                                                <span className="font-semibold text-xs uppercase tracking-wide text-muted-foreground">Title</span>
                                                 <span>
-                                                    {reqs.title_text_min_length || 0} - {reqs.title_text_max_length || 'Max'} chars
+                                                    {reqs.title_text_min_length || 0}–{reqs.title_text_max_length || 'Max'} characters
                                                 </span>
                                             </div>
                                         )}
@@ -71,9 +71,9 @@ export const PostRequirements: React.FC<Props> = ({ requirements, loading, selec
                                         {/* Body Length */}
                                         {(reqs.body_text_min_length !== undefined || reqs.body_text_max_length !== undefined) && (
                                             <div className="flex flex-col gap-1 bg-secondary/30 p-2 rounded">
-                                                <span className="font-semibold text-xs uppercase tracking-wide text-muted-foreground">Body Length</span>
+                                                <span className="font-semibold text-xs uppercase tracking-wide text-muted-foreground">Description</span>
                                                 <span>
-                                                    {reqs.body_text_min_length || 0} - {reqs.body_text_max_length ? `${reqs.body_text_max_length} chars` : 'Unlimited'}
+                                                    {reqs.body_text_min_length || 0}–{reqs.body_text_max_length ? `${reqs.body_text_max_length} characters` : 'Unlimited'}
                                                 </span>
                                             </div>
                                         )}
@@ -84,7 +84,7 @@ export const PostRequirements: React.FC<Props> = ({ requirements, loading, selec
                                         <div className="bg-red-50 dark:bg-red-900/10 p-2 rounded border border-red-200 dark:border-red-900/30">
                                             <span className="flex items-center gap-1.5 font-medium text-red-600 dark:text-red-400 text-xs mb-1">
                                                 <AlertCircle className="w-3 h-3" />
-                                                Strict Title Format Required
+                                                Title must match one of these formats
                                             </span>
                                             <ul className="list-disc list-inside text-xs space-y-1 opacity-90 break-all">
                                                 {reqs.title_regexes.map((regex, idx) => (
@@ -98,7 +98,7 @@ export const PostRequirements: React.FC<Props> = ({ requirements, loading, selec
                                     {reqs.domain_whitelist && reqs.domain_whitelist.length > 0 && (
                                         <div className="bg-blue-50 dark:bg-blue-900/10 p-2 rounded border border-blue-200 dark:border-blue-900/30">
                                             <span className="font-medium text-blue-600 dark:text-blue-400 text-xs mb-1 block">
-                                                Allowed Domains Only
+                                                Only these link domains
                                             </span>
                                             <div className="flex flex-wrap gap-1">
                                                 {reqs.domain_whitelist.map(d => (
@@ -112,7 +112,7 @@ export const PostRequirements: React.FC<Props> = ({ requirements, loading, selec
                                     {reqs.domain_blacklist && reqs.domain_blacklist.length > 0 && (
                                         <div className="bg-orange-50 dark:bg-orange-900/10 p-2 rounded border border-orange-200 dark:border-orange-900/30">
                                             <span className="font-medium text-orange-600 dark:text-orange-400 text-xs mb-1 block">
-                                                Blocked Domains
+                                                These link domains aren&apos;t allowed
                                             </span>
                                             <div className="flex flex-wrap gap-1">
                                                 {reqs.domain_blacklist.map(d => (
@@ -124,7 +124,7 @@ export const PostRequirements: React.FC<Props> = ({ requirements, loading, selec
 
                                     {reqs.body_restriction_policy === 'required' && (
                                         <div className="text-xs p-2 bg-secondary/30 rounded">
-                                            <span className="font-semibold">Note:</span> Body text is required.
+                                            <span className="font-semibold">Note:</span> Description is required for this community.
                                         </div>
                                     )}
                                 </div>

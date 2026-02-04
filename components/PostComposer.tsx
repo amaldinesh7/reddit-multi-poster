@@ -34,7 +34,7 @@ export default function PostComposer({ value, onChange, body, onBodyChange, pref
       {/* Title Input */}
       <div>
         <Textarea
-          placeholder="Write your post title..."
+          placeholder="Post title"
           value={value}
           onChange={(e) => handleChange(e.target.value)}
           className="resize-none min-h-[40px]"
@@ -55,13 +55,13 @@ export default function PostComposer({ value, onChange, body, onBodyChange, pref
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           {showBody ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          <span>Add body text {body && body.length > 0 && `(${body.length} chars)`}</span>
+          <span>Add description{body && body.length > 0 ? ` (${body.length} chars)` : ''}</span>
         </button>
         
         {showBody && onBodyChange && (
           <div className="mt-2">
             <Textarea
-              placeholder="Optional body text..."
+              placeholder="Description (optional)"
               value={body || ''}
               onChange={(e) => handleBodyChange(e.target.value)}
               className="resize-none min-h-[120px]"
@@ -69,7 +69,7 @@ export default function PostComposer({ value, onChange, body, onBodyChange, pref
             />
             <div className="flex justify-between mt-1">
               <span className="text-xs text-muted-foreground">
-                Optional body text
+                Description (optional)
               </span>
               <span className={`text-xs ${(body?.length || 0) > bodyLimit * 0.9 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
                 {body?.length || 0}/{bodyLimit}

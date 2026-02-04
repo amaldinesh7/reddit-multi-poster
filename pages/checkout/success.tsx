@@ -17,11 +17,11 @@ export default function CheckoutSuccess() {
           </div>
           <h1 className="text-2xl font-semibold text-white">Thank you</h1>
           <p className="text-zinc-400">
-            Your purchase was successful. You now have full access with up to 5 subreddits and 5
-            posts per submission.
+            You&apos;re all set. You can now save unlimited communities and post to as many as you
+            want at once.
           </p>
           <p className="text-sm text-zinc-500">
-            If you don’t see the update immediately, refresh the page or wait a few seconds.
+            If nothing changed yet, refresh the page or wait a few seconds.
           </p>
           <Link
             href="/"

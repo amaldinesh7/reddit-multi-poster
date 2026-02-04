@@ -184,8 +184,8 @@ const SubredditRow = React.memo(({
               <button
                 onClick={handleExpandClick}
                 className="bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full w-4 h-4 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0"
-                aria-label="Show posting rules"
-                title="View posting rules"
+                aria-label="Community rules"
+                title="Community rules"
               >
                 <span className="font-serif font-bold italic text-[10px]">i</span>
               </button>
@@ -193,7 +193,7 @@ const SubredditRow = React.memo(({
 
             {/* Flair Required Badge - Subtler */}
             {!isLoading && isSelected && flairRequired && (
-              <Badge variant="secondary" className="h-4 px-1 text-[9px] uppercase font-bold tracking-wider text-muted-foreground bg-muted hover:bg-muted flex-shrink-0" title="Flair selection is required">
+              <Badge variant="secondary" className="h-4 px-1 text-[9px] uppercase font-bold tracking-wider text-muted-foreground bg-muted hover:bg-muted flex-shrink-0" title="This community requires a flair">
                 Flair
               </Badge>
             )}
@@ -215,12 +215,12 @@ const SubredditRow = React.memo(({
                     ? 'border-red-500 bg-red-500/10 text-red-400'
                     : ''
                     }`}
-                  aria-label={`Select flair for r/${name}`}
+                  aria-label={`Pick flair for r/${name}`}
                 >
-                  <SelectValue placeholder={flairRequired ? 'Flair*' : 'Flair'} />
+                  <SelectValue placeholder={flairRequired ? 'Flair (required)' : 'Flair'} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">{flairRequired ? 'Flair*' : 'Flair'}</SelectItem>
+                  <SelectItem value="__none__">{flairRequired ? 'Flair (required)' : 'Flair'}</SelectItem>
                   {flairOptions.map((f) => (
                     <SelectItem key={f.id} value={f.id}>{f.text || '—'}</SelectItem>
                   ))}
@@ -240,24 +240,24 @@ const SubredditRow = React.memo(({
                       className="h-7 flex-1 w-full min-w-[70px] sm:min-w-[80px] text-xs cursor-pointer flex-shrink-0"
                       aria-label={`Title tag for r/${name}`}
                     >
-                      <SelectValue placeholder="Tag" />
+                      <SelectValue placeholder="Title tag" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Tag</SelectItem>
+                      <SelectItem value="__none__">Title tag</SelectItem>
                       {suffixOptions.map((opt) => (
                         <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                       ))}
-                      <SelectItem value="__custom__">Custom...</SelectItem>
+                      <SelectItem value="__custom__">Custom tag…</SelectItem>
                     </SelectContent>
                   </Select>
                 ) : (
                   <div className="flex items-center gap-1 flex-shrink-0 flex-1">
                     <Input
                       className="h-7 flex-1 w-full text-xs px-1.5"
-                      placeholder="Tag"
+                      placeholder="e.g. (f), 25F, [OC]"
                       value={titleSuffix || ''}
                       onChange={(e) => onTitleSuffixChange(name, e.target.value)}
-                      title="Custom title suffix (e.g., (f), 25F, [OC])"
+                      title="Add a tag to your title for this community"
                       aria-label={`Title suffix for r/${name}`}
                     />
                     <button

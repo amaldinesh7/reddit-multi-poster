@@ -47,10 +47,10 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
   if (!open) return null;
 
   const benefits = [
-    'Unlimited subreddits',
-    'Unlimited posts per submission',
-    'No restrictions, ever',
-    'One-time payment',
+    'Unlimited communities',
+    'Post to as many as you want at once',
+    'No limits',
+    'Pay once',
   ];
 
   return (
@@ -91,10 +91,10 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
             </div>
             <div>
               <h2 id="upgrade-modal-title" className="text-2xl font-bold">
-                Upgrade to Pro
+                Get Pro
               </h2>
               <p className="text-white/80 text-sm">
-                Unlock the full experience
+                Post to unlimited communities
               </p>
             </div>
           </div>
@@ -124,7 +124,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
           {/* Benefits list */}
           <div className="space-y-3">
             <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Pro benefits
+              What you get
             </p>
             <ul className="space-y-2.5">
               {benefits.map((benefit, i) => (
@@ -166,7 +166,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
             {upgradeLoading ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Taking you to checkout...
+                Opening checkout…
               </>
             ) : (
               <>

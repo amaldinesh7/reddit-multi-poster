@@ -44,7 +44,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     <Card className="glass-card rounded-xl overflow-hidden animate-fadeIn">
       <CardHeader className="p-4 border-b border-border/30 bg-secondary/20">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Search Results</span>
+          <span className="text-sm font-medium">Communities found</span>
           <Button
             variant="ghost"
             size="sm"
@@ -96,7 +96,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                     onChange={(e) => handleSelectChange(e, subreddit.name)}
                     aria-label={`Add r/${subreddit.name} to category`}
                   >
-                    <option value="" disabled>Add to...</option>
+                    <option value="" disabled>Save to list…</option>
                     {categories.map((category) => (
                       <option key={category.id} value={category.id}>
                         {category.name}

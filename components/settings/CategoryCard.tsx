@@ -46,8 +46,8 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
 
   const handleDeleteCategory = async () => {
     const confirmed = await confirmDialog.openDialog({
-      title: 'Delete Category',
-      message: `Are you sure you want to delete "${category.name}" and all its subreddits? This action cannot be undone.`,
+      title: 'Delete list?',
+      message: `"${category.name}" and all its communities will be removed. This can't be undone.`,
       variant: 'destructive',
     });
 

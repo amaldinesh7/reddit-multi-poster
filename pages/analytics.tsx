@@ -76,7 +76,7 @@ export default function Analytics() {
       }
       
       if (res.status === 403) {
-        setError('Access denied. Admin only.');
+        setError('Only admins can view this page.');
         return;
       }
       
@@ -114,7 +114,7 @@ export default function Analytics() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading analytics...</p>
+          <p className="text-muted-foreground">Loading…</p>
         </div>
       </div>
     );
@@ -128,7 +128,7 @@ export default function Analytics() {
           <XCircle className="w-12 h-12 text-red-500" />
           <h1 className="text-xl font-semibold">{error}</h1>
           <p className="text-muted-foreground text-sm">
-            {error.includes('Admin') 
+            {error.includes('admins')
               ? 'This page is only accessible to administrators.'
               : 'Please try again later.'}
           </p>
@@ -151,7 +151,7 @@ export default function Analytics() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <BarChart3 className="w-12 h-12 text-muted-foreground" />
-          <p className="text-muted-foreground">No analytics data available</p>
+          <p className="text-muted-foreground">No data yet</p>
         </div>
       </div>
     );
@@ -214,26 +214,26 @@ export default function Analytics() {
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatsCard
-                title="Total Posts"
+                title="Posts"
                 value={data.totalPosts.toLocaleString()}
                 subtitle={`${data.postsLast7Days} this week`}
                 icon={<BarChart3 className="w-5 h-5" />}
               />
               <StatsCard
-                title="Success Rate"
+                title="Success rate"
                 value={`${data.successRate}%`}
                 subtitle={`${data.successfulPosts} successful`}
                 trend={data.successRate >= 90 ? 'up' : data.successRate >= 70 ? 'neutral' : 'down'}
                 icon={<CheckCircle2 className="w-5 h-5" />}
               />
               <StatsCard
-                title="Failed Posts"
+                title="Failed"
                 value={data.failedPosts.toLocaleString()}
                 subtitle={`${data.totalPosts > 0 ? Math.round((data.failedPosts / data.totalPosts) * 100) : 0}% of total`}
                 icon={<XCircle className="w-5 h-5" />}
               />
               <StatsCard
-                title="Total Users"
+                title="Users"
                 value={data.totalUsers.toLocaleString()}
                 subtitle={`${data.postsToday} posts today`}
                 icon={<Users className="w-5 h-5" />}

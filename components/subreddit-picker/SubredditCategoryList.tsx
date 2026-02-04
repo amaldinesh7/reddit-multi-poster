@@ -54,7 +54,7 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
   if (categorizedSubreddits.length === 0) {
     return (
       <div className="px-4 py-8 text-center text-muted-foreground">
-        <p className="text-sm">No subreddits configured.</p>
+        <p className="text-sm">No communities added yet.</p>
         <a
           href="/settings"
           className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 text-sm font-medium rounded-md bg-primary text-white hover:bg-primary/90 transition-colors cursor-pointer"

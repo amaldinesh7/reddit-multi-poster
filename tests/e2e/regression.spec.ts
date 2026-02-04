@@ -179,7 +179,7 @@ test.describe('Regression - Critical UI Elements', () => {
     await expect(authenticatedPage.getByText('Settings')).toBeVisible();
     
     // Actions
-    await expect(authenticatedPage.getByRole('button', { name: /add category/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: /new list/i })).toBeVisible();
     
     // Search
     await expect(authenticatedPage.getByPlaceholder(/search reddit/i)).toBeVisible();
@@ -189,7 +189,7 @@ test.describe('Regression - Critical UI Elements', () => {
     await authenticatedPage.goto('/');
     
     // Post button should be visible with proper text
-    const postButton = authenticatedPage.getByRole('button', { name: /select communities|post to/i });
+    const postButton = authenticatedPage.getByRole('button', { name: /choose communities|post to/i });
     await expect(postButton).toBeVisible();
     
     // Button should have proper aria attributes
@@ -279,7 +279,7 @@ test.describe('Regression - Responsive Design', () => {
     await expect(authenticatedPage.getByText('Media')).toBeVisible();
     await expect(authenticatedPage.getByText('Title')).toBeVisible();
     await expect(authenticatedPage.getByText('Subreddits')).toBeVisible();
-    await expect(authenticatedPage.getByRole('button', { name: /select communities|post to/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: /choose communities|post to/i })).toBeVisible();
   });
 
   test('settings page does not break on mobile viewport', async ({ authenticatedPage }) => {
@@ -288,7 +288,7 @@ test.describe('Regression - Responsive Design', () => {
     
     // Critical elements should still be visible
     await expect(authenticatedPage.getByText('Settings')).toBeVisible();
-    await expect(authenticatedPage.getByRole('button', { name: /add category/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: /new list/i })).toBeVisible();
     await expect(authenticatedPage.getByPlaceholder(/search reddit/i)).toBeVisible();
   });
 
@@ -374,7 +374,7 @@ test.describe('Regression - Component Rendering', () => {
     await authenticatedPage.goto('/');
     
     // Initial state - no selection
-    await expect(authenticatedPage.getByRole('button', { name: /select communities/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: /choose communities/i })).toBeVisible();
     
     // After selecting
     await authenticatedPage.waitForSelector('text=pics', { timeout: 5000 });

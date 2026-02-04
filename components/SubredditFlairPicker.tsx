@@ -269,11 +269,11 @@ const SubredditFlairPicker: React.FC<Props> = ({
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
             <Input
-              placeholder="Search subreddits..."
+              placeholder="Find communities"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="pl-10 pr-8"
-              aria-label="Search subreddits"
+              aria-label="Find communities"
             />
             {query.length > 0 && (
               <button
@@ -294,9 +294,9 @@ const SubredditFlairPicker: React.FC<Props> = ({
             <button
               onClick={() => onSelectedChange([])}
               className="text-xs text-muted-foreground hover:text-red-500 transition-colors cursor-pointer mr-1"
-              aria-label="Clear all selections"
+              aria-label="Clear all chosen communities"
             >
-              Clear
+              Clear all
             </button>
           )}
 
@@ -311,8 +311,8 @@ const SubredditFlairPicker: React.FC<Props> = ({
               onClick={handleReload}
               disabled={isReloading}
               className="h-9 w-9 p-0 rounded-lg cursor-pointer"
-              title="Reload flair data"
-              aria-label="Reload flair data for selected subreddits"
+              title="Refresh flairs"
+              aria-label="Refresh flairs for chosen communities"
             >
               <RefreshCw className={`h-4 w-4 ${isReloading ? 'animate-spin' : ''}`} />
             </Button>
@@ -337,7 +337,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
           {hasLocalResults && (
             <div>
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
-                Your Subreddits
+                Your communities
               </div>
               <div className="rounded-md border border-border overflow-hidden">
                 {localFilteredSubreddits.map((name) => {
@@ -369,7 +369,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
           {query.trim().length >= 2 && (
             <div>
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5 flex items-center gap-2">
-                Search Reddit
+                From Reddit
               </div>
 
               {isSearching && !hasRedditResults && (
@@ -416,7 +416,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
 
               {hasSearched && !isSearching && !hasRedditResults && (
                 <div className="px-4 py-3 text-sm text-muted-foreground text-center border border-border rounded-md">
-                  No new subreddits found for &quot;{query}&quot;
+                  No communities found for &quot;{query}&quot;
                 </div>
               )}
             </div>
@@ -425,7 +425,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
           {/* No Results At All */}
           {showNoResultsMessage && (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground border border-border rounded-md">
-              No subreddits found matching &quot;{query}&quot;
+              Nothing found for &quot;{query}&quot;
             </div>
           )}
         </div>

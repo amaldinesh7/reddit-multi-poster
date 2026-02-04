@@ -77,10 +77,10 @@ const BatchProgress: React.FC<BatchProgressProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-zinc-300">
           <Layers className="h-4 w-4" aria-hidden="true" />
-          <span>Batch Progress</span>
+          <span>Posting in rounds</span>
         </div>
         <span className="text-xs text-zinc-400">
-          {completedBatches} / {totalBatches} batches
+          {completedBatches} of {totalBatches} posted
         </span>
       </div>
 
@@ -97,7 +97,7 @@ const BatchProgress: React.FC<BatchProgressProps> = ({
                   ? 'bg-blue-500 animate-pulse'
                   : 'bg-zinc-700'
               }`}
-            title={`Batch ${batch.batchIndex + 1}: ${batch.status}`}
+            title={`Round ${batch.batchIndex + 1}: ${batch.status}`}
           />
         ))}
       </div>
@@ -107,8 +107,8 @@ const BatchProgress: React.FC<BatchProgressProps> = ({
         <div className="text-xs text-zinc-400 flex items-center gap-2">
           <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
           <span>
-            Processing batch {currentBatchIndex + 1}/{totalBatches}
-            {' '}({batchStates[currentBatchIndex].completedItems}/{batchStates[currentBatchIndex].totalItems} items)
+            Round {currentBatchIndex + 1} of {totalBatches}
+            {' '}({batchStates[currentBatchIndex].completedItems}/{batchStates[currentBatchIndex].totalItems} posted)
           </span>
         </div>
       )}
@@ -117,7 +117,7 @@ const BatchProgress: React.FC<BatchProgressProps> = ({
       {failedBatches > 0 && currentBatchIndex === null && (
         <div className="flex items-center justify-between pt-1">
           <span className="text-xs text-red-400">
-            {failedBatches} batch{failedBatches !== 1 ? 'es' : ''} failed
+            {failedBatches} round{failedBatches !== 1 ? 's' : ''} failed
           </span>
           {onRetryFailed && (
             <Button
@@ -127,7 +127,7 @@ const BatchProgress: React.FC<BatchProgressProps> = ({
               className="h-6 text-xs cursor-pointer border-red-600/50 text-red-400 hover:bg-red-600/20"
             >
               <RefreshCw className="h-3 w-3 mr-1" />
-              Retry Failed
+              Try again
             </Button>
           )}
         </div>
@@ -215,7 +215,7 @@ const PostingQueue: React.FC<Props> = ({
     totalBatches,
     canProceed: items.length > 0 && items.length <= maxItems,
     validationError: items.length > maxItems
-      ? `You can add up to ${maxItems} communities per post. Remove some to continue.`
+      ? `Free plan: up to ${maxItems} communities per post. Remove some or upgrade.`
       : undefined,
   };
 
@@ -282,7 +282,7 @@ const PostingQueue: React.FC<Props> = ({
       {/* Posting Queue Header - Visible when posting starts */}
       {(running || logs.length > 0) && (
         <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-lg font-semibold">Posting Queue</h3>
+          <h3 className="text-lg font-semibold">Ready to post</h3>
           {items.length > 0 && (
             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
               {items.length}
@@ -311,7 +311,7 @@ const PostingQueue: React.FC<Props> = ({
                 )}
                 {error.batchIndex !== undefined && (
                   <p className="text-xs text-red-400/70 mt-1">
-                    Failed at batch {error.batchIndex + 1}
+                    Failed at round {error.batchIndex + 1}
                   </p>
                 )}
               </div>
@@ -326,7 +326,7 @@ const PostingQueue: React.FC<Props> = ({
                   aria-label="Go to login page"
                 >
                   <LogIn className="h-4 w-4 mr-2" />
-                  Log In Again
+                  Sign in again
                 </Button>
               ) : isRecoverable ? (
                 <Button
@@ -345,10 +345,10 @@ const PostingQueue: React.FC<Props> = ({
                 variant="ghost"
                 size="sm"
                 className="cursor-pointer text-red-400/70 hover:text-red-400 hover:bg-red-600/10"
-                aria-label="Dismiss error"
+                aria-label="Close"
               >
                 <X className="h-4 w-4 mr-2" />
-                Dismiss
+                Close
               </Button>
             </div>
           </div>
@@ -374,24 +374,24 @@ const PostingQueue: React.FC<Props> = ({
                   failed ? 'Reset and retry' :
                     running ? 'Posting in progress' :
                       state.isSubmitting ? 'Submitting...' :
-                        !batchInfo.canProceed ? 'Fix validation errors' :
-                          `Post to ${items.length} subreddits`
+                        !batchInfo.canProceed ? 'Fix issues above' :
+                          `Post to ${items.length} communities`
           }
         >
           {completed ? (
             <>
               <CheckCircle className="h-4 w-4 mr-2" />
-              Done - Reset
+              Post again
             </>
           ) : error || failed ? (
             <>
               <RefreshCw className="h-4 w-4 mr-2" />
-              Reset
+              Post again
             </>
           ) : cancelled ? (
             <>
               <XCircle className="h-4 w-4 mr-2" />
-              Retry
+              Try again
             </>
           ) : state.isSubmitting ? (
             <>
@@ -408,10 +408,10 @@ const PostingQueue: React.FC<Props> = ({
               <Send className="h-4 w-4 mr-2" />
               {items.length > 0 ? (
                 <>
-                  Post to {items.length} Subreddit{items.length !== 1 ? 's' : ''}
+                  Post to {items.length} {items.length === 1 ? 'community' : 'communities'}
                 </>
               ) : (
-                'Select Communities'
+                'Choose communities'
               )}
             </>
           )}
@@ -435,8 +435,8 @@ const PostingQueue: React.FC<Props> = ({
             onClick={onClearAll}
             variant="ghost"
             className="cursor-pointer text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-            aria-label="Clear selection"
-            title="Clear all selected subreddits"
+            aria-label="Clear list"
+            title="Clear list"
           >
             <span className="font-serif mr-2 text-lg">🗑️</span>
             Clear
@@ -448,7 +448,7 @@ const PostingQueue: React.FC<Props> = ({
       {items.length === 0 && !running && !completed && !cancelled && !error && (
         <div className="text-center py-6 text-muted-foreground hidden lg:block">
           <Send className="w-8 h-8 mx-auto mb-2 opacity-50" aria-hidden="true" />
-          <p className="text-sm">Select communities to post to</p>
+          <p className="text-sm">Pick communities above, then post</p>
         </div>
       )}
 
@@ -468,7 +468,7 @@ const PostingQueue: React.FC<Props> = ({
         <div className="rounder-md bg-green-600/20 border border-green-600/30 p-3 text-green-500 hidden lg:block">
           <div className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5" aria-hidden="true" />
-            <span className="font-medium">All posts completed!</span>
+            <span className="font-medium">All done!</span>
           </div>
         </div>
       )}
@@ -478,7 +478,7 @@ const PostingQueue: React.FC<Props> = ({
         <div className="rounded-md bg-yellow-600/20 border border-yellow-600/30 p-3 text-yellow-500 hidden lg:block">
           <div className="flex items-center gap-2">
             <XCircle className="h-5 w-5" aria-hidden="true" />
-            <span className="font-medium">Posting cancelled</span>
+            <span className="font-medium">Stopped</span>
           </div>
         </div>
       )}
@@ -488,7 +488,7 @@ const PostingQueue: React.FC<Props> = ({
         <div className="rounded-md bg-red-600/20 border border-red-600/30 p-3 text-red-500 hidden lg:block">
           <div className="flex items-center gap-2">
             <XCircle className="h-5 w-5" aria-hidden="true" />
-            <span className="font-medium">Job failed</span>
+            <span className="font-medium">Something went wrong</span>
           </div>
         </div>
       )}

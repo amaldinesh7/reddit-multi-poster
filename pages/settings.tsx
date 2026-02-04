@@ -118,8 +118,8 @@ export default function Settings() {
     // Check if free user is at limit
     if (entitlement === 'free' && currentSubredditCount >= maxSubreddits) {
       setUpgradeModalContext({
-        title: 'Subreddit limit reached',
-        message: `Free plan supports up to ${maxSubreddits} saved subreddits. Upgrade for unlimited.`,
+        title: 'Free limit reached',
+        message: `Free: save up to ${maxSubreddits} communities. Go Pro to save unlimited.`,
       });
       setShowUpgradeModal(true);
       return null;
@@ -278,7 +278,7 @@ export default function Settings() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading settings...</p>
+          <p className="text-muted-foreground">Loading…</p>
         </div>
       </div>
     );
@@ -323,7 +323,7 @@ export default function Settings() {
                   </div>
                   <div>
                     <h1 className="text-lg font-semibold">Settings</h1>
-                    <p className="text-xs text-muted-foreground hidden sm:block">Manage your subreddits</p>
+                    <p className="text-xs text-muted-foreground hidden sm:block">Your communities and lists</p>
                   </div>
                 </div>
 
@@ -332,7 +332,7 @@ export default function Settings() {
                   {/* Only show limit counter for FREE users - paid users have no limit */}
                   {entitlement === 'free' && (
                     <span className="text-xs text-muted-foreground tabular-nums">
-                      {currentSubredditCount}/{maxSubreddits} subreddits
+                      {currentSubredditCount} of {maxSubreddits} communities
                     </span>
                   )}
                   <Button
@@ -341,7 +341,7 @@ export default function Settings() {
                     onClick={() => refresh()}
                     disabled={isLoading}
                     className="p-2 cursor-pointer"
-                    aria-label="Refresh categories"
+                    aria-label="Refresh lists"
                   >
                     <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                   </Button>
@@ -358,10 +358,10 @@ export default function Settings() {
                 <Button
                   onClick={handleAddCategory}
                   className="flex-1 sm:flex-none rounded-xl h-10 cursor-pointer"
-                  aria-label="Add new category"
+                  aria-label="Add new list"
                 >
                   <FolderPlus className="w-4 h-4 mr-2" />
-                  Add Category
+                  New list
                 </Button>
                 {/* Dev-only: Load NSFW subreddits */}
                 {isDev && (
@@ -387,7 +387,7 @@ export default function Settings() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
                   <Input
-                    placeholder="Search Reddit for subreddits..."
+                    placeholder="Search for communities on Reddit"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10 pr-10 h-11 rounded-xl bg-secondary/30 border-border/50"
@@ -426,8 +426,8 @@ export default function Settings() {
                       <Crown className="w-4 h-4 text-violet-500" />
                     </div>
                     <div className="text-left">
-                      <p className="text-sm font-medium text-foreground">You&apos;ve reached the free limit</p>
-                      <p className="text-xs text-muted-foreground">Upgrade for unlimited subreddits</p>
+                      <p className="text-sm font-medium text-foreground">You&apos;ve hit the free limit</p>
+                      <p className="text-xs text-muted-foreground">Upgrade to add more</p>
                     </div>
                   </div>
                   <span className="text-xs text-violet-500 font-medium group-hover:underline">
@@ -461,8 +461,8 @@ export default function Settings() {
                     {data.categories.length === 0 && (
                       <div className="text-center py-12 text-muted-foreground">
                         <FolderPlus className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p className="text-sm">No categories yet.</p>
-                        <p className="text-xs mt-1">Create your first category above.</p>
+                        <p className="text-sm">No lists yet.</p>
+                        <p className="text-xs mt-1">Tap &apos;New list&apos; above to start.</p>
                       </div>
                     )}
                   </div>

@@ -36,11 +36,11 @@ const SubredditChart: React.FC<SubredditChartProps> = ({ data, className = '' })
         <p className="text-sm font-medium mb-2">r/{item.subreddit}</p>
         <div className="space-y-1 text-xs">
           <div className="flex items-center justify-between gap-4">
-            <span className="text-muted-foreground">Total Posts:</span>
+            <span className="text-muted-foreground">Posts: </span>
             <span className="font-medium">{item.count}</span>
           </div>
           <div className="flex items-center justify-between gap-4">
-            <span className="text-muted-foreground">Success Rate:</span>
+            <span className="text-muted-foreground">Success: </span>
             <span className="font-medium">{item.successRate}%</span>
           </div>
         </div>
