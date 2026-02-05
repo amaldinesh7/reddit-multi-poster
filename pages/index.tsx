@@ -1,8 +1,10 @@
 import React from 'react';
+import type { GetServerSideProps } from 'next';
 import { Settings } from 'lucide-react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import axios from 'axios';
+import { checkAuthCookies, redirectToLogin } from '@/lib/serverAuth';
 import * as Sentry from '@sentry/nextjs';
 import MediaUpload from '../components/MediaUpload';
 import SubredditFlairPicker from '../components/SubredditFlairPicker';
@@ -47,6 +49,9 @@ export default function Home() {
   const [upgradeLoading, setUpgradeLoading] = React.useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
+
+  // Track if we're redirecting to prevent showing content during navigation
+  const isRedirectingRef = React.useRef(false);
 
   const {
     selectedSubs,
@@ -236,8 +241,9 @@ export default function Home() {
         const { data } = await axios.get<MeResponse>('/api/me');
         setAuth(data);
 
-        // Redirect to login if not authenticated
+        // Redirect to login if not authenticated (token invalid/expired)
         if (!data.authenticated) {
+          isRedirectingRef.current = true;
           router.replace('/login');
           return;
         }
@@ -258,10 +264,14 @@ export default function Home() {
           // Ignore admin check failures
         }
       } catch {
+        isRedirectingRef.current = true;
         setAuth({ authenticated: false });
         router.replace('/login');
       } finally {
-        setLoading(false);
+        // Only hide loader if we're not redirecting (prevents flash)
+        if (!isRedirectingRef.current) {
+          setLoading(false);
+        }
       }
     };
     load();
@@ -622,3 +632,21 @@ export default function Home() {
     </>
   );
 }
+
+/**
+ * Server-side authentication check.
+ * Redirects to /login if no auth cookies exist (prevents flash of content).
+ * Token validation still happens client-side via /api/me.
+ */
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const authCheck = checkAuthCookies(context);
+  
+  // If no auth cookies exist, redirect to login immediately (no flash)
+  if (!authCheck.authenticated) {
+    return redirectToLogin();
+  }
+  
+  // User has auth cookies - render the page
+  // Client-side will validate the token and handle refresh
+  return { props: {} };
+};

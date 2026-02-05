@@ -41,7 +41,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   useEffect(() => {
-    const stored = (localStorage?.getItem(THEME_STORAGE_KEY) as Theme | null) ?? 'system';
+    const stored = (localStorage?.getItem(THEME_STORAGE_KEY) as Theme | null) ?? 'dark';
     setThemeState(stored);
     const resolved = stored === 'system' ? getSystemTheme() : stored;
     setResolvedTheme(resolved);

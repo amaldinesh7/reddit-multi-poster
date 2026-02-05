@@ -59,12 +59,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 type="button"
                 onClick={onUpgrade}
                 disabled={upgradeLoading}
-                className="shrink-0 flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md px-3 py-1.5 sm:py-1 font-semibold transition-all bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-md shadow-violet-500/25 hover:shadow-violet-500/40 hover:from-violet-500 hover:to-purple-500 sm:bg-none sm:from-transparent sm:to-transparent sm:shadow-none sm:text-violet-500 sm:hover:text-violet-400 sm:border sm:border-violet-500/30 sm:hover:border-violet-400/50 sm:font-medium"
-                aria-label="Get lifetime access"
+                className="shrink-0 flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md px-3 py-1.5 font-semibold transition-all bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-md shadow-violet-500/25 hover:shadow-violet-500/40 hover:from-violet-500 hover:to-purple-500"
+                aria-label="Go Unlimited"
               >
-                <Infinity className="h-4 w-4 sm:hidden" aria-hidden="true" />
-                <span className="hidden sm:inline">{upgradeLoading ? 'Opening checkout…' : 'Get lifetime access'}</span>
-                <span className="sm:hidden">{upgradeLoading ? '…' : 'Go Unlimited'}</span>
+                <Infinity className="h-4 w-4" aria-hidden="true" />
+                <span>{upgradeLoading ? 'Opening checkout…' : 'Go Unlimited'}</span>
               </button>
             )}
             <DropdownMenu
