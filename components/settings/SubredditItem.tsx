@@ -4,19 +4,23 @@ import { Input } from '@/components/ui/input';
 import { GripVertical, Edit2, X, Trash2, Loader2 } from 'lucide-react';
 import { useSettingsContext } from './SettingsContext';
 import { SubredditItem as SubredditItemType, Category } from './types';
+import { usePointerCoarse } from '@/hooks/usePointerCoarse';
 
 interface SubredditItemComponentProps {
   subreddit: SubredditItemType;
   category: Category;
   dragHandleProps: Record<string, unknown>;
+  dragContainerProps?: Record<string, unknown>;
   isDragging: boolean;
 }
 
 const SubredditItemComponent: React.FC<SubredditItemComponentProps> = ({
   subreddit,
   dragHandleProps,
+  dragContainerProps,
   isDragging
 }) => {
+  const isCoarsePointer = usePointerCoarse();
   const [editingSubreddit, setEditingSubreddit] = React.useState(false);
   const { updateSubreddit, deleteSubreddit, loading, errors } = useSettingsContext();
 
@@ -40,13 +44,18 @@ const SubredditItemComponent: React.FC<SubredditItemComponentProps> = ({
   const isLoading = loading[subreddit.subreddit_name.toLowerCase()];
   const error = errors[subreddit.subreddit_name.toLowerCase()];
 
+  const containerDragProps = !isCoarsePointer ? dragContainerProps : undefined;
+
   return (
-    <div className={`
-      flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/20 border border-border/30 
-      transition-all duration-200 hover:bg-secondary/30
-      ${isDragging ? 'opacity-50 ring-2 ring-primary/50' : ''}
-    `}>
-      <div {...dragHandleProps} className="cursor-grab">
+    <div
+      {...containerDragProps}
+      className={`
+        flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/20 border border-border/30 
+        transition-all duration-200 hover:bg-secondary/30
+        ${isDragging ? 'opacity-50 ring-2 ring-primary/50' : ''}
+      `}
+    >
+      <div {...dragHandleProps} className="cursor-grab touch-none select-none">
         <GripVertical className="w-3 h-3 text-muted-foreground" aria-hidden="true" />
       </div>
       
@@ -86,6 +95,7 @@ const SubredditItemComponent: React.FC<SubredditItemComponentProps> = ({
             size="sm"
             variant="ghost"
             onClick={() => setEditingSubreddit(true)}
+            onPointerDown={(e) => e.stopPropagation()}
             className="h-7 w-7 p-0 hover:bg-secondary cursor-pointer"
             aria-label={`Edit r/${subreddit.subreddit_name}`}
           >
@@ -95,6 +105,7 @@ const SubredditItemComponent: React.FC<SubredditItemComponentProps> = ({
             size="sm"
             variant="ghost"
             onClick={handleDeleteSubreddit}
+            onPointerDown={(e) => e.stopPropagation()}
             className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
             aria-label={`Delete r/${subreddit.subreddit_name}`}
           >

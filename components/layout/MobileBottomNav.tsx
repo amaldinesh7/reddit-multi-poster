@@ -126,15 +126,12 @@ const MobileBottomNav: React.FC = () => {
   const isActive = (tab: NavTab): boolean =>
     tab.matchPaths.includes(router.pathname);
 
-  const activeIndex = visibleTabs.findIndex((tab) => isActive(tab));
-  const indicatorWidth = visibleTabs.length > 0 ? 100 / visibleTabs.length : 0;
-
   return (
     <>
       {/* Bottom navigation bar */}
       <nav
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-50 md:hidden",
+          "fixed bottom-0 left-0 right-0 z-50 md:hidden mobile-bottom-nav",
           "bg-background/95 backdrop-blur-sm",
           "border-t border-border/50",
           "pb-[env(safe-area-inset-bottom)]"
@@ -142,18 +139,7 @@ const MobileBottomNav: React.FC = () => {
         role="navigation"
         aria-label="Main navigation"
       >
-        <div className="relative flex items-stretch justify-around h-14">
-          <div
-            className={cn(
-              "absolute bottom-0 h-0.5 bg-primary transition-transform duration-200 ease-out",
-              activeIndex === -1 && "opacity-0"
-            )}
-            style={{
-              width: `${indicatorWidth}%`,
-              transform: `translateX(${activeIndex * 100}%)`,
-            }}
-            aria-hidden="true"
-          />
+        <div className="flex items-stretch justify-around h-14">
           {visibleTabs.map((tab) => {
             const active = isActive(tab);
             return (

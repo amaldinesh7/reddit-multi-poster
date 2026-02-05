@@ -9,10 +9,12 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSettingsContext } from './SettingsContext';
 import { Category } from './types';
 import SortableSubreddit from './SortableSubreddit';
+import { usePointerCoarse } from '@/hooks/usePointerCoarse';
 
 interface CategoryCardProps {
   category: Category;
   dragHandleProps: Record<string, unknown>;
+  dragContainerProps?: Record<string, unknown>;
   isDragging: boolean;
   canDelete: boolean;
 }
@@ -20,9 +22,11 @@ interface CategoryCardProps {
 const CategoryCard: React.FC<CategoryCardProps> = ({
   category,
   dragHandleProps,
+  dragContainerProps,
   isDragging,
   canDelete
 }) => {
+  const isCoarsePointer = usePointerCoarse();
   const [editingCategory, setEditingCategory] = React.useState(false);
   const [newSubredditName, setNewSubredditName] = React.useState('');
   const [isAddingSubreddit, setIsAddingSubreddit] = React.useState(false);
@@ -91,9 +95,12 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
     }
   };
 
+  const containerDragProps = !isCoarsePointer ? dragContainerProps : undefined;
+
   return (
     <Card
       ref={setDroppableRef}
+      {...containerDragProps}
       className={`glass-card rounded-xl overflow-hidden transition-all duration-200 ${isDragging ? 'opacity-50 ring-2 ring-primary/50' : ''
         } ${isDropTarget ? 'ring-2 ring-primary bg-primary/5' : ''}`}
     >
@@ -101,7 +108,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         <div className="flex items-center gap-3">
           <div
             {...dragHandleProps}
-            className="cursor-grab hover:text-primary transition-colors"
+            className="cursor-grab hover:text-primary transition-colors touch-none select-none"
           >
             <GripVertical className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
           </div>
@@ -152,6 +159,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
                   size="sm"
                   variant="ghost"
                   onClick={() => setEditingCategory(true)}
+                  onPointerDown={(e) => e.stopPropagation()}
                   className="h-8 w-8 p-0 hover:bg-secondary cursor-pointer"
                   aria-label={`Edit ${category.name} category`}
                 >
@@ -162,6 +170,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
                     size="sm"
                     variant="ghost"
                     onClick={handleDeleteCategory}
+                    onPointerDown={(e) => e.stopPropagation()}
                     className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
                     aria-label={`Delete ${category.name} category`}
                   >

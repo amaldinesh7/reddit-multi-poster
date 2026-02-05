@@ -8,7 +8,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { AppFooter, MobileBottomNav } from "@/components/layout";
+import { MobileBottomNav } from "@/components/layout";
 import { inter, fontVariables } from "@/lib/fonts";
 import { swrConfig } from "@/lib/swr";
 
@@ -98,10 +98,26 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
 };
 
 export default function App({ Component, pageProps }: AppProps) {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ua = navigator.userAgent || "";
+    const isAndroid = /Android/i.test(ua);
+    const isWebView = ua.includes("wv");
+    const isStandalone =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(display-mode: standalone)").matches;
+    if (isAndroid && (isWebView || isStandalone)) {
+      document.documentElement.classList.add("android-webview");
+    }
+  }, []);
+
   return (
     <>
       <Head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+        />
       </Head>
       <ErrorBoundary>
         <SWRConfig value={swrConfig}>
@@ -112,7 +128,6 @@ export default function App({ Component, pageProps }: AppProps) {
                 <PageTransition>
                   <Component {...pageProps} />
                 </PageTransition>
-                <AppFooter />
                 <MobileBottomNav />
                 <Toaster />
               </div>

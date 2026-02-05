@@ -2,6 +2,7 @@ import React from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { AppFooter } from '@/components/layout';
 
 const LAST_UPDATED = 'February 5, 2026';
 
@@ -171,6 +172,7 @@ export default function Privacy() {
           </article>
         </main>
 
+        <AppFooter />
       </div>
     </>
   );

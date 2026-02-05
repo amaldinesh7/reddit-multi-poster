@@ -142,6 +142,13 @@
   }
 }
 
+/* Android WebView/PWA: stabilize bottom nav hit-testing */
+.android-webview .mobile-bottom-nav {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transform: translateZ(0);
+}
+
 /* Smooth theme transition — only active during a theme switch */
 html.theme-transitioning,
 html.theme-transitioning *,

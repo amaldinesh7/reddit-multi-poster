@@ -12,7 +12,7 @@ import PostComposer from '../components/PostComposer';
 import { AppLoader, Skeleton, SubredditRowSkeleton, CardSkeleton } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { AppHeader, MobileUserStatsBanner } from '@/components/layout';
+import { AppHeader, MobileUserStatsBanner, AppFooter } from '@/components/layout';
 import { useHomePageState } from '@/hooks/useHomePageState';
 import { useFailedPosts, FailedPost } from '@/hooks/useFailedPosts';
 import { useSubredditFlairData } from '@/hooks/useSubredditFlairData';
@@ -623,6 +623,8 @@ export default function Home() {
             </div>
           </main>
 
+          {/* Footer */}
+          <AppFooter />
         </div>
       )}
 
