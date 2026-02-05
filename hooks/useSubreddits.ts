@@ -12,6 +12,7 @@ import {
   reorderItems 
 } from '../lib/api/settings';
 import { SubredditItem, Category, SubredditData, ApiResponse } from '../types/api';
+import { captureClientError } from '../lib/clientErrorHandler';
 
 const DEFAULT_DATA: SubredditData = {
   categories: []
@@ -32,9 +33,11 @@ export function useSubreddits() {
       const fetchedCategories = await fetchCategoriesAPI();
       setData({ categories: fetchedCategories });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch categories';
+      const message = captureClientError(err, 'useSubreddits.fetchCategories', {
+        showToast: false, // Error is shown via state.error
+        userMessage: 'Failed to fetch categories',
+      });
       setError(message);
-      console.error('Failed to fetch categories:', err);
     } finally {
       setIsLoading(false);
       setIsLoaded(true);
@@ -56,7 +59,10 @@ export function useSubreddits() {
       }));
       return newCategory;
     } catch (err) {
-      console.error('Failed to create category:', err);
+      captureClientError(err, 'useSubreddits.createCategory', {
+        toastTitle: 'Create Category Failed',
+        context: { name },
+      });
       return null;
     }
   }, []);
@@ -76,7 +82,10 @@ export function useSubreddits() {
       }));
       return true;
     } catch (err) {
-      console.error('Failed to update category:', err);
+      captureClientError(err, 'useSubreddits.updateCategory', {
+        toastTitle: 'Update Category Failed',
+        context: { categoryId, updates },
+      });
       return false;
     }
   }, []);
@@ -91,7 +100,10 @@ export function useSubreddits() {
       }));
       return true;
     } catch (err) {
-      console.error('Failed to delete category:', err);
+      captureClientError(err, 'useSubreddits.deleteCategory', {
+        toastTitle: 'Delete Category Failed',
+        context: { categoryId },
+      });
       return false;
     }
   }, []);
@@ -113,7 +125,10 @@ export function useSubreddits() {
       }));
       return newSubreddit;
     } catch (err) {
-      console.error('Failed to add subreddit:', err);
+      captureClientError(err, 'useSubreddits.addSubreddit', {
+        toastTitle: 'Add Subreddit Failed',
+        context: { categoryId, subredditName },
+      });
       return null;
     }
   }, []);
@@ -174,7 +189,10 @@ export function useSubreddits() {
       }
       return true;
     } catch (err) {
-      console.error('Failed to update subreddit:', err);
+      captureClientError(err, 'useSubreddits.updateSubreddit', {
+        toastTitle: 'Update Subreddit Failed',
+        context: { subredditId, updates },
+      });
       return false;
     }
   }, []);
@@ -192,7 +210,10 @@ export function useSubreddits() {
       }));
       return true;
     } catch (err) {
-      console.error('Failed to delete subreddit:', err);
+      captureClientError(err, 'useSubreddits.deleteSubreddit', {
+        toastTitle: 'Delete Subreddit Failed',
+        context: { subredditId },
+      });
       return false;
     }
   }, []);
@@ -222,7 +243,9 @@ export function useSubreddits() {
       }
       return true;
     } catch (err) {
-      console.error('Failed to reorder categories:', err);
+      captureClientError(err, 'useSubreddits.reorderCategories', {
+        showToast: false, // Silent failure, data reverts automatically
+      });
       await fetchCategories();
       return false;
     }
@@ -256,7 +279,9 @@ export function useSubreddits() {
       }
       return true;
     } catch (err) {
-      console.error('Failed to reorder subreddits:', err);
+      captureClientError(err, 'useSubreddits.reorderSubreddits', {
+        showToast: false, // Silent failure, data reverts automatically
+      });
       await fetchCategories();
       return false;
     }

@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import { redditClient, refreshAccessToken } from '../../utils/reddit';
 import { serialize } from 'cookie';
+import { addApiBreadcrumb, handleRedditApiError } from '../../lib/apiErrorHandler';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -15,6 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   
   try {
     if (!access && refresh) {
+      addApiBreadcrumb('Refreshing access token');
       const t = await refreshAccessToken(refresh);
       access = t.access_token;
       res.setHeader('Set-Cookie', serialize('reddit_access', access, { 
@@ -29,6 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     const client = redditClient(access);
     
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let subreddits: any[] = [];
     
     try {
@@ -61,14 +65,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       for (const method of searchMethods) {
         try {
-          console.log(`Trying search method: ${method.endpoint} with params:`, method.params);
+          addApiBreadcrumb('Trying search method', { endpoint: method.endpoint });
           const response = await client.get(method.endpoint, { params: method.params });
           
-          console.log('Reddit search response for query:', q.trim());
-          console.log('Response status:', response.status);
-          console.log('Response data keys:', Object.keys(response.data || {}));
-          
           if (response.data?.data?.children?.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             subreddits = response.data.data.children.map((child: any) => ({
               name: child.data.display_name,
               title: child.data.title || child.data.display_name,
@@ -79,19 +80,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               url: `https://reddit.com${child.data.url}`
             }));
             
-            console.log('Found subreddits:', subreddits.length);
+            addApiBreadcrumb('Subreddits found', { count: subreddits.length });
             break; // Stop if we found results
           }
-        } catch (methodError) {
-          console.log(`Search method failed:`, methodError);
-          continue; // Try next method
+        } catch {
+          // Try next method
+          continue;
         }
       }
       
       // If no results found, try direct subreddit check
       if (subreddits.length === 0) {
         try {
-          console.log(`Trying direct subreddit check for: ${q.trim()}`);
+          addApiBreadcrumb('Trying direct subreddit check', { query: q.trim() });
           const directResponse = await client.get(`/r/${q.trim()}/about`, { params: { raw_json: 1 } });
           
           if (directResponse.data?.data) {
@@ -105,22 +106,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               icon: subData.icon_img || subData.community_icon || '',
               url: `https://reddit.com${subData.url}`
             }];
-            console.log('Found via direct check:', subreddits);
+            addApiBreadcrumb('Found via direct check', { name: subData.display_name });
           }
-        } catch (directError) {
-          console.log('Direct subreddit check failed:', directError);
+        } catch {
+          addApiBreadcrumb('Direct subreddit check failed', {}, 'warning');
         }
       }
       
     } catch (searchError) {
-      console.error('All search methods failed:', searchError);
+      addApiBreadcrumb('All search methods failed', {}, 'warning');
+      Sentry.captureException(searchError, {
+        tags: { component: 'search-subreddits' },
+        extra: { query: q },
+      });
     }
     
-    console.log('Final subreddits result:', subreddits);
     res.status(200).json({ subreddits });
   } catch (e: unknown) {
-    console.error('Search subreddits error:', e);
-    const msg = e instanceof Error ? e.message : 'Error searching subreddits';
-    res.status(500).json({ error: msg });
+    return handleRedditApiError(req, res, e, 'searchSubreddits');
   }
 } 

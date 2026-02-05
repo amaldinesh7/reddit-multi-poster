@@ -1,7 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import { createServerSupabaseClient } from '../../../lib/supabase';
 import { getUserId } from '../../../lib/apiAuth';
 import { getEntitlement, FREE_MAX_SUBREDDITS } from '../../../lib/entitlement';
+import { addApiBreadcrumb } from '../../../lib/apiErrorHandler';
 
 interface ApiResponse {
   success: boolean;
@@ -116,6 +118,11 @@ export default async function handler(
 
         if (error) throw error;
 
+        addApiBreadcrumb('Subreddit added to category', {
+          categoryId: category_id,
+          subredditName: cleanName,
+        });
+
         return res.status(201).json({ success: true, data: subreddit });
       }
 
@@ -127,7 +134,13 @@ export default async function handler(
         });
     }
   } catch (error) {
-    console.error('Subreddits API error:', error);
+    Sentry.captureException(error, {
+      tags: {
+        component: 'settings.subreddits',
+        method: req.method,
+      },
+    });
+    
     return res.status(500).json({
       success: false,
       error: {

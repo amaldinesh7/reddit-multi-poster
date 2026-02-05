@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import { createServerSupabaseClient } from '../../../lib/supabase';
 import { getUserId } from '../../../lib/apiAuth';
+import { addApiBreadcrumb } from '../../../lib/apiErrorHandler';
 
 interface ApiResponse {
   success: boolean;
@@ -52,6 +54,7 @@ export default async function handler(
           ),
         }));
 
+        addApiBreadcrumb('Categories fetched', { count: categories?.length || 0 });
         return res.status(200).json({ success: true, data: sortedCategories });
       }
 
@@ -92,6 +95,7 @@ export default async function handler(
 
         if (error) throw error;
 
+        addApiBreadcrumb('Category created', { name: name.trim() });
         return res.status(201).json({ success: true, data: category });
       }
 
@@ -103,7 +107,13 @@ export default async function handler(
         });
     }
   } catch (error) {
-    console.error('Categories API error:', error);
+    Sentry.captureException(error, {
+      tags: {
+        component: 'settings.categories',
+        method: req.method,
+      },
+    });
+    
     return res.status(500).json({
       success: false,
       error: {

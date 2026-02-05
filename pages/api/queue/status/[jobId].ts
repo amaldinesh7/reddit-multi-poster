@@ -6,6 +6,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import { getUserId } from '../../../../lib/apiAuth';
 import { getQueueJob } from '../../../../lib/queueService';
 import { JobStatusResponse } from '../../../../lib/queueJob';
@@ -43,7 +44,10 @@ export default async function handler(
 
     return res.status(200).json({ job });
   } catch (error) {
-    console.error('Failed to get queue job status:', error);
+    Sentry.captureException(error, {
+      tags: { component: 'queue.status' },
+      extra: { jobId },
+    });
     const message = error instanceof Error ? error.message : 'Failed to get job status';
     return res.status(500).json({ job: null, error: message });
   }

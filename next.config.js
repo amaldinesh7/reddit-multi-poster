@@ -9,8 +9,9 @@ module.exports = withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
-  org: "amaldinesh",
-  project: "reddit-multi-poster",
+  // Use environment variables for Sentry configuration
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
 
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
@@ -29,6 +30,10 @@ module.exports = withSentryConfig(nextConfig, {
 
   // Transpiles SDK to be compatible with IE11 (increases bundle size)
   transpileClientSDK: true,
+
+  // Disable Sentry webpack plugin if no auth token (for local development)
+  disableServerWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
+  disableClientWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
 
   webpack: {
     // Enables automatic instrumentation of Vercel Cron Monitors

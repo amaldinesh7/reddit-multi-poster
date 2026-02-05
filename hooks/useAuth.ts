@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { captureClientError } from '../lib/clientErrorHandler';
 
 export interface AuthUser {
   redditUsername: string;
@@ -82,13 +83,17 @@ export function useAuth() {
         });
       }
     } catch (error) {
+      const errorMessage = captureClientError(error, 'useAuth.checkAuth', {
+        showToast: false, // Don't show toast for auth check failures (expected when not logged in)
+        skipSentry: axios.isAxiosError(error) && error.response?.status === 401,
+      });
       setState({
         isAuthenticated: false,
         isLoading: false,
         user: null,
         entitlement: 'free',
         limits: DEFAULT_LIMITS,
-        error: error instanceof Error ? error.message : 'Authentication check failed',
+        error: errorMessage,
       });
     }
   }, []);
@@ -114,7 +119,10 @@ export function useAuth() {
       });
       window.location.href = '/login';
     } catch (error) {
-      console.error('Logout failed:', error);
+      captureClientError(error, 'useAuth.logout', {
+        toastTitle: 'Logout Failed',
+        userMessage: 'Could not log out. Please try again.',
+      });
     }
   }, []);
 

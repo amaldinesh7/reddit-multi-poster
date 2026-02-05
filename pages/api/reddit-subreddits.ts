@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import { listMySubreddits, redditClient, refreshAccessToken } from '../../utils/reddit';
 import { serialize } from 'cookie';
+import { addApiBreadcrumb, handleRedditApiError } from '../../lib/apiErrorHandler';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -15,6 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Refresh token if needed
     if (!access && refresh) {
+      addApiBreadcrumb('Refreshing access token');
       const t = await refreshAccessToken(refresh);
       access = t.access_token;
       res.setHeader('Set-Cookie', serialize('reddit_access', access, { 
@@ -32,9 +35,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const client = redditClient(access);
     const subs = await listMySubreddits(client);
     
+    addApiBreadcrumb('Subreddits fetched', { count: subs.length });
+    
     return res.status(200).json({ subreddits: subs });
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Error fetching subreddits';
-    return res.status(500).json({ error: msg });
+    return handleRedditApiError(req, res, e, 'listMySubreddits');
   }
 } 

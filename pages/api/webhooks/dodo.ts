@@ -5,9 +5,11 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import crypto from 'crypto';
 import { createServerSupabaseClient } from '../../../lib/supabase';
 import { invalidateEntitlementCache } from '../../../lib/entitlement';
+import { addApiBreadcrumb } from '../../../lib/apiErrorHandler';
 
 export const config = {
   api: { bodyParser: false },
@@ -106,7 +108,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const secret = process.env.DODO_PAYMENTS_WEBHOOK_SECRET;
   if (!secret) {
-    console.error('Dodo webhook: DODO_PAYMENTS_WEBHOOK_SECRET not set');
+    Sentry.captureMessage('DODO_PAYMENTS_WEBHOOK_SECRET not set', { level: 'error' });
     return res.status(500).json({ error: 'Webhook not configured' });
   }
 
@@ -116,7 +118,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const signatureResult = verifySignature(rawBody, webhookId, webhookTimestamp, webhookSignature, secret);
   if (!signatureResult.valid) {
-    console.warn('Dodo webhook: signature verification failed', signatureResult.error);
+    addApiBreadcrumb('Dodo webhook signature verification failed', { error: signatureResult.error }, 'warning');
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
@@ -135,9 +137,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const paymentId = payload.data?.payment_id;
 
   if (!userId) {
-    console.warn('Dodo webhook: payment.succeeded without metadata.user_id');
+    addApiBreadcrumb('Dodo webhook: payment.succeeded without metadata.user_id', {}, 'warning');
     return res.status(200).json({ received: true });
   }
+
+  addApiBreadcrumb('Dodo webhook: processing payment.succeeded', { userId, paymentId });
 
   const supabase = createServerSupabaseClient();
 
@@ -149,12 +153,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Handle DB errors (not "not found") - return 500 to trigger webhook retry
   if (fetchError && fetchError.code !== 'PGRST116') {
-    console.error('Dodo webhook: DB query failed', { userId, error: fetchError.message });
+    Sentry.captureException(new Error(`Dodo webhook DB query failed: ${fetchError.message}`), {
+      tags: { component: 'webhooks.dodo' },
+      extra: { userId, errorCode: fetchError.code },
+    });
     return res.status(500).json({ error: 'Database error' });
   }
 
   if (!existing) {
-    console.warn('Dodo webhook: user not found', userId);
+    addApiBreadcrumb('Dodo webhook: user not found', { userId }, 'warning');
     return res.status(200).json({ received: true });
   }
 
@@ -172,11 +179,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .eq('id', userId);
 
   if (error) {
-    console.error('Dodo webhook: update user failed', error);
+    Sentry.captureException(new Error(`Dodo webhook update user failed: ${error.message}`), {
+      tags: { component: 'webhooks.dodo' },
+      extra: { userId, paymentId },
+    });
     return res.status(500).json({ error: 'Update failed' });
   }
 
   invalidateEntitlementCache(userId);
+  addApiBreadcrumb('Dodo webhook: user entitlement updated to paid', { userId, paymentId });
 
   return res.status(200).json({ received: true });
 }

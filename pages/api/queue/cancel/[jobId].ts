@@ -6,9 +6,11 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import { getUserId } from '../../../../lib/apiAuth';
 import { cancelQueueJob } from '../../../../lib/queueService';
 import { CancelJobResponse } from '../../../../lib/queueJob';
+import { addApiBreadcrumb } from '../../../../lib/apiErrorHandler';
 
 export default async function handler(
   req: NextApiRequest,
@@ -40,9 +42,13 @@ export default async function handler(
       });
     }
 
+    addApiBreadcrumb('Queue job cancelled', { jobId });
     return res.status(200).json({ success: true });
   } catch (error) {
-    console.error('Failed to cancel queue job:', error);
+    Sentry.captureException(error, {
+      tags: { component: 'queue.cancel' },
+      extra: { jobId },
+    });
     const message = error instanceof Error ? error.message : 'Failed to cancel job';
     return res.status(500).json({ success: false, error: message });
   }

@@ -6,6 +6,15 @@ import { createServerSupabaseClient, type PostLog } from '../../lib/supabase';
 // Types
 // ============================================================================
 
+interface TopPoster {
+  userId: string;
+  username: string;
+  avatarUrl: string | null;
+  postCount: number;
+  successCount: number;
+  successRate: number;
+}
+
 interface AnalyticsResponse {
   // Summary stats
   totalPosts: number;
@@ -51,6 +60,9 @@ interface AnalyticsResponse {
   
   // Total unique users
   totalUsers: number;
+  
+  // Top posters leaderboard
+  topPosters: TopPoster[];
 }
 
 // ============================================================================
@@ -169,6 +181,51 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const uniqueUsers = new Set(posts.map(p => p.user_id));
     const totalUsers = uniqueUsers.size;
 
+    // Calculate top posters (post count by user)
+    const userPostCounts = posts.reduce((acc, p) => {
+      if (!acc[p.user_id]) {
+        acc[p.user_id] = { total: 0, success: 0 };
+      }
+      acc[p.user_id].total++;
+      if (p.status === 'success') {
+        acc[p.user_id].success++;
+      }
+      return acc;
+    }, {} as Record<string, { total: number; success: number }>);
+
+    // Get top 10 user IDs by post count
+    const topUserIds = Object.entries(userPostCounts)
+      .sort((a, b) => b[1].total - a[1].total)
+      .slice(0, 10)
+      .map(([userId]) => userId);
+
+    // Fetch user details for top posters
+    let topPosters: TopPoster[] = [];
+    if (topUserIds.length > 0) {
+      const { data: topUsers } = await client
+        .from('users')
+        .select('id, reddit_username, reddit_avatar_url')
+        .in('id', topUserIds);
+
+      if (topUsers) {
+        const userMap = new Map(topUsers.map(u => [u.id, u]));
+        topPosters = topUserIds
+          .filter(userId => userMap.has(userId))
+          .map(userId => {
+            const user = userMap.get(userId)!;
+            const stats = userPostCounts[userId];
+            return {
+              userId,
+              username: user.reddit_username,
+              avatarUrl: user.reddit_avatar_url,
+              postCount: stats.total,
+              successCount: stats.success,
+              successRate: Math.round((stats.success / stats.total) * 100),
+            };
+          });
+      }
+    }
+
     const response: AnalyticsResponse = {
       totalPosts,
       successfulPosts,
@@ -181,6 +238,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       postsByDay,
       recentPosts,
       totalUsers,
+      topPosters,
     };
 
     return res.status(200).json(response);

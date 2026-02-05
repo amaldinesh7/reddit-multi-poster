@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { supabase } from '@/lib/supabase';
 import {
   QueueJob,
@@ -19,6 +20,7 @@ import {
   QUEUE_JOB_CONSTANTS,
 } from '@/lib/queueJob';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { captureClientError } from '@/lib/clientErrorHandler';
 
 // ============================================================================
 // Types
@@ -284,7 +286,12 @@ export function useQueueJob(): UseQueueJobReturn {
                 break;
             }
           } catch (parseError) {
-            console.error('Failed to parse update:', line, parseError);
+            Sentry.addBreadcrumb({
+              category: 'queue.stream',
+              message: 'Failed to parse stream update',
+              level: 'warning',
+              data: { line },
+            });
           }
         }
       }
@@ -292,10 +299,13 @@ export function useQueueJob(): UseQueueJobReturn {
       if (error instanceof Error && error.name === 'AbortError') {
         return; // Cancelled, ignore
       }
-      console.error('Process job error:', error);
+      const errorMessage = captureClientError(error, 'useQueueJob.processJob', {
+        showToast: false, // Error shown in UI via state
+        context: { jobId },
+      });
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Failed to process job',
+        error: errorMessage,
         isProcessing: false,
       }));
     } finally {
@@ -385,11 +395,14 @@ export function useQueueJob(): UseQueueJobReturn {
 
       return jobId;
     } catch (error) {
-      console.error('Submit job error:', error);
+      const errorMessage = captureClientError(error, 'useQueueJob.submit', {
+        toastTitle: 'Submission Failed',
+        context: { itemCount: submission.items.length },
+      });
       setState(prev => ({
         ...prev,
         isSubmitting: false,
-        error: error instanceof Error ? error.message : 'Failed to submit job',
+        error: errorMessage,
       }));
       return null;
     }
@@ -471,10 +484,13 @@ export function useQueueJob(): UseQueueJobReturn {
 
       return true;
     } catch (error) {
-      console.error('Cancel job error:', error);
+      const errorMessage = captureClientError(error, 'useQueueJob.cancel', {
+        toastTitle: 'Cancel Failed',
+        context: { jobId: state.jobId },
+      });
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Failed to cancel job',
+        error: errorMessage,
       }));
       return false;
     }
@@ -514,10 +530,13 @@ export function useQueueJob(): UseQueueJobReturn {
         startPolling(jobId);
       }
     } catch (error) {
-      console.error('Resume job error:', error);
+      const errorMessage = captureClientError(error, 'useQueueJob.resumeJob', {
+        showToast: false, // Error shown in UI via state
+        context: { jobId },
+      });
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : 'Failed to resume job',
+        error: errorMessage,
       }));
     }
   }, [subscribeToJob, startPolling]);

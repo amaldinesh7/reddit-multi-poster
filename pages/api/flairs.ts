@@ -1,22 +1,21 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import { getFlairs, redditClient, refreshAccessToken } from '../../utils/reddit';
 import { serialize } from 'cookie';
+import { addApiBreadcrumb, handleRedditApiError } from '../../lib/apiErrorHandler';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).end();
   
-  const { subreddit, force } = req.query as { subreddit?: string; force?: string };
+  const { subreddit } = req.query as { subreddit?: string };
   if (!subreddit) return res.status(400).json({ error: 'Missing subreddit' });
-  
-  // If not forcing a refresh, try to return cached data from client-side
-  // The actual caching logic will be handled on the client side
-  // This API will always fetch fresh data from Reddit
   
   let access = req.cookies['reddit_access'];
   const refresh = req.cookies['reddit_refresh'];
   
   try {
     if (!access && refresh) {
+      addApiBreadcrumb('Refreshing access token');
       const t = await refreshAccessToken(refresh);
       access = t.access_token;
       res.setHeader('Set-Cookie', serialize('reddit_access', access, { 
@@ -32,6 +31,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const client = redditClient(access);
     const { flairs, required } = await getFlairs(client, subreddit);
     
+    addApiBreadcrumb('Flairs fetched', { subreddit, flairCount: flairs.length, required });
+    
     res.status(200).json({ 
       flairs, 
       required,
@@ -39,7 +40,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       fetchedAt: Date.now()
     });
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Error';
-    res.status(500).json({ error: msg });
+    return handleRedditApiError(req, res, e, 'getFlairs');
   }
 } 
