@@ -59,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const errText = await response.text();
       Sentry.captureException(new Error(`Dodo checkout create failed: ${response.status}`), {
         tags: { component: 'checkout.create-session' },
-        extra: { userId, status: response.status, responseBody: errText },
+        extra: { hasUserId: true, status: response.status, responseBody: errText },
       });
       return res.status(502).json({ error: 'Could not create checkout session' });
     }
@@ -69,15 +69,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sessionId = data.session_id;
 
     if (!checkoutUrl) {
-      addApiBreadcrumb('Dodo checkout: no checkout URL in response', { sessionId }, 'warning');
+      addApiBreadcrumb('Dodo checkout: no checkout URL in response', {}, 'warning');
       return res.status(502).json({ error: 'No checkout URL in response' });
     }
 
     if (!sessionId) {
-      addApiBreadcrumb('Dodo checkout: no session ID in response', { checkoutUrl }, 'warning');
+      addApiBreadcrumb('Dodo checkout: no session ID in response', {}, 'warning');
     }
 
-    addApiBreadcrumb('Checkout session created', { userId, sessionId });
+    addApiBreadcrumb('Checkout session created', {});
     return res.status(200).json({ 
       checkout_url: checkoutUrl,
       session_id: sessionId,
@@ -85,7 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error) {
     Sentry.captureException(error, {
       tags: { component: 'checkout.create-session' },
-      extra: { userId },
+      extra: { hasUserId: true },
     });
     return res.status(500).json({ error: 'Checkout failed' });
   }

@@ -217,9 +217,6 @@ export default async function handler(
         component: 'queue.submit',
         endpoint: '/api/queue/submit',
       },
-      extra: {
-        userId: req.cookies['supabase_user_id'],
-      },
     });
     
     const message = error instanceof Error ? error.message : 'Failed to submit job';
