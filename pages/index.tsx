@@ -348,8 +348,15 @@ export default function Home() {
   }, [isAuthenticated]);
 
   const handleLogout = React.useCallback(async () => {
-    Sentry.setUser(null);
-    await logout();
+    try {
+      await logout();
+      Sentry.setUser(null);
+    } catch (err) {
+      captureClientError(err, 'index.handleLogout', {
+        toastTitle: 'Logout Failed',
+        userMessage: 'Could not log out. Please try again.',
+      });
+    }
   }, [logout]);
 
   const handleUpgrade = React.useCallback(() => {

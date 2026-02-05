@@ -23,6 +23,11 @@ const RouteProgressBar = () => {
 
   useEffect(() => {
     const handleStart = (url: string) => {
+      // Clear any existing timer to prevent race conditions
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
       // Only show for actual navigation, not hash changes
       if (url !== router.asPath) {
         setLoading(true);
@@ -42,7 +47,11 @@ const RouteProgressBar = () => {
       router.events.off("routeChangeStart", handleStart);
       router.events.off("routeChangeComplete", handleDone);
       router.events.off("routeChangeError", handleDone);
-      if (timerRef.current) clearTimeout(timerRef.current);
+      // Clear timer on cleanup
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     };
   }, [router]);
 
@@ -79,8 +88,8 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
     <div
       className={
         transitionStage === "enter"
-          ? "opacity-0 translate-y-1 transition-none"
-          : "opacity-100 translate-y-0 transition-all duration-200 ease-out"
+          ? "opacity-0 transition-none"
+          : "opacity-100 transition-opacity duration-200 ease-out"
       }
     >
       {children}
@@ -92,7 +101,7 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <>
       <Head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </Head>
       <ErrorBoundary>
         <SWRConfig value={swrConfig}>

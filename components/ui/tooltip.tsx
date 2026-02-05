@@ -8,11 +8,26 @@ interface TooltipProps {
 }
 
 export function Tooltip({ content, children, side = 'left' }: TooltipProps) {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      // Trigger same behavior as click - the trigger will handle tooltip open
+      e.currentTarget.click();
+    }
+  };
+
   return (
     <TooltipPrimitive.Provider delayDuration={200}>
       <TooltipPrimitive.Root>
         <TooltipPrimitive.Trigger asChild>
-          <div className="inline-flex">{children}</div>
+          <div
+            className="inline-flex"
+            tabIndex={0}
+            role="button"
+            onKeyDown={handleKeyDown}
+          >
+            {children}
+          </div>
         </TooltipPrimitive.Trigger>
         <TooltipPrimitive.Portal>
           <TooltipPrimitive.Content

@@ -104,14 +104,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   // Derive state from SWR data
-  const isAuthenticated = Boolean(data?.authenticated && data?.me);
+  // Require both authenticated flag AND valid userId
+  const hasValidUserId = Boolean(data?.userId);
+  const isAuthenticated = Boolean(data?.authenticated && data?.me && hasValidUserId);
   const me = data?.me ?? null;
-  const user: AuthUser | null = me
+  const user: AuthUser | null = (me && hasValidUserId)
     ? {
         redditUsername: me.name,
         redditId: me.id,
         avatarUrl: me.icon_img,
-        userId: data?.userId || '',
+        userId: data!.userId!, // Safe: hasValidUserId guarantees this exists
       }
     : null;
   const entitlement = data?.entitlement === 'paid' ? 'paid' : 'free';

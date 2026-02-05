@@ -41,8 +41,16 @@ const MobileBottomNav: React.FC = () => {
       try {
         const res = await fetch('/api/admin-check');
         if (res.ok) {
-          const data = await res.json();
-          setIsAdmin(data.isAdmin === true);
+          const data: unknown = await res.json();
+          // Runtime type validation
+          if (
+            typeof data === 'object' &&
+            data !== null &&
+            'isAdmin' in data &&
+            typeof (data as { isAdmin: unknown }).isAdmin === 'boolean'
+          ) {
+            setIsAdmin((data as { isAdmin: boolean }).isAdmin);
+          }
         }
       } catch {
         // silently fail
@@ -69,7 +77,12 @@ const MobileBottomNav: React.FC = () => {
 
   const handleViewProfile = () => {
     setProfileOpen(false);
-    window.open(`https://reddit.com/user/${me?.name}`, '_blank');
+    if (!me?.name) return;
+    window.open(
+      `https://reddit.com/user/${me.name}`,
+      '_blank',
+      'noopener,noreferrer'
+    );
   };
 
   const tabs: NavTab[] = [

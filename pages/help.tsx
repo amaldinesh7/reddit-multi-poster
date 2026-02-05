@@ -26,11 +26,23 @@ const HelpPage: React.FC = () => {
       try {
         const res = await fetch('/api/admin-check');
         if (res.ok) {
-          const data = await res.json();
-          setIsAdmin(data.isAdmin === true);
+          const data: unknown = await res.json();
+          // Runtime type validation
+          if (
+            typeof data === 'object' &&
+            data !== null &&
+            'isAdmin' in data &&
+            typeof (data as { isAdmin: unknown }).isAdmin === 'boolean'
+          ) {
+            setIsAdmin((data as { isAdmin: boolean }).isAdmin);
+          } else {
+            setIsAdmin(false);
+          }
+        } else {
+          setIsAdmin(false);
         }
       } catch {
-        // silently fail
+        setIsAdmin(false);
       } finally {
         setAdminCheckDone(true);
       }
