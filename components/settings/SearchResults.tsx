@@ -33,9 +33,10 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   onAddSubreddit,
 }) => {
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>, subredditName: string) => {
-    if (e.target.value) {
-      onAddSubreddit(e.target.value, subredditName);
-      e.target.value = '';
+    const categoryId = e.target.value;
+    if (categoryId) {
+      onAddSubreddit(categoryId, subredditName);
+      // Reset is handled by value="" in the select element
     }
   };
 
@@ -43,7 +44,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     <Card className="glass-card rounded-xl overflow-hidden animate-fadeIn">
       <CardHeader className="p-4 border-b border-border/30 bg-secondary/20">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Search Results</span>
+          <span className="text-sm font-medium">Communities found</span>
           <Button
             variant="ghost"
             size="sm"
@@ -87,14 +88,15 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                     </a>
                   </div>
                 </div>
-                
+
                 {categories.length > 0 && (
                   <select
                     className="text-xs px-2 py-1.5 rounded-lg border border-border/50 bg-secondary/30 cursor-pointer"
+                    value="" // Always reset to empty since it's an action, not a state
                     onChange={(e) => handleSelectChange(e, subreddit.name)}
                     aria-label={`Add r/${subreddit.name} to category`}
                   >
-                    <option value="">Add to...</option>
+                    <option value="" disabled>Save to list…</option>
                     {categories.map((category) => (
                       <option key={category.id} value={category.id}>
                         {category.name}

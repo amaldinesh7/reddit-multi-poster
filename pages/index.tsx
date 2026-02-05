@@ -7,17 +7,26 @@ import MediaUpload from '../components/MediaUpload';
 import SubredditFlairPicker from '../components/SubredditFlairPicker';
 import PostComposer from '../components/PostComposer';
 import PostingQueue from '../components/PostingQueue';
+import UpgradeModal from '../components/UpgradeModal';
 import { AppLoader } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { AppHeader } from '@/components/layout';
 import { useHomePageState } from '@/hooks/useHomePageState';
 
+interface PlanLimits {
+  maxSubreddits: number;
+  maxPostItems: number;
+  temporarySelectionEnabled: boolean;
+}
+
 interface MeResponse {
   authenticated: boolean;
   me?: { name: string; icon_img?: string; id?: string };
   subs?: string[];
   userId?: string;
+  entitlement?: 'free' | 'paid';
+  limits?: PlanLimits;
 }
 
 import { PwaOnboarding } from '@/components/PwaOnboarding';
@@ -28,6 +37,9 @@ export default function Home() {
   const [auth, setAuth] = React.useState<MeResponse>({ authenticated: false });
   const [loading, setLoading] = React.useState(true);
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [upgradeLoading, setUpgradeLoading] = React.useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
+  const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
 
   const {
     selectedSubs,
@@ -56,6 +68,7 @@ export default function Home() {
     handleValidationChange,
     handlePostAttempt,
     handleUnselectSuccessItems,
+    clearSelection,
   } = useHomePageState({ authMe: auth.me });
 
   React.useEffect(() => {
@@ -97,16 +110,49 @@ export default function Home() {
 
   const handleLogout = async () => {
     await axios.post('/api/auth/logout');
-    // Clear Sentry user context on logout
     Sentry.setUser(null);
     router.replace('/login');
   };
+
+  const handleUpgrade = React.useCallback(async () => {
+    if (upgradeLoading) return;
+    setUpgradeLoading(true);
+    try {
+      const { data } = await axios.post<{ checkout_url: string }>('/api/checkout/create-session');
+      if (data?.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        console.error('Checkout session creation failed: no URL returned');
+      }
+    } catch (error) {
+      console.error('Failed to create checkout session:', error);
+      // Keep user on page; they can retry via the modal
+    } finally {
+      setUpgradeLoading(false);
+    }
+  }, [upgradeLoading]);
+
+  // Wrapper for post attempt that checks free user limit
+  const handlePostWithLimitCheck = React.useCallback(() => {
+    const maxPostItems = auth.limits?.maxPostItems ?? 5;
+    // Check if free user is trying to post to more subreddits than their limit
+    if (auth.entitlement === 'free' && selectedSubs.length > maxPostItems) {
+      setUpgradeModalContext({
+        title: `You picked ${selectedSubs.length} communities`,
+        message: `Free: up to ${maxPostItems} per post. Go Pro for unlimited.`,
+      });
+      setShowUpgradeModal(true);
+      return;
+    }
+    // Otherwise proceed with normal post attempt
+    handlePostAttempt();
+  }, [auth.entitlement, auth.limits?.maxPostItems, selectedSubs.length, handlePostAttempt]);
 
   return (
     <>
       <Head>
         <title>Reddit Multi Poster - Post to Multiple Subreddits</title>
-        <meta name="description" content="Effortlessly post content to multiple subreddits at once. Manage your Reddit marketing, schedule posts, and save time with Reddit Multi Poster." />
+        <meta name="description" content="Post to multiple communities at once. Share to many subreddits in one go with Reddit Multi Poster." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="canonical" href="https://reddit-multi-poster.vercel.app/" />
 
@@ -114,14 +160,14 @@ export default function Home() {
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://reddit-multi-poster.vercel.app/" />
         <meta property="og:title" content="Reddit Multi Poster - Post to Multiple Subreddits" />
-        <meta property="og:description" content="Effortlessly post content to multiple subreddits at once. Manage your Reddit marketing, schedule posts, and save time with Reddit Multi Poster." />
+        <meta property="og:description" content="Post to multiple communities at once. Share to many subreddits in one go with Reddit Multi Poster." />
         <meta property="og:image" content="https://reddit-multi-poster.vercel.app/og-image.png" />
 
         {/* Twitter */}
         <meta property="twitter:card" content="summary_large_image" />
         <meta property="twitter:url" content="https://reddit-multi-poster.vercel.app/" />
         <meta property="twitter:title" content="Reddit Multi Poster - Post to Multiple Subreddits" />
-        <meta property="twitter:description" content="Effortlessly post content to multiple subreddits at once. Manage your Reddit marketing, schedule posts, and save time with Reddit Multi Poster." />
+        <meta property="twitter:description" content="Post to multiple communities at once. Share to many subreddits in one go with Reddit Multi Poster." />
         <meta property="twitter:image" content="https://reddit-multi-poster.vercel.app/og-image.png" />
       </Head>
 
@@ -135,6 +181,12 @@ export default function Home() {
             userAvatar={auth.me?.icon_img}
             onLogout={handleLogout}
             isAdmin={isAdmin}
+            entitlement={auth.entitlement}
+            onUpgrade={() => {
+              setUpgradeModalContext(undefined);
+              setShowUpgradeModal(true);
+            }}
+            upgradeLoading={upgradeLoading}
           />
 
           <PwaOnboarding />
@@ -145,14 +197,14 @@ export default function Home() {
 
               {/* Left Column: Create Post */}
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Create Post</h2>
+                <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Your post</h2>
 
                 {/* Media Section */}
                 <section>
                   {/* Desktop: Card wrapper */}
                   <div className="hidden lg:block rounded-lg border border-border bg-card p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold">Media</h3>
+                      <h3 className="text-lg font-semibold">Image or video</h3>
                       <div className="inline-flex items-center rounded-lg border border-border bg-card p-1 text-muted-foreground">
                         <button
                           onClick={() => setMediaMode('file')}
@@ -182,7 +234,7 @@ export default function Home() {
                   {/* Mobile: No card wrapper */}
                   <div className="lg:hidden">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-base font-semibold">Media</h3>
+                      <h3 className="text-base font-semibold">Image or video</h3>
                       <div className="inline-flex items-center rounded-lg border border-border bg-card p-1 text-muted-foreground">
                         <button
                           onClick={() => setMediaMode('file')}
@@ -242,14 +294,14 @@ export default function Home() {
 
               {/* Right Column: Communities & Queue */}
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Subreddits & Queue</h2>
+                <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Where to post</h2>
 
                 {/* Communities Section */}
                 <section>
                   {/* Desktop: Card wrapper */}
                   <div className="hidden lg:block rounded-lg border border-border bg-card p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <h3 className="text-lg font-semibold">Subreddits</h3>
+                    <div className="flex items-center gap-2 mb-4 flex-wrap">
+                      <h3 className="text-lg font-semibold">Communities</h3>
                       <Button
                         variant="link"
                         size="sm"
@@ -257,7 +309,7 @@ export default function Home() {
                         className="h-8 px-2 text-xs font-medium cursor-pointer"
                         aria-label="Manage communities and flairs"
                       >
-                        Manage
+                        Manage list
                       </Button>
                     </div>
                     <div className="space-y-4">
@@ -270,6 +322,7 @@ export default function Home() {
                         onTitleSuffixChange={setTitleSuffixes}
                         onValidationChange={handleValidationChange}
                         showValidationErrors={showValidationErrors}
+                        temporarySelectionEnabled={auth.limits?.temporarySelectionEnabled ?? true}
                       />
 
                       {/* Post to Profile */}
@@ -284,7 +337,7 @@ export default function Home() {
                             htmlFor="post-to-profile-desktop"
                             className="text-sm cursor-pointer"
                           >
-                            Also post to my profile (u/{auth.me.name})
+                            Also post to my profile (u/{auth.me.name}) so it appears on your profile too.
                           </label>
                         </div>
                       )}
@@ -293,8 +346,8 @@ export default function Home() {
 
                   {/* Mobile: No card wrapper */}
                   <div className="lg:hidden">
-                    <div className="flex items-center gap-2 mb-3">
-                      <h3 className="text-base font-semibold">Subreddits</h3>
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <h3 className="text-base font-semibold">Communities</h3>
                       <Button
                         variant="link"
                         size="sm"
@@ -302,7 +355,7 @@ export default function Home() {
                         className="h-8 px-2 text-xs font-medium cursor-pointer"
                         aria-label="Manage communities and flairs"
                       >
-                        Manage
+                        Manage list
                       </Button>
                     </div>
                     <div className="space-y-4">
@@ -315,6 +368,7 @@ export default function Home() {
                         onTitleSuffixChange={setTitleSuffixes}
                         onValidationChange={handleValidationChange}
                         showValidationErrors={showValidationErrors}
+                        temporarySelectionEnabled={auth.limits?.temporarySelectionEnabled ?? true}
                       />
 
                       {/* Post to Profile */}
@@ -329,7 +383,7 @@ export default function Home() {
                             htmlFor="post-to-profile-mobile"
                             className="text-sm cursor-pointer"
                           >
-                            Also post to my profile (u/{auth.me.name})
+                            Also post to my profile (u/{auth.me.name}) so it appears on your profile too.
                           </label>
                         </div>
                       )}
@@ -347,7 +401,7 @@ export default function Home() {
                       caption={caption}
                       prefixes={prefixes}
                       hasFlairErrors={hasFlairErrors}
-                      onPostAttempt={handlePostAttempt}
+                      onPostAttempt={handlePostWithLimitCheck}
                       onUnselectSuccessItems={handleUnselectSuccessItems}
                     />
                   </div>
@@ -360,7 +414,7 @@ export default function Home() {
                       caption={caption}
                       prefixes={prefixes}
                       hasFlairErrors={hasFlairErrors}
-                      onPostAttempt={handlePostAttempt}
+                      onPostAttempt={handlePostWithLimitCheck}
                       onUnselectSuccessItems={handleUnselectSuccessItems}
                     />
                   </div>
@@ -370,6 +424,15 @@ export default function Home() {
           </main>
         </div>
       )}
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        open={showUpgradeModal}
+        onOpenChange={setShowUpgradeModal}
+        onUpgrade={handleUpgrade}
+        upgradeLoading={upgradeLoading}
+        context={upgradeModalContext}
+      />
     </>
   );
 }

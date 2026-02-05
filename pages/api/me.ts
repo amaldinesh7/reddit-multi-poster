@@ -1,6 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getIdentity, listMySubreddits, redditClient, refreshAccessToken } from '../../utils/reddit';
 import { serialize } from 'cookie';
+import { getEntitlement, getLimits } from '../../lib/entitlement';
+
+/** Normalize non-finite values for JSON serialization (Infinity becomes MAX_SAFE_INTEGER) */
+const normalizeForJson = (value: number): number => 
+  Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const access = req.cookies['reddit_access'];
@@ -32,11 +37,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const fetchSubs = req.query.include_subs === 'true';
       const subs = fetchSubs ? await listMySubreddits(client) : [];
       
-      return res.status(200).json({ 
-        authenticated: true, 
-        me, 
+      const entitlement = supabaseUserId ? await getEntitlement(supabaseUserId) : 'free';
+      const limits = getLimits(entitlement);
+
+      return res.status(200).json({
+        authenticated: true,
+        me,
         subs,
         userId: supabaseUserId || null,
+        entitlement,
+        limits: {
+          maxSubreddits: normalizeForJson(limits.maxSubreddits),
+          maxPostItems: normalizeForJson(limits.maxPostItems),
+          temporarySelectionEnabled: limits.temporarySelectionEnabled,
+        },
       });
     } catch (e: unknown) {
       if (refresh) {
@@ -56,11 +70,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const fetchSubs = req.query.include_subs === 'true';
         const subs = fetchSubs ? await listMySubreddits(client2) : [];
         
-        return res.status(200).json({ 
-          authenticated: true, 
-          me, 
+        const entitlement = supabaseUserId ? await getEntitlement(supabaseUserId) : 'free';
+        const limits = getLimits(entitlement);
+
+        return res.status(200).json({
+          authenticated: true,
+          me,
           subs,
           userId: supabaseUserId || null,
+          entitlement,
+          limits: {
+            maxSubreddits: normalizeForJson(limits.maxSubreddits),
+            maxPostItems: normalizeForJson(limits.maxPostItems),
+            temporarySelectionEnabled: limits.temporarySelectionEnabled,
+          },
         });
       }
       throw e;

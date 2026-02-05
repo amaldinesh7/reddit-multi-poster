@@ -7,9 +7,10 @@ import { Category } from './types';
 interface SortableCategoryProps {
   category: Category;
   isActive: boolean;
+  canDelete: boolean;
 }
 
-const SortableCategory: React.FC<SortableCategoryProps> = ({ category }) => {
+const SortableCategory: React.FC<SortableCategoryProps> = ({ category, canDelete }) => {
   const {
     attributes,
     listeners,
@@ -27,10 +28,11 @@ const SortableCategory: React.FC<SortableCategoryProps> = ({ category }) => {
 
   return (
     <div ref={setNodeRef} style={style}>
-      <CategoryCard 
-        category={category} 
+      <CategoryCard
+        category={category}
         dragHandleProps={{ ...attributes, ...listeners }}
         isDragging={isDragging}
+        canDelete={canDelete}
       />
     </div>
   );

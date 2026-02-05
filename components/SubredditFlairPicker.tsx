@@ -4,6 +4,7 @@ import AddToCategoryDialog from './AddToCategoryDialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Search, Plus, Save, Loader2, X } from 'lucide-react';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useSubredditFlairData } from '../hooks/useSubredditFlairData';
 import { SubredditCategoryList } from './subreddit-picker';
 import SubredditRow from './subreddit-picker/SubredditRow';
@@ -24,6 +25,8 @@ interface Props {
   onTitleSuffixChange: (v: Record<string, string | undefined>) => void;
   onValidationChange?: (hasErrors: boolean, missingFlairs: string[]) => void;
   showValidationErrors?: boolean;
+  /** If false, hide search and temporary subreddits. Default true */
+  temporarySelectionEnabled?: boolean;
 }
 
 const SubredditFlairPicker: React.FC<Props> = ({
@@ -34,7 +37,8 @@ const SubredditFlairPicker: React.FC<Props> = ({
   titleSuffixValue,
   onTitleSuffixChange,
   onValidationChange,
-  showValidationErrors
+  showValidationErrors,
+  temporarySelectionEnabled = true,
 }) => {
   const {
     allSubreddits,
@@ -85,17 +89,33 @@ const SubredditFlairPicker: React.FC<Props> = ({
   }, [searchResults, mergedSubreddits]);
 
   const displayCategories = useMemo(() => {
-    if (temporarySubreddits.length === 0) return categorizedSubreddits;
+    if (!temporarySelectionEnabled || temporarySubreddits.length === 0) return categorizedSubreddits;
     return [
       { categoryName: 'Temporary', subreddits: temporarySubreddits },
       ...categorizedSubreddits
     ];
-  }, [categorizedSubreddits, temporarySubreddits]);
+  }, [categorizedSubreddits, temporarySubreddits, temporarySelectionEnabled]);
+
+  // Clear temporary selections when temporarySelectionEnabled is toggled off
+  React.useEffect(() => {
+    if (!temporarySelectionEnabled && temporarySubreddits.length > 0) {
+      // Remove temporary subreddits from selection
+      const filtered = selected.filter(s => !temporarySubreddits.includes(s));
+      if (filtered.length !== selected.length) {
+        onSelectedChange(filtered);
+      }
+      // Clear the temporary subreddits list
+      setTemporarySubreddits([]);
+    }
+  }, [temporarySelectionEnabled, temporarySubreddits, selected, onSelectedChange]);
 
   const handleToggle = useCallback((name: string) => {
     const exists = selected.includes(name);
-    const next = exists ? selected.filter(s => s !== name) : (selected.length < 30 ? [...selected, name] : selected);
-    onSelectedChange(next);
+    if (exists) {
+      onSelectedChange(selected.filter(s => s !== name));
+    } else {
+      onSelectedChange([...selected, name]);
+    }
   }, [selected, onSelectedChange]);
 
   const handleToggleCategory = useCallback((categoryName: string) => {
@@ -107,10 +127,8 @@ const SubredditFlairPicker: React.FC<Props> = ({
   }, []);
 
   const handleSelectAllInCategory = useCallback((subreddits: string[]) => {
-    const newSelected = [...new Set([...selected, ...subreddits])];
-    if (newSelected.length <= 30) {
-      onSelectedChange(newSelected);
-    }
+    const combined = [...new Set([...selected, ...subreddits])];
+    onSelectedChange(combined);
   }, [selected, onSelectedChange]);
 
   const handleFlairChange = useCallback((sr: string, id: string) => {
@@ -185,7 +203,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
       setTemporarySubreddits(prev => [...prev, subredditName]);
     }
 
-    if (!selected.includes(subredditName) && selected.length < 30) {
+    if (!selected.includes(subredditName)) {
       const newSelected = [...selected, subredditName];
       onSelectedChange(newSelected);
       reloadSelectedData(newSelected);
@@ -206,7 +224,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
       // Remove from temporary if it was there
       setTemporarySubreddits(prev => prev.filter(s => s !== subredditToSave));
 
-      if (!selected.includes(subredditToSave) && selected.length < 30) {
+      if (!selected.includes(subredditToSave)) {
         onSelectedChange([...selected, subredditToSave]);
       }
 
@@ -241,47 +259,65 @@ const SubredditFlairPicker: React.FC<Props> = ({
   const hasRedditResults = filteredSearchResults && filteredSearchResults.length > 0;
   const showNoResultsMessage = isSearchMode && !hasLocalResults && hasSearched && !isSearching && (!filteredSearchResults || filteredSearchResults.length === 0);
 
+  const showSearchUi = temporarySelectionEnabled;
+  const showSearchResults = temporarySelectionEnabled && isSearchMode;
+
   return (
     <div className="space-y-4">
-      {/* Search Bar */}
+      {/* Search Bar (hidden for paid: temporary selection disabled) */}
       <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-          <Input
-            placeholder="Search subreddits..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pl-10 pr-8"
-            aria-label="Search subreddits"
-          />
-          {query.length > 0 && (
-            <button
-              onClick={handleClearSearch}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground md:transition-colors cursor-pointer"
-              aria-label="Clear search"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+        {showSearchUi ? (
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Input
+              placeholder="Find communities"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="pl-10 pr-8"
+              aria-label="Find communities"
+            />
+            {query.length > 0 && (
+              <button
+                onClick={handleClearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground md:transition-colors cursor-pointer"
+                aria-label="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex-1" />
+        )}
 
         <div className="flex items-center gap-2">
+          {selected.length > 0 && (
+            <button
+              onClick={() => onSelectedChange([])}
+              className="text-xs text-muted-foreground hover:text-red-500 transition-colors cursor-pointer mr-1"
+              aria-label="Clear all chosen communities"
+            >
+              Clear all
+            </button>
+          )}
+
           <span className="text-sm text-muted-foreground whitespace-nowrap tabular-nums">
-            {selected.length}<span className="text-muted-foreground/50">/30</span>
+            {selected.length} selected
           </span>
 
           {selected.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleReload}
-              disabled={isReloading}
-              className="h-9 w-9 p-0 rounded-lg cursor-pointer"
-              title="Reload flair data"
-              aria-label="Reload flair data for selected subreddits"
-            >
-              <RefreshCw className={`h-4 w-4 ${isReloading ? 'animate-spin' : ''}`} />
-            </Button>
+            <Tooltip content="Sync flair & rules from Reddit" side="bottom">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReload}
+                disabled={isReloading}
+                className="h-9 w-9 p-0 rounded-lg cursor-pointer"
+                aria-label="Refresh flairs for chosen communities"
+              >
+                <RefreshCw className={`h-4 w-4 ${isReloading ? 'animate-spin' : ''}`} />
+              </Button>
+            </Tooltip>
           )}
         </div>
       </div>
@@ -297,13 +333,13 @@ const SubredditFlairPicker: React.FC<Props> = ({
             </div>
           ))}
         </div>
-      ) : isSearchMode ? (
+      ) : showSearchResults ? (
         <div className="space-y-3">
           {/* Local Results Section */}
           {hasLocalResults && (
             <div>
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
-                Your Subreddits
+                Your communities
               </div>
               <div className="rounded-md border border-border overflow-hidden">
                 {localFilteredSubreddits.map((name) => {
@@ -335,8 +371,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
           {query.trim().length >= 2 && (
             <div>
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5 flex items-center gap-2">
-                Search Reddit
-                {isSearching && <Loader2 className="w-3 h-3 animate-spin" />}
+                From Reddit
               </div>
 
               {isSearching && !hasRedditResults && (
@@ -383,7 +418,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
 
               {hasSearched && !isSearching && !hasRedditResults && (
                 <div className="px-4 py-3 text-sm text-muted-foreground text-center border border-border rounded-md">
-                  No new subreddits found for &quot;{query}&quot;
+                  No communities found for &quot;{query}&quot;
                 </div>
               )}
             </div>
@@ -392,7 +427,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
           {/* No Results At All */}
           {showNoResultsMessage && (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground border border-border rounded-md">
-              No subreddits found matching &quot;{query}&quot;
+              Nothing found for &quot;{query}&quot;
             </div>
           )}
         </div>

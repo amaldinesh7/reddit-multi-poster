@@ -8,10 +8,18 @@ export interface AuthUser {
   userId: string; // Supabase user ID
 }
 
+export interface PlanLimits {
+  maxSubreddits: number;
+  maxPostItems: number;
+  temporarySelectionEnabled: boolean;
+}
+
 export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   user: AuthUser | null;
+  entitlement: 'free' | 'paid';
+  limits: PlanLimits;
   error: string | null;
 }
 
@@ -23,13 +31,23 @@ interface MeResponse {
     icon_img?: string;
   };
   userId?: string;
+  entitlement?: 'free' | 'paid';
+  limits?: PlanLimits;
 }
+
+const DEFAULT_LIMITS: PlanLimits = {
+  maxSubreddits: 30,
+  maxPostItems: 100,
+  temporarySelectionEnabled: true,
+};
 
 export function useAuth() {
   const [state, setState] = useState<AuthState>({
     isAuthenticated: false,
     isLoading: true,
     user: null,
+    entitlement: 'free',
+    limits: DEFAULT_LIMITS,
     error: null,
   });
 
@@ -49,6 +67,8 @@ export function useAuth() {
             avatarUrl: data.me.icon_img,
             userId: data.userId || '',
           },
+          entitlement: data.entitlement === 'paid' ? 'paid' : 'free',
+          limits: data.limits ?? DEFAULT_LIMITS,
           error: null,
         });
       } else {
@@ -56,6 +76,8 @@ export function useAuth() {
           isAuthenticated: false,
           isLoading: false,
           user: null,
+          entitlement: 'free',
+          limits: DEFAULT_LIMITS,
           error: null,
         });
       }
@@ -64,6 +86,8 @@ export function useAuth() {
         isAuthenticated: false,
         isLoading: false,
         user: null,
+        entitlement: 'free',
+        limits: DEFAULT_LIMITS,
         error: error instanceof Error ? error.message : 'Authentication check failed',
       });
     }
@@ -84,6 +108,8 @@ export function useAuth() {
         isAuthenticated: false,
         isLoading: false,
         user: null,
+        entitlement: 'free',
+        limits: DEFAULT_LIMITS,
         error: null,
       });
       window.location.href = '/login';

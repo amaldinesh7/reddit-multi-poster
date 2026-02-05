@@ -34,7 +34,7 @@ test.describe('Settings Page - Navigation', () => {
     await expect(authenticatedPage.getByText('Settings')).toBeVisible();
     
     // Should show add category button
-    await expect(authenticatedPage.getByRole('button', { name: /add category/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: /new list/i })).toBeVisible();
   });
 
   test('can navigate back to home from settings', async ({ authenticatedPage }) => {
@@ -51,7 +51,7 @@ test.describe('Settings Page - Navigation', () => {
     await authenticatedPage.goto('/settings');
     
     // Should show search input
-    await expect(authenticatedPage.getByPlaceholder(/search reddit/i)).toBeVisible();
+    await expect(authenticatedPage.getByPlaceholder(/search for communities/i)).toBeVisible();
   });
 });
 
@@ -98,7 +98,7 @@ test.describe('Settings Page - Categories', () => {
     await authenticatedPage.goto('/settings');
     
     // Click add category button
-    await authenticatedPage.getByRole('button', { name: /add category/i }).click();
+    await authenticatedPage.getByRole('button', { name: /new list/i }).click();
     
     // Wait for the API call and UI update
     await authenticatedPage.waitForTimeout(500);
@@ -138,7 +138,7 @@ test.describe('Settings Page - Subreddit Search', () => {
     await authenticatedPage.goto('/settings');
     
     // Enter search query
-    const searchInput = authenticatedPage.getByPlaceholder(/search reddit/i);
+    const searchInput = authenticatedPage.getByPlaceholder(/search for communities/i);
     await searchInput.fill('programming');
     
     // Wait for debounced search
@@ -152,7 +152,7 @@ test.describe('Settings Page - Subreddit Search', () => {
     await authenticatedPage.goto('/settings');
     
     // Search for something
-    const searchInput = authenticatedPage.getByPlaceholder(/search reddit/i);
+    const searchInput = authenticatedPage.getByPlaceholder(/search for communities/i);
     await searchInput.fill('programming');
     
     // Wait for results
@@ -166,7 +166,7 @@ test.describe('Settings Page - Subreddit Search', () => {
     await authenticatedPage.goto('/settings');
     
     // Search for a subreddit
-    const searchInput = authenticatedPage.getByPlaceholder(/search reddit/i);
+    const searchInput = authenticatedPage.getByPlaceholder(/search for communities/i);
     await searchInput.fill('programming');
     
     // Wait for results
@@ -183,7 +183,7 @@ test.describe('Settings Page - Subreddit Search', () => {
     await authenticatedPage.goto('/settings');
     
     // Search for a subreddit
-    const searchInput = authenticatedPage.getByPlaceholder(/search reddit/i);
+    const searchInput = authenticatedPage.getByPlaceholder(/search for communities/i);
     await searchInput.fill('programming');
     
     // Wait for results
@@ -213,7 +213,7 @@ test.describe('Settings Page - Subreddit Search', () => {
     });
     
     // Enter search query
-    const searchInput = authenticatedPage.getByPlaceholder(/search reddit/i);
+    const searchInput = authenticatedPage.getByPlaceholder(/search for communities/i);
     await searchInput.fill('programming');
     
     // Loading indicator might appear during search
@@ -233,7 +233,7 @@ test.describe('Settings Page - Subreddit Search', () => {
     await authenticatedPage.goto('/settings');
     
     // Search for something that won't match
-    const searchInput = authenticatedPage.getByPlaceholder(/search reddit/i);
+    const searchInput = authenticatedPage.getByPlaceholder(/search for communities/i);
     await searchInput.fill('xyznonexistent123');
     
     // Wait for search
@@ -331,7 +331,7 @@ test.describe('Settings Page - Error Handling', () => {
     });
     
     // Try to search
-    const searchInput = authenticatedPage.getByPlaceholder(/search reddit/i);
+    const searchInput = authenticatedPage.getByPlaceholder(/search for communities/i);
     await searchInput.fill('test');
     
     // Wait - should not crash
@@ -357,7 +357,7 @@ test.describe('Settings Page - Accessibility', () => {
   test('add category button is accessible', async ({ authenticatedPage }) => {
     await authenticatedPage.goto('/settings');
     
-    const addButton = authenticatedPage.getByRole('button', { name: /add category/i });
+    const addButton = authenticatedPage.getByRole('button', { name: /new list/i });
     await expect(addButton).toBeVisible();
     await expect(addButton).toBeEnabled();
   });
@@ -365,7 +365,7 @@ test.describe('Settings Page - Accessibility', () => {
   test('search input has proper aria label', async ({ authenticatedPage }) => {
     await authenticatedPage.goto('/settings');
     
-    const searchInput = authenticatedPage.getByPlaceholder(/search reddit/i);
+    const searchInput = authenticatedPage.getByPlaceholder(/search for communities/i);
     await expect(searchInput).toBeVisible();
   });
 });
@@ -383,8 +383,8 @@ test.describe('Settings Page - Mobile Responsiveness', () => {
     
     // Key elements should still be visible
     await expect(authenticatedPage.getByText('Settings')).toBeVisible();
-    await expect(authenticatedPage.getByRole('button', { name: /add category/i })).toBeVisible();
-    await expect(authenticatedPage.getByPlaceholder(/search reddit/i)).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: /new list/i })).toBeVisible();
+    await expect(authenticatedPage.getByPlaceholder(/search for communities/i)).toBeVisible();
   });
 
   test('back button is accessible on mobile', async ({ authenticatedPage }) => {

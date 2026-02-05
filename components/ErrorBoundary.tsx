@@ -88,7 +88,7 @@ class ErrorBoundary extends Component<Props, State> {
                 Something went wrong
               </h1>
               <p className="text-muted-foreground text-sm">
-                We&apos;re sorry, but something unexpected happened. Our team has been notified and is working on a fix.
+                Something went wrong. We&apos;ve been notified. Try refreshing or go home.
               </p>
             </div>
 
@@ -119,7 +119,7 @@ class ErrorBoundary extends Component<Props, State> {
                 aria-label="Reload the page"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Try Again
+                Refresh
               </Button>
               <Button
                 onClick={this.handleGoHome}
@@ -128,7 +128,7 @@ class ErrorBoundary extends Component<Props, State> {
                 aria-label="Go to home page"
               >
                 <Home className="h-4 w-4 mr-2" />
-                Go Home
+                Go home
               </Button>
             </div>
 
@@ -139,7 +139,7 @@ class ErrorBoundary extends Component<Props, State> {
                 className="text-sm text-muted-foreground hover:text-foreground underline cursor-pointer"
                 aria-label="Report this issue"
               >
-                Report this issue
+                Report
               </button>
             )}
 

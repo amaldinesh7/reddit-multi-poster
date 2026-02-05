@@ -45,13 +45,13 @@ export default function Login() {
   const features = [
     {
       icon: Upload,
-      title: 'Upload Once',
-      description: 'Share to 30+ communities with a single upload',
+      title: 'Post once',
+      description: 'Share to many communities in one go',
     },
     {
       icon: Layers,
-      title: 'Queue Management',
-      description: 'Track posting progress in real-time',
+      title: 'See progress',
+      description: 'Watch posts go out in real time',
     },
   ];
 
@@ -126,7 +126,7 @@ export default function Login() {
               {/* Error message */}
               {errorMessage && (
                 <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                  <p className="font-medium mb-1">Authentication failed</p>
+                  <p className="font-medium mb-1">Sign-in didn&apos;t work</p>
                   <p className="text-red-400/80 text-xs">{errorMessage}</p>
                 </div>
               )}
@@ -143,7 +143,7 @@ export default function Login() {
                   {isRedirecting ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Logging in...</span>
+                      <span>Taking you to Reddit…</span>
                     </>
                   ) : (
                     <>
@@ -159,7 +159,7 @@ export default function Login() {
               {/* Divider */}
               <div className="flex items-center gap-4 my-8">
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                <span className="text-gray-500 text-xs uppercase tracking-wider">Features</span>
+                <span className="text-gray-500 text-xs uppercase tracking-wider">Why use this</span>
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
               </div>
 

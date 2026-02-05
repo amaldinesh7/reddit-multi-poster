@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Send,
@@ -10,12 +10,7 @@ import {
   RefreshCw,
   WifiOff,
   LogIn,
-  Info,
   Layers,
-  CloudOff,
-  Cloud,
-  Copy,
-  Check,
 } from 'lucide-react';
 import { useQueueJob } from '../hooks/useQueueJob';
 import { QueueProgressList } from './posting-queue';
@@ -41,79 +36,15 @@ interface Props {
   hasFlairErrors?: boolean;
   onPostAttempt?: () => void;
   onUnselectSuccessItems?: (subreddits: string[]) => void;
+  onClearAll?: () => void;
+  /** Max items allowed (e.g. 5 for paid). Falls back to QUEUE_LIMITS.MAX_TOTAL_ITEMS */
+  maxItems?: number;
 }
 
 // ============================================================================
 // Sub-Components
 // ============================================================================
 
-interface QueueLimitsBannerProps {
-  itemCount: number;
-  totalFileSize: number;
-  batchCount: number;
-  validationError?: string;
-}
-
-const QueueLimitsBanner: React.FC<QueueLimitsBannerProps> = ({
-  itemCount,
-  totalFileSize,
-  batchCount,
-  validationError,
-}) => {
-  const hasFiles = totalFileSize > 0;
-  const itemProgress = (itemCount / QUEUE_LIMITS.MAX_TOTAL_ITEMS) * 100;
-
-  if (validationError) {
-    return (
-      <div
-        className="rounded-md bg-red-600/15 border border-red-600/30 p-3"
-        role="alert"
-      >
-        <div className="flex items-start gap-2 text-red-400">
-          <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" aria-hidden="true" />
-          <span className="text-sm">{validationError}</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (itemCount === 0) return null;
-
-  return (
-    <div className="rounded-md bg-zinc-800/50 border border-zinc-700/50 p-3 space-y-2">
-      {/* Item Count Progress */}
-      <div className="space-y-1">
-        <div className="flex items-center justify-between text-xs text-zinc-400">
-          <span>Items</span>
-          <span>{itemCount} / {QUEUE_LIMITS.MAX_TOTAL_ITEMS}</span>
-        </div>
-        <div className="h-1.5 bg-zinc-700 rounded-full overflow-hidden">
-          <div
-            className={`h-full transition-all duration-300 ${itemProgress > 80 ? 'bg-yellow-500' : 'bg-blue-500'
-              }`}
-            style={{ width: `${Math.min(itemProgress, 100)}%` }}
-          />
-        </div>
-      </div>
-
-      {/* File Size Info (only if files present) */}
-      {hasFiles && (
-        <div className="flex items-center justify-between text-xs text-zinc-400">
-          <span>Total Files</span>
-          <span>{formatFileSize(totalFileSize)}</span>
-        </div>
-      )}
-
-      {/* Batch Info */}
-      {batchCount > 1 && (
-        <div className="flex items-center gap-2 pt-1 text-xs text-zinc-500">
-          <Info className="h-3 w-3" aria-hidden="true" />
-          <span>Will be processed in {batchCount} batches</span>
-        </div>
-      )}
-    </div>
-  );
-};
 
 interface BatchProgressProps {
   batchStates: Array<{
@@ -146,10 +77,10 @@ const BatchProgress: React.FC<BatchProgressProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-zinc-300">
           <Layers className="h-4 w-4" aria-hidden="true" />
-          <span>Batch Progress</span>
+          <span>Posting in rounds</span>
         </div>
         <span className="text-xs text-zinc-400">
-          {completedBatches} / {totalBatches} batches
+          {completedBatches} of {totalBatches} posted
         </span>
       </div>
 
@@ -166,7 +97,7 @@ const BatchProgress: React.FC<BatchProgressProps> = ({
                   ? 'bg-blue-500 animate-pulse'
                   : 'bg-zinc-700'
               }`}
-            title={`Batch ${batch.batchIndex + 1}: ${batch.status}`}
+            title={`Round ${batch.batchIndex + 1}: ${batch.status}`}
           />
         ))}
       </div>
@@ -176,8 +107,8 @@ const BatchProgress: React.FC<BatchProgressProps> = ({
         <div className="text-xs text-zinc-400 flex items-center gap-2">
           <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
           <span>
-            Processing batch {currentBatchIndex + 1}/{totalBatches}
-            {' '}({batchStates[currentBatchIndex].completedItems}/{batchStates[currentBatchIndex].totalItems} items)
+            Round {currentBatchIndex + 1} of {totalBatches}
+            {' '}({batchStates[currentBatchIndex].completedItems}/{batchStates[currentBatchIndex].totalItems} posted)
           </span>
         </div>
       )}
@@ -186,7 +117,7 @@ const BatchProgress: React.FC<BatchProgressProps> = ({
       {failedBatches > 0 && currentBatchIndex === null && (
         <div className="flex items-center justify-between pt-1">
           <span className="text-xs text-red-400">
-            {failedBatches} batch{failedBatches !== 1 ? 'es' : ''} failed
+            {failedBatches} round{failedBatches !== 1 ? 's' : ''} failed
           </span>
           {onRetryFailed && (
             <Button
@@ -196,93 +127,11 @@ const BatchProgress: React.FC<BatchProgressProps> = ({
               className="h-6 text-xs cursor-pointer border-red-600/50 text-red-400 hover:bg-red-600/20"
             >
               <RefreshCw className="h-3 w-3 mr-1" />
-              Retry Failed
+              Try again
             </Button>
           )}
         </div>
       )}
-    </div>
-  );
-};
-
-// ============================================================================
-// Job Status Banner (shows when job is queued)
-// ============================================================================
-
-interface JobStatusBannerProps {
-  jobId: string;
-  status: string;
-  isConnected: boolean;
-}
-
-const JobStatusBanner: React.FC<JobStatusBannerProps> = ({
-  jobId,
-  status,
-  isConnected,
-}) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopyJobId = async () => {
-    try {
-      await navigator.clipboard.writeText(jobId);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = jobId;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  return (
-    <div className="rounded-md bg-blue-600/15 border border-blue-600/30 p-3 space-y-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-blue-400">
-          <Cloud className="h-4 w-4" aria-hidden="true" />
-          <span className="text-sm font-medium">Job Queued</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {isConnected ? (
-            <span className="text-xs text-green-400 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-              Live
-            </span>
-          ) : (
-            <span className="text-xs text-yellow-400 flex items-center gap-1">
-              <CloudOff className="h-3 w-3" />
-              Reconnecting...
-            </span>
-          )}
-        </div>
-      </div>
-
-      <p className="text-xs text-blue-300/80">
-        Your posts are being processed in the cloud. You can close this tab and come back later.
-      </p>
-
-      <div className="flex items-center gap-2 text-xs text-zinc-500">
-        <span>Job ID:</span>
-        <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400 font-mono text-[10px]">
-          {jobId.slice(0, 8)}...
-        </code>
-        <button
-          onClick={handleCopyJobId}
-          className="text-zinc-400 hover:text-zinc-300 transition-colors"
-          title="Copy job ID"
-        >
-          {copied ? (
-            <Check className="h-3 w-3 text-green-400" />
-          ) : (
-            <Copy className="h-3 w-3" />
-          )}
-        </button>
-      </div>
     </div>
   );
 };
@@ -297,8 +146,11 @@ const PostingQueue: React.FC<Props> = ({
   prefixes,
   hasFlairErrors,
   onPostAttempt,
-  onUnselectSuccessItems
+  onUnselectSuccessItems,
+  onClearAll,
+  maxItems: maxItemsProp,
 }) => {
+  const maxItems = maxItemsProp ?? QUEUE_LIMITS.MAX_TOTAL_ITEMS;
   const {
     state,
     submit,
@@ -332,14 +184,22 @@ const PostingQueue: React.FC<Props> = ({
   const cancelled = state.status === 'cancelled';
   const failed = state.status === 'failed';
   // Build error object with proper typing
-  const error: { message: string; code: string; recoverable: boolean; details?: string; batchIndex?: number } | null = state.error ? {
-    message: state.error,
-    code: state.error.includes('Unauthorized') ? 'AUTH_ERROR' :
-      state.error.includes('network') ? 'NETWORK_ERROR' : 'UNKNOWN_ERROR',
-    recoverable: !state.error.includes('Unauthorized'),
-    details: undefined,
-    batchIndex: undefined,
-  } : null;
+  // Detect limit errors to filter them out from display
+  const isLimitError = state.error && (
+    state.error.includes('plan allows') ||
+    state.error.includes('subreddits at once') ||
+    state.error.includes('Upgrade for unlimited')
+  );
+  
+  const error: { message: string; code: string; recoverable: boolean; details?: string; batchIndex?: number } | null = 
+    state.error && !isLimitError ? {
+      message: state.error,
+      code: state.error.includes('Unauthorized') ? 'AUTH_ERROR' :
+        state.error.includes('network') ? 'NETWORK_ERROR' : 'UNKNOWN_ERROR',
+      recoverable: !state.error.includes('Unauthorized'),
+      details: undefined,
+      batchIndex: undefined,
+    } : null;
 
   // Current wait for progress display
   const currentWait = state.waitingSeconds ? {
@@ -353,9 +213,9 @@ const PostingQueue: React.FC<Props> = ({
   const totalBatches = Math.ceil(items.length / QUEUE_LIMITS.MAX_ITEMS_PER_BATCH);
   const batchInfo = {
     totalBatches,
-    canProceed: items.length > 0 && items.length <= QUEUE_LIMITS.MAX_TOTAL_ITEMS,
-    validationError: items.length > QUEUE_LIMITS.MAX_TOTAL_ITEMS
-      ? `Maximum ${QUEUE_LIMITS.MAX_TOTAL_ITEMS} items allowed`
+    canProceed: items.length > 0 && items.length <= maxItems,
+    validationError: items.length > maxItems
+      ? `Free plan: up to ${maxItems} communities per post. Remove some or upgrade.`
       : undefined,
   };
 
@@ -422,7 +282,7 @@ const PostingQueue: React.FC<Props> = ({
       {/* Posting Queue Header - Visible when posting starts */}
       {(running || logs.length > 0) && (
         <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-lg font-semibold">Posting Queue</h3>
+          <h3 className="text-lg font-semibold">Ready to post</h3>
           {items.length > 0 && (
             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
               {items.length}
@@ -431,29 +291,7 @@ const PostingQueue: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Queue Limits Banner */}
-      {!running && !completed && !cancelled && !state.jobId && (
-        <div className="hidden lg:block">
-          <QueueLimitsBanner
-            itemCount={items.length}
-            totalFileSize={totalFileSize}
-            batchCount={batchInfo.totalBatches}
-            validationError={batchInfo.validationError}
-          />
-        </div>
-      )}
-
-      {/* Job Status Banner (shows when job is queued/processing) */}
-      {state.jobId && (running || state.status === 'pending') && (
-        <div className="hidden lg:block">
-          <JobStatusBanner
-            jobId={state.jobId}
-            status={state.status || 'pending'}
-            isConnected={state.isConnected}
-          />
-        </div>
-      )}
-
+      
       {/* Error Banner - Mobile Friendly (Keep visible on mobile as it's important) */}
       {error && (
         <div
@@ -473,7 +311,7 @@ const PostingQueue: React.FC<Props> = ({
                 )}
                 {error.batchIndex !== undefined && (
                   <p className="text-xs text-red-400/70 mt-1">
-                    Failed at batch {error.batchIndex + 1}
+                    Failed at round {error.batchIndex + 1}
                   </p>
                 )}
               </div>
@@ -488,7 +326,7 @@ const PostingQueue: React.FC<Props> = ({
                   aria-label="Go to login page"
                 >
                   <LogIn className="h-4 w-4 mr-2" />
-                  Log In Again
+                  Sign in again
                 </Button>
               ) : isRecoverable ? (
                 <Button
@@ -507,10 +345,10 @@ const PostingQueue: React.FC<Props> = ({
                 variant="ghost"
                 size="sm"
                 className="cursor-pointer text-red-400/70 hover:text-red-400 hover:bg-red-600/10"
-                aria-label="Dismiss error"
+                aria-label="Close"
               >
                 <X className="h-4 w-4 mr-2" />
-                Dismiss
+                Close
               </Button>
             </div>
           </div>
@@ -536,24 +374,24 @@ const PostingQueue: React.FC<Props> = ({
                   failed ? 'Reset and retry' :
                     running ? 'Posting in progress' :
                       state.isSubmitting ? 'Submitting...' :
-                        !batchInfo.canProceed ? 'Fix validation errors' :
-                          `Post to ${items.length} subreddits`
+                        !batchInfo.canProceed ? 'Fix issues above' :
+                          `Post to ${items.length} communities`
           }
         >
           {completed ? (
             <>
               <CheckCircle className="h-4 w-4 mr-2" />
-              Done - Reset
+              Post again
             </>
           ) : error || failed ? (
             <>
               <RefreshCw className="h-4 w-4 mr-2" />
-              Reset
+              Post again
             </>
           ) : cancelled ? (
             <>
               <XCircle className="h-4 w-4 mr-2" />
-              Retry
+              Try again
             </>
           ) : state.isSubmitting ? (
             <>
@@ -570,10 +408,10 @@ const PostingQueue: React.FC<Props> = ({
               <Send className="h-4 w-4 mr-2" />
               {items.length > 0 ? (
                 <>
-                  Post to {items.length} Subreddit{items.length !== 1 ? 's' : ''}
+                  Post to {items.length} {items.length === 1 ? 'community' : 'communities'}
                 </>
               ) : (
-                'Select Communities'
+                'Choose communities'
               )}
             </>
           )}
@@ -590,13 +428,27 @@ const PostingQueue: React.FC<Props> = ({
             Stop
           </Button>
         )}
+
+        {/* Clear Selection Button (Desktop) */}
+        {!running && !completed && items.length > 0 && onClearAll && (
+          <Button
+            onClick={onClearAll}
+            variant="ghost"
+            className="cursor-pointer text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            aria-label="Clear list"
+            title="Clear list"
+          >
+            <span className="font-serif mr-2 text-lg">🗑️</span>
+            Clear
+          </Button>
+        )}
       </div>
 
       {/* Empty State */}
       {items.length === 0 && !running && !completed && !cancelled && !error && (
         <div className="text-center py-6 text-muted-foreground hidden lg:block">
           <Send className="w-8 h-8 mx-auto mb-2 opacity-50" aria-hidden="true" />
-          <p className="text-sm">Select communities to post to</p>
+          <p className="text-sm">Pick communities above, then post</p>
         </div>
       )}
 
@@ -616,7 +468,7 @@ const PostingQueue: React.FC<Props> = ({
         <div className="rounder-md bg-green-600/20 border border-green-600/30 p-3 text-green-500 hidden lg:block">
           <div className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5" aria-hidden="true" />
-            <span className="font-medium">All posts completed!</span>
+            <span className="font-medium">All done!</span>
           </div>
         </div>
       )}
@@ -626,7 +478,7 @@ const PostingQueue: React.FC<Props> = ({
         <div className="rounded-md bg-yellow-600/20 border border-yellow-600/30 p-3 text-yellow-500 hidden lg:block">
           <div className="flex items-center gap-2">
             <XCircle className="h-5 w-5" aria-hidden="true" />
-            <span className="font-medium">Posting cancelled</span>
+            <span className="font-medium">Stopped</span>
           </div>
         </div>
       )}
@@ -636,7 +488,7 @@ const PostingQueue: React.FC<Props> = ({
         <div className="rounded-md bg-red-600/20 border border-red-600/30 p-3 text-red-500 hidden lg:block">
           <div className="flex items-center gap-2">
             <XCircle className="h-5 w-5" aria-hidden="true" />
-            <span className="font-medium">Job failed</span>
+            <span className="font-medium">Something went wrong</span>
           </div>
         </div>
       )}
@@ -653,6 +505,7 @@ const PostingQueue: React.FC<Props> = ({
         onPostClick={handleButtonClick}
         onResetClick={reset}
         onStopClick={handleCancel}
+        onClearClick={onClearAll}
       />
     </div>
   );

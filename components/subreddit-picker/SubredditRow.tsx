@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -72,6 +72,13 @@ const SubredditRow = React.memo(({
     return suffixOptions.length > 0 && !suffixOptions.includes(titleSuffix);
   }, [titleSuffix, suffixOptions]);
 
+  // Auto-show custom input when a custom suffix is persisted
+  useEffect(() => {
+    if (isCustomSuffix) {
+      setShowCustomInput(true);
+    }
+  }, [isCustomSuffix]);
+
   // Title length constraints
   const titleMinLength = postRequirements?.title_text_min_length;
   const titleMaxLength = postRequirements?.title_text_max_length;
@@ -105,7 +112,10 @@ const SubredditRow = React.memo(({
   const handleSuffixSelectChange = (value: string) => {
     if (value === '__custom__') {
       setShowCustomInput(true);
-      onTitleSuffixChange(name, '');
+      // Don't clear existing custom value when switching to custom mode
+      if (!isCustomSuffix) {
+        onTitleSuffixChange(name, '');
+      }
     } else if (value === '__none__') {
       setShowCustomInput(false);
       onTitleSuffixChange(name, '');
@@ -131,7 +141,7 @@ const SubredditRow = React.memo(({
       {/* Main Row */}
       <div
         className={`
-          flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 transition-colors cursor-pointer
+          flex flex-col sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3 transition-colors cursor-pointer gap-2
           ${hasError ? 'bg-red-500/20 border-l-2 border-red-500' : 'hover:bg-secondary/50'}
         `}
         onClick={handleRowClick}
@@ -145,126 +155,124 @@ const SubredditRow = React.memo(({
           }
         }}
       >
-        <div className="flex items-center" onClick={handleCheckboxContainerClick}>
-          <Checkbox
-            id={checkboxId}
-            checked={isSelected}
-            onCheckedChange={() => onToggle(name)}
-          />
-        </div>
+        <div className="flex items-center gap-2 flex-grow min-w-0 pr-2">
+          <div className="flex items-center" onClick={handleCheckboxContainerClick}>
+            <Checkbox
+              id={checkboxId}
+              checked={isSelected}
+              onCheckedChange={() => onToggle(name)}
+            />
+          </div>
 
-        <div className="flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2">
-          {hasError && (
-            <AlertTriangle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" aria-hidden="true" />
-          )}
-          <span
-            className={`text-sm truncate select-none font-medium ${hasError ? 'text-red-400' : ''}`}
-          >
-            r/{name}
-          </span>
-
-          {/* Loading indicator */}
-          {isLoading && (
-            <div className="w-3 h-3 border-2 border-muted border-t-primary rounded-full animate-spin" aria-label="Loading" />
-          )}
-
-          {/* Info/Status Line (Mobile & Desktop) */}
-          {!isLoading && isSelected && (
-            <div className="flex items-center gap-2 mt-1 w-full basis-full sm:basis-auto sm:w-auto sm:mt-0">
-              {/* Info Trigger (Mobile/Desktop) */}
-              {canExpand && (
-                <button
-                  onClick={handleExpandClick}
-                  className="bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer"
-                  aria-label="Show posting rules"
-                  title="View posting rules"
-                >
-                  <span className="font-serif font-bold italic text-xs">i</span>
-                </button>
-              )}
-
-              {/* Flair Required - Prominent */}
-              {flairRequired && (
-                <Badge variant="destructive" className="h-5 px-1.5 text-[10px] uppercase font-bold tracking-wider shadow-sm" title="Flair selection is required">
-                  Flair Req
-                </Badge>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Controls */}
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0" onClick={handleControlsClick}>
-          {/* Title Suffix */}
-
-          {/* Title Suffix - Only show when required strings exist */}
-          {showTagControls && (
-            <>
-              {!showCustomInput ? (
-                <Select
-                  value={isCustomSuffix ? '__custom__' : (titleSuffix || '__none__')}
-                  onValueChange={handleSuffixSelectChange}
-                >
-                  <SelectTrigger
-                    className="h-7 w-16 sm:w-20 text-xs cursor-pointer"
-                    aria-label={`Title tag for r/${name}`}
-                  >
-                    <SelectValue placeholder="Tag" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Tag</SelectItem>
-                    {suffixOptions.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                    <SelectItem value="__custom__">Custom...</SelectItem>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="flex items-center gap-1">
-                  <Input
-                    className="h-7 w-14 sm:w-16 text-xs px-1.5"
-                    placeholder="Tag"
-                    value={titleSuffix || ''}
-                    onChange={(e) => onTitleSuffixChange(name, e.target.value)}
-                    title="Custom title suffix (e.g., (f), 25F, [OC])"
-                    aria-label={`Title suffix for r/${name}`}
-                  />
-                  <button
-                    onClick={() => setShowCustomInput(false)}
-                    className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-                    aria-label="Switch to dropdown"
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Flair Dropdown - Only show when there are flair options */}
-          {isSelected && flairOptions.length > 0 && (
-            <Select
-              value={flairValue || '__none__'}
-              onValueChange={(value) => onFlairChange(name, value === '__none__' ? '' : value)}
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
+            {hasError && (
+              <AlertTriangle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" aria-hidden="true" />
+            )}
+            <span
+              className={`text-sm truncate select-none font-medium ${hasError ? 'text-red-400' : ''}`}
             >
-              <SelectTrigger
-                className={`h-7 w-20 sm:w-28 text-xs cursor-pointer ${hasError
-                  ? 'border-red-500 bg-red-500/10 text-red-400'
-                  : ''
-                  }`}
-                aria-label={`Select flair for r/${name}`}
+              r/{name}
+            </span>
+
+            {/* Loading indicator */}
+            {isLoading && (
+              <div className="w-3 h-3 border-2 border-muted border-t-primary rounded-full animate-spin" aria-label="Loading" />
+            )}
+
+            {/* Info Trigger */}
+            {!isLoading && isSelected && canExpand && (
+              <button
+                onClick={handleExpandClick}
+                className="bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full w-4 h-4 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0"
+                aria-label="Community rules"
+                title="Community rules"
               >
-                <SelectValue placeholder={flairRequired ? 'Flair*' : 'Flair'} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">{flairRequired ? 'Flair*' : 'Flair'}</SelectItem>
-                {flairOptions.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>{f.text || '—'}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+                <span className="font-serif font-bold italic text-[10px]">i</span>
+              </button>
+            )}
+
+            {/* Flair Required Badge - Subtler */}
+            {!isLoading && isSelected && flairRequired && (
+              <Badge variant="secondary" className="h-4 px-1 text-[9px] uppercase font-bold tracking-wider text-muted-foreground bg-muted hover:bg-muted flex-shrink-0" title="This community requires a flair">
+                Flair
+              </Badge>
+            )}
+          </div>
         </div>
+
+        {/* Row 2: Controls (Flair/Tag Selection) - Only when selected */}
+        {isSelected && (showTagControls || flairOptions.length > 0) && (
+          <div className={`flex items-center gap-2 flex-nowrap sm:justify-end w-full sm:w-auto mt-1 sm:mt-0 flex-shrink-0 ${!isSelected ? 'hidden' : ''}`} onClick={handleControlsClick}>
+
+            {/* Flair Dropdown - Only show when there are flair options */}
+            {flairOptions.length > 0 && (
+              <Select
+                value={flairValue || '__none__'}
+                onValueChange={(value) => onFlairChange(name, value === '__none__' ? '' : value)}
+              >
+                <SelectTrigger
+                  className={`h-7 flex-1 w-full min-w-[80px] sm:max-w-[140px] text-xs cursor-pointer flex-shrink-0 ${hasError
+                    ? 'border-red-500 bg-red-500/10 text-red-400'
+                    : ''
+                    }`}
+                  aria-label={`Pick flair for r/${name}`}
+                >
+                  <SelectValue placeholder={flairRequired ? 'Flair (required)' : 'Flair'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">{flairRequired ? 'Flair (required)' : 'Flair'}</SelectItem>
+                  {flairOptions.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.text || '—'}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+              {/* Title Suffix - Only show when required strings exist */}
+              {showTagControls && (
+              <>
+                {!showCustomInput ? (
+                  <Select
+                    value={isCustomSuffix ? '__custom__' : (titleSuffix || '__none__')}
+                    onValueChange={handleSuffixSelectChange}
+                  >
+                    <SelectTrigger
+                      className="h-7 flex-1 w-full min-w-[70px] sm:min-w-[80px] text-xs cursor-pointer flex-shrink-0"
+                      aria-label={`Title tag for r/${name}`}
+                    >
+                      <SelectValue placeholder="Title tag" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Title tag</SelectItem>
+                      {suffixOptions.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                      <SelectItem value="__custom__">Custom tag…</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex items-center gap-1 flex-shrink-0 flex-1">
+                    <Input
+                      className="h-7 flex-1 w-full text-xs px-1.5"
+                      placeholder="e.g. (f), 25F, [OC]"
+                      value={titleSuffix || ''}
+                      onChange={(e) => onTitleSuffixChange(name, e.target.value)}
+                      title="Add a tag to your title for this community"
+                      aria-label={`Title suffix for r/${name}`}
+                    />
+                    <button
+                      onClick={() => setShowCustomInput(false)}
+                      className="text-xs text-muted-foreground hover:text-foreground cursor-pointer p-1"
+                      aria-label="Switch to dropdown"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Expanded Details Section */}
