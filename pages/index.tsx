@@ -344,6 +344,7 @@ export default function Home() {
     
     return {
       totalKarma: auth.me.total_karma ?? 0,
+      followers: auth.me.followers ?? 0,
       accountAgeDays,
       accountAgeLabel,
       hasVerifiedEmail: auth.me.has_verified_email ?? false,
@@ -552,7 +553,7 @@ export default function Home() {
                   className={cn(
                     "lg:sticky lg:top-20",
                     "lg:rounded-lg lg:border lg:border-border/50 lg:p-6 lg:bg-card/50",
-                    "pt-6 lg:pt-0 border-t border-border/50 lg:border-t-0"
+                    "pt-6  border-t border-border/50 lg:border-t-0"
                   )}
                 >
                   <PostingQueue

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import { TrendingUp, Clock } from 'lucide-react';
+import { TrendingUp, Clock, Users } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 
 interface UserStats {
   totalKarma?: number;
+  followers?: number;
   accountAgeDays?: number;
   accountAgeLabel?: string;
   hasVerifiedEmail?: boolean;
@@ -148,6 +149,7 @@ export const MobileUserStatsBanner: React.FC<MobileUserStatsBannerProps> = ({
           <div className="text-xs space-y-1 p-1">
             <p className="font-medium">{statusLabels[eligibilityStatus]}</p>
             <p>Karma: {(userStats.totalKarma ?? 0).toLocaleString()}</p>
+            <p>Followers: {(userStats.followers ?? 0).toLocaleString()}</p>
             <p>Account: {userStats.accountAgeLabel || 'Unknown'} old</p>
             <p>Email: {userStats.hasVerifiedEmail ? 'Verified' : 'Not verified'}</p>
           </div>
@@ -169,6 +171,14 @@ export const MobileUserStatsBanner: React.FC<MobileUserStatsBannerProps> = ({
             <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
             <span className="font-semibold">{(userStats.totalKarma ?? 0).toLocaleString()}</span>
             <span className="text-muted-foreground text-xs">karma</span>
+          </div>
+          
+          <span className="text-muted-foreground/40">·</span>
+          
+          {/* Followers */}
+          <div className="flex items-center gap-1.5 text-sm">
+            <Users className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="font-semibold">{(userStats.followers ?? 0).toLocaleString()}</span>
           </div>
           
           <span className="text-muted-foreground/40">·</span>

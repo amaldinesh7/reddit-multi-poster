@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { ChevronDown, User, Settings, LogOut, Shield, Sun, Moon, Monitor, Infinity, TrendingUp, Clock } from 'lucide-react';
+import { ChevronDown, User, Settings, LogOut, Shield, Sun, Moon, Monitor, Infinity, TrendingUp, Clock, Users } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { Theme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
@@ -9,6 +9,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 
 interface UserStats {
   totalKarma?: number;
+  followers?: number;
   accountAgeDays?: number;
   accountAgeLabel?: string;
   hasVerifiedEmail?: boolean;
@@ -191,6 +192,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <div className="text-xs space-y-1 p-1">
                   <p className="font-medium">{statusLabels[eligibilityStatus]}</p>
                   <p>Karma: {(userStats.totalKarma ?? 0).toLocaleString()}</p>
+                  <p>Followers: {(userStats.followers ?? 0).toLocaleString()}</p>
                   <p>Account: {userStats.accountAgeLabel || 'Unknown'} old</p>
                   <p>Email: {userStats.hasVerifiedEmail ? 'Verified' : 'Not verified'}</p>
                 </div>
@@ -210,6 +212,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <div className="flex items-center gap-1 text-sm">
                   <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
                   <span className="font-medium">{(userStats.totalKarma ?? 0).toLocaleString()}</span>
+                </div>
+                <span className="text-muted-foreground/40">·</span>
+                {/* Followers */}
+                <div className="flex items-center gap-1 text-sm">
+                  <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="font-medium">{(userStats.followers ?? 0).toLocaleString()}</span>
                 </div>
                 <span className="text-muted-foreground/40">·</span>
                 {/* Account Age */}

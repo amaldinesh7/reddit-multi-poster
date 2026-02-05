@@ -842,7 +842,7 @@ const PostingQueue: React.FC<Props> = ({
       )}
 
       {/* Spacer for Mobile Sticky Queue */}
-      <div className="min-h-[calc(6rem+env(safe-area-inset-bottom,0px))] lg:min-h-0 lg:h-0" aria-hidden="true" />
+      <div className="min-h-[calc(2rem+env(safe-area-inset-bottom,0px))] lg:min-h-0 lg:h-0" aria-hidden="true" />
 
       {/* Mobile Sticky Queue Footer */}
       <MobileStickyQueue
