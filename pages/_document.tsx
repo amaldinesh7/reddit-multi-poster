@@ -1,8 +1,8 @@
 import { Html, Head, Main, NextScript } from "next/document";
 
-export default function Document() {
+const Document = (): JSX.Element => {
   // JSON-LD structured data for SEO
-  const structuredData = {
+  const structuredData: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "Reddit Multi Poster",
@@ -31,13 +31,6 @@ export default function Document() {
       "@type": "Organization",
       "name": "Reddit Multi Poster"
     },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.8",
-      "ratingCount": "150",
-      "bestRating": "5",
-      "worstRating": "1"
-    }
   };
 
   return (
@@ -83,4 +76,6 @@ export default function Document() {
       </body>
     </Html>
   );
-}
+};
+
+export default Document;
