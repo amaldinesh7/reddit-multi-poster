@@ -1,4 +1,4 @@
-import { FlairOption, SubredditRules, PostRequirements } from '../utils/reddit';
+import { FlairOption, SubredditRules, PostRequirements, SubredditEligibility } from '../utils/reddit';
 
 export interface SubredditItem {
   id: string;
@@ -37,6 +37,7 @@ export interface CachedSubredditData {
   rules: SubredditRules;
   title_tags: TitleTag[];
   post_requirements?: PostRequirements;
+  eligibility?: SubredditEligibility;
   cached: boolean;
   stale?: boolean;
   cached_at: string;

@@ -20,6 +20,8 @@ export interface RedditUser {
   verified?: boolean;
   created_utc?: number;
   is_gold?: boolean;
+  // Followers count (subscribers to user's profile)
+  followers?: number;
 }
 
 // Subreddit eligibility data - user's relationship with a subreddit
@@ -151,7 +153,7 @@ export function redditClient(accessToken: string): AxiosInstance {
 
 export async function getIdentity(client: AxiosInstance): Promise<RedditUser> {
   const { data } = await client.get('/api/v1/me');
-  // Return enhanced user data including karma, account age, and verification status
+  // Return enhanced user data including karma, account age, verification status, and followers
   return {
     name: data.name,
     id: data.id,
@@ -163,6 +165,7 @@ export async function getIdentity(client: AxiosInstance): Promise<RedditUser> {
     verified: data.verified,
     created_utc: data.created_utc,
     is_gold: data.is_gold,
+    followers: data.subreddit?.subscribers ?? 0,
   };
 }
 
