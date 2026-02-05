@@ -8,7 +8,7 @@ interface TooltipProps {
 }
 
 export function Tooltip({ content, children, side = 'left' }: TooltipProps) {
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       // Trigger same behavior as click - the trigger will handle tooltip open
