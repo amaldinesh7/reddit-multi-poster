@@ -248,7 +248,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               className={cn(
                 "md:hidden min-h-[44px] min-w-[44px]",
                 "flex items-center justify-center",
-                "rounded-md hover:bg-secondary transition-colors",
                 "cursor-pointer active:scale-95"
               )}
               aria-label={`Theme: ${theme}. Tap to switch.`}

@@ -45,6 +45,7 @@ interface Props {
   onPostAttempt?: () => boolean;
   onUnselectSuccessItems?: (subreddits: string[]) => void;
   onClearAll?: () => void;
+  onResetMedia?: () => void;
   /** Max items allowed (e.g. 5 for paid). Falls back to QUEUE_LIMITS.MAX_TOTAL_ITEMS */
   maxItems?: number;
   /** Callback when posting results are available (for failed post tracking) */
@@ -161,6 +162,7 @@ const PostingQueue: React.FC<Props> = ({
   onPostAttempt,
   onUnselectSuccessItems,
   onClearAll,
+  onResetMedia,
   maxItems: maxItemsProp,
   onResultsAvailable,
   onValidationChange,
@@ -587,6 +589,13 @@ const PostingQueue: React.FC<Props> = ({
     });
   };
 
+  const handleMobileReset = useCallback(() => {
+    reset();
+    if (onResetMedia) {
+      onResetMedia();
+    }
+  }, [reset, onResetMedia]);
+
   // Get the appropriate error icon based on error type
   const getErrorIcon = () => {
     if (error?.message?.includes('network') || error?.message?.includes('connect')) {
@@ -868,7 +877,7 @@ const PostingQueue: React.FC<Props> = ({
         isCompleted={completed}
         hasErrors={hasFlairErrors || !batchInfo.canProceed || !validation.canSubmit}
         onPostClick={handleButtonClick}
-        onResetClick={reset}
+        onResetClick={handleMobileReset}
         onStopClick={handleCancel}
         onClearClick={onClearAll}
       />

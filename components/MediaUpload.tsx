@@ -7,9 +7,10 @@ interface Props {
   onUrl: (url: string) => void;
   onFile: (files: File[]) => void;
   mode: 'file' | 'url';
+  resetSignal?: number;
 }
 
-export default function MediaUpload({ onUrl, onFile, mode }: Props) {
+export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props) {
   const [mediaUrl, setMediaUrl] = React.useState('');
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = React.useState<string[]>([]);
@@ -85,20 +86,25 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
     onFile(newFiles);
   };
 
-  const clearMedia = () => {
+  const clearMedia = React.useCallback(() => {
     setSelectedFiles([]);
     setMediaUrl('');
     onFile([]);
     onUrl('');
     previewUrls.forEach(url => URL.revokeObjectURL(url));
     setPreviewUrls([]);
-  };
+  }, [onFile, onUrl, previewUrls]);
 
   React.useEffect(() => {
     return () => {
       previewUrls.forEach(url => URL.revokeObjectURL(url));
     };
   }, [previewUrls]);
+
+  React.useEffect(() => {
+    if (resetSignal === undefined) return;
+    clearMedia();
+  }, [resetSignal, clearMedia]);
 
   return (
     <div>

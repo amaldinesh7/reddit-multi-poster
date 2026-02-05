@@ -91,6 +91,7 @@ export default function Home() {
   const [upgradeLoading, setUpgradeLoading] = React.useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
+  const [mediaResetCounter, setMediaResetCounter] = React.useState(0);
 
   // Smooth loader exit: keep AppLoader mounted briefly to fade out
   const [showLoader, setShowLoader] = React.useState(true);
@@ -139,6 +140,18 @@ export default function Home() {
     clearSelection,
     clearAllState,
   } = useHomePageState({ authMe: me ?? undefined });
+
+  const resetMedia = React.useCallback(() => {
+    setMediaUrl('');
+    setMediaFiles([]);
+    setMediaMode('file');
+    setMediaResetCounter((prev) => prev + 1);
+  }, [setMediaUrl, setMediaFiles, setMediaMode]);
+
+  const handleClearAll = React.useCallback(() => {
+    clearAllState();
+    setMediaResetCounter((prev) => prev + 1);
+  }, [clearAllState]);
 
   // Failed posts tracking for inline error display
   const failedPostsHook = useFailedPosts();
@@ -512,7 +525,12 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
-                  <MediaUpload onUrl={setMediaUrl} onFile={setMediaFiles} mode={mediaMode} />
+                  <MediaUpload
+                    onUrl={setMediaUrl}
+                    onFile={setMediaFiles}
+                    mode={mediaMode}
+                    resetSignal={mediaResetCounter}
+                  />
                 </section>
 
                 {/* Title Section - No card wrapper, flowing layout */}
@@ -614,7 +632,8 @@ export default function Home() {
                     hasFlairErrors={hasFlairErrors}
                     onPostAttempt={handlePostWithLimitCheck}
                     onUnselectSuccessItems={handleUnselectSuccessItems}
-                    onClearAll={clearAllState}
+                    onClearAll={handleClearAll}
+                    onResetMedia={resetMedia}
                     onResultsAvailable={handleResultsAvailable}
                     onValidationChange={handleQueueValidationChange}
                   />
