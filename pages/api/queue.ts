@@ -240,18 +240,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       
       try {
-        // Get files if uploaded for this item (support multiple files)
+        // Get files for this item (support shared files and multiple files)
         const itemFiles: File[] = [];
         
-        // Check if there's a fileCount for this item (multiple files)
-        const fileCountKey = `fileCount_${i}`;
-        const fileCountField = Array.isArray(fields[fileCountKey]) ? fields[fileCountKey][0] : fields[fileCountKey];
-        const fileCount = fileCountField ? parseInt(fileCountField as string) : 1;
+        // Check for shared files first (uploaded once, used by all items)
+        // Frontend sends: sharedFile_0, sharedFile_1, etc. with sharedFileCount
+        const sharedFileCountField = Array.isArray(fields.sharedFileCount) 
+          ? fields.sharedFileCount[0] 
+          : fields.sharedFileCount;
+        const sharedFileCount = sharedFileCountField ? parseInt(sharedFileCountField as string) : 0;
         
-        
-        // Collect all files for this item
-        for (let fileIndex = 0; fileIndex < fileCount; fileIndex++) {
-          const fileKey = `file_${i}_${fileIndex}`;
+        // Collect shared files (same files used for all items in the batch)
+        for (let fileIndex = 0; fileIndex < sharedFileCount; fileIndex++) {
+          const fileKey = `sharedFile_${fileIndex}`;
           if (files[fileKey]) {
             const uploadedFile = Array.isArray(files[fileKey]) ? files[fileKey][0] : files[fileKey];
             if (uploadedFile) {
@@ -265,7 +266,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
         
-        // Fallback: check for single file with old format
+        // Fallback: check for old per-item file format (file_0_0, file_0_1, etc.)
+        if (itemFiles.length === 0) {
+          const fileCountKey = `fileCount_${i}`;
+          const fileCountField = Array.isArray(fields[fileCountKey]) ? fields[fileCountKey][0] : fields[fileCountKey];
+          const fileCount = fileCountField ? parseInt(fileCountField as string) : 1;
+          
+          for (let fileIndex = 0; fileIndex < fileCount; fileIndex++) {
+            const fileKey = `file_${i}_${fileIndex}`;
+            if (files[fileKey]) {
+              const uploadedFile = Array.isArray(files[fileKey]) ? files[fileKey][0] : files[fileKey];
+              if (uploadedFile) {
+                const buffer = fs.readFileSync(uploadedFile.filepath);
+                const file = new File([buffer], uploadedFile.originalFilename || 'upload', {
+                  type: uploadedFile.mimetype || 'application/octet-stream'
+                });
+                itemFiles.push(file);
+              }
+            }
+          }
+        }
+        
+        // Fallback: check for single file with oldest format (file_0)
         if (itemFiles.length === 0) {
           const fileKey = `file_${i}`;
           if (files[fileKey]) {
