@@ -206,8 +206,8 @@ export const QUEUE_JOB_CONSTANTS = {
   /** How long to keep completed job files before cleanup (hours) */
   FILE_RETENTION_HOURS: 24,
   
-  /** Max concurrent jobs per user */
-  MAX_JOBS_PER_USER: 3,
+  /** Max concurrent jobs per user (single session model) */
+  MAX_JOBS_PER_USER: 1,
   
   /** Storage bucket name */
   STORAGE_BUCKET: 'queue-files',

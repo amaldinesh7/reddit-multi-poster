@@ -41,8 +41,8 @@ export const MobileStickyQueue: React.FC<Props> = ({
                         {hasErrors ? (
                             <div className="flex items-center gap-1.5 text-red-500 mt-1.5 transition-all">
                                 <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                                <span className="text-[11px] font-bold uppercase tracking-widest truncate">
-                                    Action Required
+                                <span className="text-[11px] font-semibold">
+                                    Needs attention
                                 </span>
                             </div>
                         ) : (
