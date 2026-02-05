@@ -484,13 +484,13 @@ export default function Home() {
 
           <PwaOnboarding hasQueueItems={items.length > 0} />
 
-            <main className="flex-1 container mx-auto px-4 sm:px-6 py-4 lg:py-8 max-w-2xl lg:max-w-7xl safe-bottom">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-start">
+            <main className="flex-1 app-container py-4 md:py-6 lg:py-8 max-w-2xl lg:max-w-7xl safe-bottom">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 items-start lg:divide-x lg:divide-border/50">
 
               {/* Left Column: Create Post */}
-              <div className="lg:space-y-8">
+              <div className="lg:pr-6">
                 {/* Section Header - Desktop only */}
-                <h2 className="text-xl mb-4 font-semibold tracking-tight hidden lg:block">Your post</h2>
+                <h2 className="text-xl mb-4 font-semibold tracking-tight hidden lg:block ">Your post</h2>
 
                 {/* Media Section - No card wrapper, flowing layout */}
                 <section className="space-y-4 mb-4">
@@ -533,6 +533,8 @@ export default function Home() {
                   />
                 </section>
 
+                <div className="border-t border-border/50 my-6" aria-hidden="true" />
+
                 {/* Title Section - No card wrapper, flowing layout */}
                 <section className="space-y-4 mb-4">
                   <h3 className="text-base lg:text-lg font-semibold tracking-tight">Title & Body</h3>
@@ -547,16 +549,17 @@ export default function Home() {
                 </section>
               </div>
 
+              <div className="border-t border-border/50 my-4 lg:hidden" aria-hidden="true" />
+
               {/* Right Column: Communities & Queue */}
-              <div className="space-y-4 lg:space-y-8">
+              <div className="lg:pl-6">
                 {/* Section Header - Desktop only */}
-                <h2 className="text-xl font-semibold tracking-tight hidden lg:block">Where to post</h2>
+                <h2 className="text-xl font-semibold tracking-tight hidden lg:block mb-4 lg:mb-6">Where to post</h2>
 
                 {/* Communities Section */}
                 <section 
                   className={cn(
-                    "space-y-4",
-                    "lg:rounded-lg lg:border lg:border-border/50 lg:p-6 lg:bg-card/50"
+                    "space-y-4"
                   )}
                 >
                   <div className="flex items-center justify-between">
@@ -616,12 +619,13 @@ export default function Home() {
                   )}
                 </section>
 
+                <div className="border-t border-border/50 my-4 lg:my-6" aria-hidden="true" />
+
                 {/* Queue Section */}
                 <section 
                   className={cn(
                     "lg:sticky lg:top-20",
-                    "lg:rounded-lg lg:border lg:border-border/50 lg:p-6 lg:bg-card/50",
-                    "pt-6  border-t border-border/50 lg:border-t-0"
+                    "pt-2 lg:pt-0"
                   )}
                 >
                   <PostingQueue

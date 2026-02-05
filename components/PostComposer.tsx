@@ -50,7 +50,7 @@ export default function PostComposer({ value, onChange, body, onBodyChange, pref
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-1">
       {/* Title Input */}
       <div>
         <Textarea
@@ -73,7 +73,7 @@ export default function PostComposer({ value, onChange, body, onBodyChange, pref
         <button
           type="button"
           onClick={() => setShowBody(!showBody)}
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           {showBody ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           <span>Add description{body && body.length > 0 ? ` (${body.length} chars)` : ''}</span>

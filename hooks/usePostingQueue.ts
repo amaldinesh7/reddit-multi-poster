@@ -195,16 +195,16 @@ export const usePostingQueue = ({
         formData.append('caption', caption);
         formData.append('prefixes', JSON.stringify(prefixes));
 
-        batch.forEach((item, index) => {
-          if (item.files && item.files.length > 0) {
-            item.files.forEach((file, fileIndex) => {
-              formData.append(`file_${index}_${fileIndex}`, file);
-            });
-            formData.append(`fileCount_${index}`, item.files.length.toString());
-          } else if (item.file) {
-            formData.append(`file_${index}`, item.file);
-          }
-        });
+        // Send shared files only once (not duplicated per item)
+        // All items in a batch share the same media files
+        const firstItemWithFiles = batch.find(item => item.files?.length || item.file);
+        if (firstItemWithFiles) {
+          const sharedFiles = firstItemWithFiles.files || (firstItemWithFiles.file ? [firstItemWithFiles.file] : []);
+          sharedFiles.forEach((file, fileIndex) => {
+            formData.append(`sharedFile_${fileIndex}`, file);
+          });
+          formData.append('sharedFileCount', sharedFiles.length.toString());
+        }
 
         res = await fetch('/api/queue', {
           method: 'POST',

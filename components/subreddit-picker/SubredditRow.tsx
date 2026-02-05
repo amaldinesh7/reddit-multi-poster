@@ -270,11 +270,16 @@ const SubredditRow = React.memo(({
   const showTagControls = isSelected && hasRequiredStrings;
 
   return (
-    <div className="border-b border-border last:border-b-0">
+    <div
+      className={`
+        rounded-lg border border-border/60 bg-card/50 overflow-hidden
+        ${(hasError || hasValidationErrors) ? 'border-red-500/40' : ''}
+      `}
+    >
       {/* Main Row */}
       <div
         className={`
-          flex items-center justify-between px-3 sm:px-4 py-3.5 sm:py-3 transition-colors cursor-pointer gap-2
+          flex items-center justify-between px-3 sm:px-4 py-4 sm:py-3.5 transition-colors cursor-pointer gap-2
           ${(hasError || hasValidationErrors) ? 'bg-red-500/10' : 'hover:bg-secondary/50 active:bg-secondary/80'}
           active:scale-[0.99] transition-transform duration-75
         `}
@@ -319,7 +324,7 @@ const SubredditRow = React.memo(({
             {!isLoading && isSelected && canExpand && (
               <button
                 onClick={handleExpandClick}
-                className="bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0"
+                className="bg-secondary/80 hover:bg-secondary text-foreground/70 hover:text-foreground rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0"
                 aria-label="Community rules"
                 title="Community rules"
               >
@@ -329,7 +334,7 @@ const SubredditRow = React.memo(({
 
             {/* Flair Required Badge - Subtler */}
             {!isLoading && isSelected && flairRequired && (
-              <Badge variant="secondary" className="h-4.5 px-1.5 text-[9px] uppercase font-bold tracking-wider text-muted-foreground bg-muted hover:bg-muted flex-shrink-0" title="This community requires a flair">
+              <Badge variant="secondary" className="h-4.5 px-1.5 text-[9px] uppercase font-bold tracking-wider text-foreground/70 bg-secondary/80 hover:bg-secondary flex-shrink-0" title="This community requires a flair">
                 Flair
               </Badge>
             )}
@@ -485,7 +490,13 @@ const SubredditRow = React.memo(({
 
       {/* Row 2: Controls (Flair/Tag Selection) - Only when selected */}
       {isSelected && (showTagControls || flairOptions.length > 0) && (
-        <div className={`flex items-center gap-2 px-3 sm:px-4 pb-3 pt-1 ${(hasError || hasValidationErrors) ? 'bg-red-500/10' : ''}`} onClick={handleControlsClick}>
+        <div
+          className={`
+            flex items-center gap-2 px-3 sm:px-4 pb-3 pt-3 border-t border-border/60
+            ${(hasError || hasValidationErrors) ? 'bg-red-500/10 border-red-500/30' : 'bg-secondary/20'}
+          `}
+          onClick={handleControlsClick}
+        >
             {/* Flair Dropdown - Only show when there are flair options */}
             {flairOptions.length > 0 && (
               <Select

@@ -474,6 +474,17 @@ const PostingQueue: React.FC<Props> = ({
   const cancelled = state.status === 'cancelled';
   const failed = state.status === 'failed';
 
+  // Auto-scroll and focus queue when posting starts
+  const queueRef = React.useRef<HTMLDivElement | null>(null);
+  const prevRunningRef = React.useRef<boolean>(false);
+  useEffect(() => {
+    if (!prevRunningRef.current && running) {
+      queueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      queueRef.current?.focus({ preventScroll: true });
+    }
+    prevRunningRef.current = running;
+  }, [running]);
+
   // Notify parent when results are available (for failed post tracking)
   const prevStatusRef = React.useRef<string | null>(null);
   React.useEffect(() => {
@@ -614,15 +625,22 @@ const PostingQueue: React.FC<Props> = ({
   const isRecoverable = error?.recoverable !== false;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" ref={queueRef} tabIndex={-1}>
       {/* Posting Queue Header - Visible when posting starts */}
       {(running || logs.length > 0) && (
-        <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-lg font-semibold">Ready to post</h3>
-          {items.length > 0 && (
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
-              {items.length}
-            </span>
+        <div className="flex flex-col gap-2 mb-2">
+          <div className="flex items-center gap-2">
+            <h3 className="text-base lg:text-lg font-semibold tracking-tight">Ready to post</h3>
+            {items.length > 0 && (
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
+                {items.length}
+              </span>
+            )}
+          </div>
+          {running && (
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Posting can take a few minutes. Please keep this tab open and wait.
+            </p>
           )}
         </div>
       )}
@@ -868,7 +886,7 @@ const PostingQueue: React.FC<Props> = ({
       )}
 
       {/* Spacer for Mobile Sticky Queue */}
-      <div className="min-h-[calc(2rem+env(safe-area-inset-bottom,0px))] lg:min-h-0 lg:h-0" aria-hidden="true" />
+      {/* <div className="min-h-[calc(2rem+env(safe-area-inset-bottom,0px))] lg:min-h-0 lg:h-0" aria-hidden="true" /> */}
 
       {/* Mobile Sticky Queue Footer */}
       <MobileStickyQueue

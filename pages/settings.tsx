@@ -300,7 +300,7 @@ export default function Settings() {
         <div className="min-h-viewport bg-background">
           {/* Header */}
           <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
-            <div className="container mx-auto px-4 sm:px-6">
+            <div className="app-container">
               <div className="flex h-14 items-center gap-4">
                 <Button
                   variant="ghost"
@@ -340,7 +340,7 @@ export default function Settings() {
           </header>
 
           {/* Main Content */}
-          <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-3xl safe-bottom">
+          <main className="app-container py-4 sm:py-6 max-w-3xl safe-bottom">
             <div className="space-y-6">
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-3">

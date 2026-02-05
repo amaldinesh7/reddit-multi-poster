@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { ChevronDown, User, Settings, LogOut, Shield, Sun, Moon, Monitor, Infinity, TrendingUp, Clock, Users } from 'lucide-react';
+import { ChevronDown, User, Settings, LogOut, Shield, Sun, Moon, Monitor, Infinity } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { Theme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
-import { Tooltip } from '@/components/ui/tooltip';
 
 interface UserStats {
   totalKarma?: number;
@@ -25,29 +24,6 @@ interface AppHeaderProps {
   upgradeLoading?: boolean;
   userStats?: UserStats;
 }
-
-/**
- * Get eligibility status based on user stats
- */
-const getEligibilityStatus = (stats: UserStats): 'good' | 'warning' | 'error' => {
-  const karma = stats.totalKarma ?? 0;
-  const accountAge = stats.accountAgeDays ?? 0;
-  const emailVerified = stats.hasVerifiedEmail ?? false;
-  
-  const issues: string[] = [];
-  
-  if (karma < 10) issues.push('very low karma');
-  else if (karma < 100) issues.push('low karma');
-  
-  if (accountAge < 3) issues.push('very new account');
-  else if (accountAge < 7) issues.push('new account');
-  
-  if (!emailVerified) issues.push('email not verified');
-  
-  if (issues.length >= 2 || karma < 10 || accountAge < 3) return 'error';
-  if (issues.length >= 1) return 'warning';
-  return 'good';
-};
 
 /**
  * Custom hook for mobile scroll-aware header behavior
@@ -113,7 +89,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   entitlement,
   onUpgrade,
   upgradeLoading = false,
-  userStats,
+  userStats: _userStats,
 }) => {
   const { theme, setTheme } = useTheme();
   const { isVisible, isAtTop } = useScrollDirection();
@@ -130,19 +106,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     setTheme(next);
   };
   
-  // Calculate eligibility status for the status orb
-  const eligibilityStatus = userStats ? getEligibilityStatus(userStats) : 'good';
-  const statusColors = {
-    good: 'bg-emerald-500',
-    warning: 'bg-amber-500',
-    error: 'bg-red-500',
-  };
-  const statusLabels = {
-    good: 'Ready to post',
-    warning: 'Some restrictions may apply',
-    error: 'Posting may be restricted',
-  };
-
   const handleThemeSelect = (next: Theme) => () => setTheme(next);
 
   const handleViewProfile = () => {
@@ -173,10 +136,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         !isVisible && "-translate-y-full"
       )}
     >
-      <div className="container mx-auto px-3 sm:px-4">
-        <div className="grid h-14 min-h-[44px] grid-cols-[1fr_auto_1fr] items-center gap-2">
+      <div className="app-container">
+        <div className="flex h-14 min-h-[44px] items-center gap-2">
           {/* Logo */}
-          <div className="flex min-w-0 shrink-0 items-center gap-2.5 justify-self-start">
+          <div className="flex min-w-0 shrink-0 items-center gap-2.5">
             <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg flex items-center justify-center">
               <img 
                 src="/logo.png" 
@@ -196,51 +159,34 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             )}
           </div>
 
-          {/* Desktop: User Stats - Karma & Account Age */}
-          {userStats && (
-            <Tooltip
-              content={
-                <div className="text-xs space-y-1 p-1">
-                  <p className="font-medium">{statusLabels[eligibilityStatus]}</p>
-                  <p>Karma: {(userStats.totalKarma ?? 0).toLocaleString()}</p>
-                  <p>Followers: {(userStats.followers ?? 0).toLocaleString()}</p>
-                  <p>Account: {userStats.accountAgeLabel || 'Unknown'} old</p>
-                  <p>Email: {userStats.hasVerifiedEmail ? 'Verified' : 'Not verified'}</p>
-                </div>
-              }
-              side="bottom"
-            >
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/50 border border-border/50 cursor-help transition-colors hover:bg-secondary justify-self-center">
-                {/* Status orb */}
-                <div className={cn(
-                  "w-2 h-2 rounded-full shrink-0",
-                  statusColors[eligibilityStatus],
-                  eligibilityStatus === 'good' && "animate-eligibility-pulse",
-                  eligibilityStatus === 'warning' && "animate-eligibility-pulse-warning",
-                  eligibilityStatus === 'error' && "animate-eligibility-pulse-blocked"
-                )} />
-                {/* Karma */}
-                <div className="flex items-center gap-1 text-sm">
-                  <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="font-medium">{(userStats.totalKarma ?? 0).toLocaleString()}</span>
-                </div>
-                <span className="text-muted-foreground/40">·</span>
-                {/* Followers */}
-                <div className="flex items-center gap-1 text-sm">
-                  <Users className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="font-medium">{(userStats.followers ?? 0).toLocaleString()}</span>
-                </div>
-                <span className="text-muted-foreground/40">·</span>
-                {/* Account Age */}
-                <div className="flex items-center gap-1 text-sm">
-                  <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="font-medium">{userStats.accountAgeLabel || 'Unknown'}</span>
-                </div>
-              </div>
-            </Tooltip>
-          )}
+          {/* Desktop: User Stats removed (now shown in sub-header banner) */}
 
-          <div className="flex min-w-0 shrink items-center gap-2 sm:gap-3 justify-self-end">
+          <div className="flex min-w-0 shrink items-center gap-2 sm:gap-3 ml-auto">
+            
+
+            {showUpgrade && (
+              <button
+                type="button"
+                onClick={onUpgrade}
+                disabled={upgradeLoading}
+                className={cn(
+                  "shrink-0 flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                  "rounded-md px-3.5 py-1.5 font-semibold",
+                  "text-white border border-violet-700/40",
+                  "bg-violet-800/90",
+                  "transition-all duration-200",
+                  "hover:bg-violet-800",
+                  "animate-subtle-glow",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                )}
+                aria-label="Go Unlimited"
+              >
+                <Infinity className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">{upgradeLoading ? 'Opening checkout…' : 'Go Unlimited'}</span>
+                <span className="sm:hidden">{upgradeLoading ? '…' : 'Go Unlimited'}</span>
+              </button>
+            )}
             {/* Mobile-only: Theme cycle button */}
             <button
               type="button"
@@ -254,28 +200,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             >
               <ThemeIcon className="w-[18px] h-[18px] text-muted-foreground" aria-hidden="true" />
             </button>
-
-            {showUpgrade && (
-              <button
-                type="button"
-                onClick={onUpgrade}
-                disabled={upgradeLoading}
-                className={cn(
-                  "shrink-0 flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
-                  "rounded-md px-3 py-2 font-semibold",
-                  "bg-violet-600 text-white",
-                  "transition-colors duration-200",
-                  "hover:bg-violet-500",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                )}
-                aria-label="Go Unlimited"
-              >
-                <Infinity className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">{upgradeLoading ? 'Opening checkout…' : 'Go Unlimited'}</span>
-                <span className="sm:hidden">{upgradeLoading ? '…' : 'Go Unlimited'}</span>
-              </button>
-            )}
             {/* Desktop-only: User dropdown (profile/settings/theme/logout moved to bottom nav on mobile) */}
             <div className="hidden md:flex">
             <DropdownMenu

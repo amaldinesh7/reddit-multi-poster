@@ -36,8 +36,21 @@ export interface QueueJobItem {
 /**
  * File reference stored in queue_jobs.file_paths JSONB.
  * Points to a file in Supabase Storage.
+ * 
+ * Storage path format: {username}/{date}/job_{shortId}/{prefix}_{fileIndex}_{fileName}
+ * 
+ * @property itemIndex - Index of the item this file belongs to, or -1 for shared files.
+ *                       Shared files (itemIndex = -1) are used by all items in the job.
+ *                       This avoids uploading the same media multiple times when posting
+ *                       to multiple subreddits.
+ * @property fileIndex - Index of the file within the item (for galleries) or shared files.
+ * @property storagePath - Full path in Supabase Storage bucket.
+ * @property originalName - Original filename uploaded by the user.
+ * @property mimeType - MIME type of the file.
+ * @property size - File size in bytes.
  */
 export interface QueueFileReference {
+  /** Item index this file belongs to, or -1 for shared files used by all items */
   itemIndex: number;
   fileIndex: number;
   storagePath: string;

@@ -211,7 +211,7 @@ export default function AdminPanel() {
       <div className="min-h-viewport bg-background">
         {/* Command Center Header */}
         <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
-          <div className="container mx-auto px-4 sm:px-6">
+          <div className="app-container">
             <div className="flex h-16 items-center gap-4">
               {/* Back Button */}
               <Button
@@ -270,7 +270,7 @@ export default function AdminPanel() {
         </header>
 
         {/* Main Content */}
-        <main className="container mx-auto px-4 sm:px-6 py-6 max-w-6xl">
+        <main className="app-container py-6 max-w-6xl">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             {/* Tab Navigation */}
             <div className="mb-6 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">

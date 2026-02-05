@@ -230,8 +230,14 @@ const QUEUE_FILES_BUCKET = 'queue-files';
 
 /**
  * Upload a file to Supabase Storage for queue processing.
- * @param jobId - The queue job ID
- * @param itemIndex - Index of the item in the queue
+ * 
+ * Folder structure: {username}/{date}/job_{shortId}/
+ * File naming:
+ *   - Shared files (itemIndex = -1): shared_{fileIndex}_{fileName}
+ *   - Item-specific files: item_{itemIndex}_{fileIndex}_{fileName}
+ * 
+ * @param jobFolder - The job folder path (format: username/date/job_shortId)
+ * @param itemIndex - Index of the item in the queue, or -1 for shared files
  * @param fileIndex - Index of the file within the item (for galleries)
  * @param file - The file buffer to upload
  * @param fileName - Original file name
@@ -239,7 +245,7 @@ const QUEUE_FILES_BUCKET = 'queue-files';
  * @returns The storage path of the uploaded file
  */
 export async function uploadQueueFile(
-  jobId: string,
+  jobFolder: string,
   itemIndex: number,
   fileIndex: number,
   file: Buffer,
@@ -247,7 +253,10 @@ export async function uploadQueueFile(
   mimeType: string
 ): Promise<string> {
   const client = createServerSupabaseClient();
-  const storagePath = `${jobId}/${itemIndex}_${fileIndex}_${fileName}`;
+  
+  // Use 'shared' prefix for shared files (itemIndex = -1), otherwise 'item_{index}'
+  const prefix = itemIndex === -1 ? 'shared' : `item_${itemIndex}`;
+  const storagePath = `${jobFolder}/${prefix}_${fileIndex}_${fileName}`;
   
   const { error } = await client.storage
     .from(QUEUE_FILES_BUCKET)

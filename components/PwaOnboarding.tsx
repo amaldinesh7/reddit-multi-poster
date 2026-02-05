@@ -510,7 +510,7 @@ export const PwaOnboarding: React.FC<PwaOnboardingProps> = ({ hasQueueItems = fa
           role="region"
           aria-label="Add to home screen"
         >
-          <div className="container mx-auto flex items-center justify-between px-4 py-2.5">
+          <div className="app-container flex items-center justify-between py-2.5">
             <div className="flex items-center gap-3">
               <div className="relative">
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center shadow-sm animate-pwa-icon-pulse">

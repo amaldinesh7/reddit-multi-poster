@@ -15,6 +15,9 @@ export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props)
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = React.useState<string[]>([]);
   const [rejectionError, setRejectionError] = React.useState<string | null>(null);
+  const previewUrlsRef = React.useRef<string[]>([]);
+  const onFileRef = React.useRef(onFile);
+  const onUrlRef = React.useRef(onUrl);
 
   const handleDropRejected = React.useCallback((fileRejections: FileRejection[]) => {
     const errors: string[] = [];
@@ -89,11 +92,20 @@ export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props)
   const clearMedia = React.useCallback(() => {
     setSelectedFiles([]);
     setMediaUrl('');
-    onFile([]);
-    onUrl('');
-    previewUrls.forEach(url => URL.revokeObjectURL(url));
+    onFileRef.current([]);
+    onUrlRef.current('');
+    previewUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
     setPreviewUrls([]);
-  }, [onFile, onUrl, previewUrls]);
+  }, []);
+
+  React.useEffect(() => {
+    previewUrlsRef.current = previewUrls;
+  }, [previewUrls]);
+
+  React.useEffect(() => {
+    onFileRef.current = onFile;
+    onUrlRef.current = onUrl;
+  }, [onFile, onUrl]);
 
   React.useEffect(() => {
     return () => {
@@ -104,7 +116,7 @@ export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props)
   React.useEffect(() => {
     if (resetSignal === undefined) return;
     clearMedia();
-  }, [resetSignal, clearMedia]);
+  }, [resetSignal]);
 
   return (
     <div>

@@ -48,7 +48,8 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
 
   const benefits = [
     'Unlimited communities',
-    'Post to as many as you want at once',
+    'Post to as many communities as you want at once',
+    'Custom title & description for each community',
     'No limits',
     'Pay once',
   ];

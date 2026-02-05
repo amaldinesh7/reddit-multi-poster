@@ -360,7 +360,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
                 Your communities
               </div>
-              <div className="rounded-md border border-border overflow-hidden">
+              <div className="space-y-2">
                 {localFilteredSubreddits.map((name) => {
                   const hasError = !!(showValidationErrors && hasMissingFlair(name));
                   const failedPost = failedPostsBySubreddit[name.toLowerCase()];
