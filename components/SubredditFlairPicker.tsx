@@ -339,37 +339,6 @@ const SubredditFlairPicker: React.FC<Props> = ({
           </div>
         )}
 
-        <div className="flex items-center justify-between min-h-[1.5rem]">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground/80 tabular-nums">
-              {selected.length} {selected.length === 1 ? 'community' : 'communities'} selected
-            </span>
-            {selected.length > 0 && (
-              <Tooltip content="Sync flair & rules from Reddit" side="bottom">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleReload}
-                  disabled={isReloading}
-                  className="h-6 w-6 p-0 rounded-md cursor-pointer hover:bg-secondary"
-                  aria-label="Refresh flairs"
-                >
-                  <RefreshCw className={`h-3 w-3 ${isReloading ? 'animate-spin' : ''}`} />
-                </Button>
-              </Tooltip>
-            )}
-          </div>
-
-          {selected.length > 0 && (
-            <button
-              onClick={() => onSelectedChange([])}
-              className="text-xs font-medium text-red-500/80 hover:text-red-500 transition-colors cursor-pointer active:scale-95"
-              aria-label="Clear all chosen communities"
-            >
-              Clear all
-            </button>
-          )}
-        </div>
       </div>
 
       {/* Content */}

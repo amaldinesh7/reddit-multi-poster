@@ -16,15 +16,15 @@ import { CustomizePostDialog, PerSubredditOverride } from '../components/subredd
 import { AppLoader } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { AppHeader } from '@/components/layout';
+import { AppHeader, MobileUserStatsBanner, AppFooter } from '@/components/layout';
 import { useHomePageState } from '@/hooks/useHomePageState';
 import { useFailedPosts, FailedPost } from '@/hooks/useFailedPosts';
 import { useSubredditFlairData } from '@/hooks/useSubredditFlairData';
 import { useQueueJob } from '@/hooks/useQueueJob';
 import { captureClientError, addActionBreadcrumb } from '@/lib/clientErrorHandler';
 import type { ValidationIssue } from '@/lib/preflightValidation';
-import { UserEligibilityIndicator } from '@/components/UserEligibilityIndicator';
 import type { RedditUser } from '@/utils/reddit';
+import { cn } from '@/lib/utils';
 
 interface PlanLimits {
   maxSubreddits: number;
@@ -317,6 +317,39 @@ export default function Home() {
     router.push('/checkout');
   }, [router]);
 
+  // Calculate user stats for header display
+  const userStats = React.useMemo(() => {
+    if (!auth.me) return undefined;
+    
+    const createdUtc = auth.me.created_utc;
+    let accountAgeDays = 0;
+    let accountAgeLabel = 'Unknown';
+    
+    if (createdUtc) {
+      const now = Date.now() / 1000;
+      const ageSeconds = now - createdUtc;
+      accountAgeDays = Math.floor(ageSeconds / (60 * 60 * 24));
+      
+      if (accountAgeDays < 1) accountAgeLabel = 'Today';
+      else if (accountAgeDays === 1) accountAgeLabel = '1 day';
+      else if (accountAgeDays < 30) accountAgeLabel = `${accountAgeDays} days`;
+      else if (accountAgeDays < 365) {
+        const months = Math.floor(accountAgeDays / 30);
+        accountAgeLabel = `${months} month${months !== 1 ? 's' : ''}`;
+      } else {
+        const years = Math.floor(accountAgeDays / 365);
+        accountAgeLabel = `${years} year${years !== 1 ? 's' : ''}`;
+      }
+    }
+    
+    return {
+      totalKarma: auth.me.total_karma ?? 0,
+      accountAgeDays,
+      accountAgeLabel,
+      hasVerifiedEmail: auth.me.has_verified_email ?? false,
+    };
+  }, [auth.me]);
+
   // Wrapper for post attempt that checks free user limit
   const handlePostWithLimitCheck = React.useCallback(() => {
     const maxPostItems = auth.limits?.maxPostItems ?? 5;
@@ -366,7 +399,7 @@ export default function Home() {
       {loading ? (
         <AppLoader />
       ) : (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background flex flex-col noise-texture noise-subtle">
           {/* Header */}
           <AppHeader
             userName={auth.me?.name}
@@ -379,274 +412,168 @@ export default function Home() {
               setShowUpgradeModal(true);
             }}
             upgradeLoading={upgradeLoading}
+            userStats={userStats}
           />
+
+          {/* Mobile: User Stats Banner (hides on scroll) */}
+          <MobileUserStatsBanner userStats={userStats} />
 
           <PwaOnboarding hasQueueItems={items.length > 0} />
 
-          {/* Main Content */}
-          <main className="container mx-auto px-4 sm:px-6 py-4 lg:py-6 max-w-2xl lg:max-w-7xl">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-x-6 items-start">
+            <main className="flex-1 container mx-auto px-4 sm:px-6 py-4 lg:py-8 max-w-2xl lg:max-w-7xl safe-bottom">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-start">
 
               {/* Left Column: Create Post */}
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Your post</h2>
+              <div className="space-y-6 lg:space-y-8">
+                {/* Section Header - Desktop only */}
+                <h2 className="text-xl font-semibold tracking-tight hidden lg:block">Your post</h2>
 
-                {/* Media Section */}
-                <section>
-                  {/* Desktop: Card wrapper */}
-                  <div className="hidden lg:block rounded-lg border border-border bg-card p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold">Image or video</h3>
-                      <div className="inline-flex items-center rounded-lg border border-border bg-card p-1 text-muted-foreground">
-                        <button
-                          onClick={() => setMediaMode('file')}
-                          className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${mediaMode === 'file'
-                            ? 'bg-secondary text-foreground shadow-sm'
-                            : 'hover:bg-muted/50'
-                            }`}
-                          aria-pressed={mediaMode === 'file'}
-                        >
-                          Upload
-                        </button>
-                        <button
-                          onClick={() => setMediaMode('url')}
-                          className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${mediaMode === 'url'
-                            ? 'bg-secondary text-foreground shadow-sm'
-                            : 'hover:bg-muted/50'
-                            }`}
-                          aria-pressed={mediaMode === 'url'}
-                        >
-                          URL
-                        </button>
-                      </div>
+                {/* Media Section - No card wrapper, flowing layout */}
+                <section className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base lg:text-lg font-semibold tracking-tight">Media</h3>
+                    <div className="inline-flex items-center rounded-md bg-secondary/50 p-1 text-muted-foreground">
+                      <button
+                        onClick={() => setMediaMode('file')}
+                        className={cn(
+                          "inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1.5 text-sm font-medium transition-colors",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                          mediaMode === 'file'
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'hover:bg-background/50 hover:text-foreground'
+                        )}
+                        aria-pressed={mediaMode === 'file'}
+                      >
+                        Upload
+                      </button>
+                      <button
+                        onClick={() => setMediaMode('url')}
+                        className={cn(
+                          "inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1.5 text-sm font-medium transition-colors",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                          mediaMode === 'url'
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'hover:bg-background/50 hover:text-foreground'
+                        )}
+                        aria-pressed={mediaMode === 'url'}
+                      >
+                        URL
+                      </button>
                     </div>
-                    <MediaUpload onUrl={setMediaUrl} onFile={setMediaFiles} mode={mediaMode} />
                   </div>
-
-                  {/* Mobile: No card wrapper */}
-                  <div className="lg:hidden">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-base font-semibold">Image or video</h3>
-                      <div className="inline-flex items-center rounded-lg border border-border bg-card p-1 text-muted-foreground">
-                        <button
-                          onClick={() => setMediaMode('file')}
-                          className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${mediaMode === 'file'
-                            ? 'bg-secondary text-foreground shadow-sm'
-                            : 'hover:bg-muted/50'
-                            }`}
-                          aria-pressed={mediaMode === 'file'}
-                        >
-                          Upload
-                        </button>
-                        <button
-                          onClick={() => setMediaMode('url')}
-                          className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${mediaMode === 'url'
-                            ? 'bg-secondary text-foreground shadow-sm'
-                            : 'hover:bg-muted/50'
-                            }`}
-                          aria-pressed={mediaMode === 'url'}
-                        >
-                          URL
-                        </button>
-                      </div>
-                    </div>
-                    <MediaUpload onUrl={setMediaUrl} onFile={setMediaFiles} mode={mediaMode} />
-                  </div>
+                  <MediaUpload onUrl={setMediaUrl} onFile={setMediaFiles} mode={mediaMode} />
                 </section>
 
-                {/* Title Section */}
-                <section>
-                  {/* Desktop: Card wrapper */}
-                  <div className="hidden lg:block rounded-lg border border-border bg-card p-6">
-                    <h3 className="text-lg font-semibold mb-4">Title</h3>
-                    <PostComposer
-                      value={caption}
-                      onChange={setCaption}
-                      body={body}
-                      onBodyChange={setBody}
-                      prefixes={prefixes}
-                      onPrefixesChange={setPrefixes}
-                    />
-                  </div>
-
-                  {/* Mobile: No card wrapper */}
-                  <div className="lg:hidden">
-                    <h3 className="text-base font-semibold mb-3">Title</h3>
-                    <PostComposer
-                      value={caption}
-                      onChange={setCaption}
-                      body={body}
-                      onBodyChange={setBody}
-                      prefixes={prefixes}
-                      onPrefixesChange={setPrefixes}
-                    />
-                  </div>
+                {/* Title Section - No card wrapper, flowing layout */}
+                <section className="space-y-4">
+                  <h3 className="text-base lg:text-lg font-semibold tracking-tight">Title & Body</h3>
+                  <PostComposer
+                    value={caption}
+                    onChange={setCaption}
+                    body={body}
+                    onBodyChange={setBody}
+                    prefixes={prefixes}
+                    onPrefixesChange={setPrefixes}
+                  />
                 </section>
               </div>
 
               {/* Right Column: Communities & Queue */}
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Where to post</h2>
-
-                {/* User Eligibility Indicator */}
-                {auth.authenticated && auth.me && (
-                  <UserEligibilityIndicator user={auth.me} className="mb-2" />
-                )}
+              <div className="space-y-6 lg:space-y-8">
+                {/* Section Header - Desktop only */}
+                <h2 className="text-xl font-semibold tracking-tight hidden lg:block">Where to post</h2>
 
                 {/* Communities Section */}
-                <section>
-                  {/* Desktop: Card wrapper */}
-                  <div className="hidden lg:block rounded-lg border border-border bg-card p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold">Communities</h3>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push('/settings')}
-                        className="h-8 px-2 text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground"
-                        aria-label="Manage communities and flairs"
-                      >
-                        <Settings className="w-3.5 h-3.5 mr-1.5" />
-                        Manage list
-                      </Button>
-                    </div>
-                    <div className="space-y-4">
-                      <SubredditFlairPicker
-                        selected={selectedSubs}
-                        onSelectedChange={setSelectedSubs}
-                        flairValue={flairs}
-                        onFlairChange={setFlairs}
-                        titleSuffixValue={titleSuffixes}
-                        onTitleSuffixChange={setTitleSuffixes}
-                        onValidationChange={handleValidationChange}
-                        showValidationErrors={showValidationErrors}
-                        temporarySelectionEnabled={auth.limits?.temporarySelectionEnabled ?? true}
-                        failedPosts={failedPostsHook.state.posts}
-                        onRetryPost={handleRetryPost}
-                        onEditPost={handleEditPost}
-                        onRemovePost={handleRemovePost}
-                        validationIssuesBySubreddit={validationIssuesBySubreddit}
-                        contentOverrides={contentOverrides}
-                        onCustomize={handleCustomize}
-                        customizationEnabled={auth.entitlement === 'paid'}
-                        userData={auth.me}
-                      />
-
-                      {/* Post to Profile */}
-                      {auth.authenticated && auth.me?.name && (
-                        <div className="flex items-center gap-2 pt-3 border-t border-border">
-                          <Checkbox
-                            id="post-to-profile-desktop"
-                            checked={postToProfile}
-                            onCheckedChange={(checked) => setPostToProfile(checked === true)}
-                          />
-                          <label
-                            htmlFor="post-to-profile-desktop"
-                            className="text-sm cursor-pointer select-none font-medium text-foreground"
-                          >
-                            Post to profile <span className="text-muted-foreground/50 text-xs font-normal ml-1">(u/{auth.me.name})</span>
-                          </label>
-                        </div>
-                      )}
-                    </div>
+                <section 
+                  className={cn(
+                    "space-y-4",
+                    "lg:rounded-lg lg:border lg:border-border/50 lg:p-6 lg:bg-card/50"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base lg:text-lg font-semibold tracking-tight">Communities</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => router.push('/settings')}
+                      className="h-9 px-3 text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground rounded-md transition-colors hover:bg-secondary"
+                      aria-label="Manage communities and flairs"
+                    >
+                      <Settings className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" />
+                      Manage
+                    </Button>
                   </div>
+                  
+                  <SubredditFlairPicker
+                    selected={selectedSubs}
+                    onSelectedChange={setSelectedSubs}
+                    flairValue={flairs}
+                    onFlairChange={setFlairs}
+                    titleSuffixValue={titleSuffixes}
+                    onTitleSuffixChange={setTitleSuffixes}
+                    onValidationChange={handleValidationChange}
+                    showValidationErrors={showValidationErrors}
+                    temporarySelectionEnabled={auth.limits?.temporarySelectionEnabled ?? true}
+                    failedPosts={failedPostsHook.state.posts}
+                    onRetryPost={handleRetryPost}
+                    onEditPost={handleEditPost}
+                    onRemovePost={handleRemovePost}
+                    validationIssuesBySubreddit={validationIssuesBySubreddit}
+                    contentOverrides={contentOverrides}
+                    onCustomize={handleCustomize}
+                    customizationEnabled={auth.entitlement === 'paid'}
+                    userData={auth.me}
+                  />
 
-                  {/* Mobile: No card wrapper */}
-                  <div className="lg:hidden">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-base font-semibold">Communities</h3>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push('/settings')}
-                        className="h-8 px-2 text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground"
-                        aria-label="Manage communities and flairs"
-                      >
-                        <Settings className="w-3.5 h-3.5 mr-1.5" />
-                        Manage list
-                      </Button>
-                    </div>
-                    <div className="space-y-4">
-                      <SubredditFlairPicker
-                        selected={selectedSubs}
-                        onSelectedChange={setSelectedSubs}
-                        flairValue={flairs}
-                        onFlairChange={setFlairs}
-                        titleSuffixValue={titleSuffixes}
-                        onTitleSuffixChange={setTitleSuffixes}
-                        onValidationChange={handleValidationChange}
-                        showValidationErrors={showValidationErrors}
-                        temporarySelectionEnabled={auth.limits?.temporarySelectionEnabled ?? true}
-                        failedPosts={failedPostsHook.state.posts}
-                        onRetryPost={handleRetryPost}
-                        onEditPost={handleEditPost}
-                        onRemovePost={handleRemovePost}
-                        validationIssuesBySubreddit={validationIssuesBySubreddit}
-                        contentOverrides={contentOverrides}
-                        onCustomize={handleCustomize}
-                        customizationEnabled={auth.entitlement === 'paid'}
-                        userData={auth.me}
+                  {/* Post to Profile - Soft divider */}
+                  {auth.authenticated && auth.me?.name && (
+                    <div className="flex items-center gap-3 pt-4 border-t border-border/50">
+                      <Checkbox
+                        id="post-to-profile"
+                        checked={postToProfile}
+                        onCheckedChange={(checked) => setPostToProfile(checked === true)}
+                        className="rounded-md"
                       />
-
-                      {/* Post to Profile */}
-                      {auth.authenticated && auth.me?.name && (
-                        <div className="flex items-center gap-2 pt-3 border-t border-border">
-                          <Checkbox
-                            id="post-to-profile-mobile"
-                            checked={postToProfile}
-                            onCheckedChange={(checked) => setPostToProfile(checked === true)}
-                          />
-                          <label
-                            htmlFor="post-to-profile-mobile"
-                            className="text-sm cursor-pointer select-none font-medium text-foreground"
-                          >
-                            Post to profile <span className="text-muted-foreground/50 text-xs font-normal ml-1">(u/{auth.me.name})</span>
-                          </label>
-                        </div>
-                      )}
+                      <label
+                        htmlFor="post-to-profile"
+                        className="text-sm cursor-pointer select-none font-medium text-foreground"
+                      >
+                        Post to profile 
+                        <span className="text-muted-foreground text-xs font-normal ml-1.5">
+                          (u/{auth.me.name})
+                        </span>
+                      </label>
                     </div>
-                  </div>
+                  )}
                 </section>
 
                 {/* Queue Section */}
-                <section>
-                  {/* Desktop: Card wrapper */}
-                  <div className="hidden lg:block rounded-lg border border-border bg-card p-6">
-
-                    <PostingQueue
-                      items={items}
-                      caption={caption}
-                      body={body}
-                      prefixes={prefixes}
-                      hasFlairErrors={hasFlairErrors}
-                      onPostAttempt={handlePostWithLimitCheck}
-                      onUnselectSuccessItems={handleUnselectSuccessItems}
-                      onClearAll={clearAllState}
-                      onResultsAvailable={handleResultsAvailable}
-                      onValidationChange={handleQueueValidationChange}
-                    />
-                  </div>
-
-                  {/* Mobile: No card wrapper */}
-                  <div className="lg:hidden">
-
-                    <PostingQueue
-                      items={items}
-                      caption={caption}
-                      body={body}
-                      prefixes={prefixes}
-                      hasFlairErrors={hasFlairErrors}
-                      onPostAttempt={handlePostWithLimitCheck}
-                      onUnselectSuccessItems={handleUnselectSuccessItems}
-                      onClearAll={clearAllState}
-                      onResultsAvailable={handleResultsAvailable}
-                      onValidationChange={handleQueueValidationChange}
-                    />
-                  </div>
+                <section 
+                  className={cn(
+                    "lg:sticky lg:top-20",
+                    "lg:rounded-lg lg:border lg:border-border/50 lg:p-6 lg:bg-card/50",
+                    "pt-6 lg:pt-0 border-t border-border/50 lg:border-t-0"
+                  )}
+                >
+                  <PostingQueue
+                    items={items}
+                    caption={caption}
+                    body={body}
+                    prefixes={prefixes}
+                    hasFlairErrors={hasFlairErrors}
+                    onPostAttempt={handlePostWithLimitCheck}
+                    onUnselectSuccessItems={handleUnselectSuccessItems}
+                    onClearAll={clearAllState}
+                    onResultsAvailable={handleResultsAvailable}
+                    onValidationChange={handleQueueValidationChange}
+                  />
                 </section>
               </div>
             </div>
           </main>
+
+          {/* Footer */}
+          <AppFooter />
         </div>
       )}
 

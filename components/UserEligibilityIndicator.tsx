@@ -62,15 +62,6 @@ const getAccountAge = (createdUtc?: number): { days: number; label: string } => 
 };
 
 /**
- * Formats karma number with abbreviation
- */
-const formatKarma = (karma: number): string => {
-  if (karma >= 1000000) return `${(karma / 1000000).toFixed(1)}M`;
-  if (karma >= 1000) return `${(karma / 1000).toFixed(1)}K`;
-  return karma.toString();
-};
-
-/**
  * Determines the overall eligibility status based on user data
  */
 const getOverallStatus = (user: RedditUser): 'good' | 'warning' | 'error' => {
@@ -179,67 +170,48 @@ export const UserEligibilityIndicator = ({
       <div className={`flex items-center gap-2 ${className}`}>
         <StatusOrb />
         <span className="text-xs text-muted-foreground font-mono-admin">
-          {formatKarma(totalKarma)} karma
+          {totalKarma.toLocaleString()} karma
         </span>
       </div>
     );
   }
 
-  // Full version
+  // Full version - simplified single line
+  const statusTooltip = overallStatus === 'good' 
+    ? 'Ready to post' 
+    : overallStatus === 'warning'
+      ? 'Some restrictions may apply'
+      : 'Posting may be restricted';
+
   return (
-    <div className={`flex items-center gap-4 px-3 py-2 rounded-lg bg-card/50 border border-border/50 ${className}`}>
-      {/* Status Orb */}
-      <StatusOrb />
-      
-      {/* Stats Row */}
-      <div className="flex items-center gap-4 flex-wrap">
-        <StatItem
-          icon={<TrendingUp className="w-3.5 h-3.5" />}
-          label="Karma"
-          value={formatKarma(totalKarma)}
-          status={karmaStatus}
-          tooltip={
-            karmaStatus !== 'good'
-              ? `Low karma (${totalKarma}) - some subreddits require higher karma to post`
-              : `Total karma: ${totalKarma.toLocaleString()}`
-          }
-        />
-        
-        <StatItem
-          icon={<Clock className="w-3.5 h-3.5" />}
-          label="Account"
-          value={accountAge.label}
-          status={ageStatus}
-          tooltip={
-            ageStatus !== 'good'
-              ? `New account (${accountAge.days} days) - some subreddits require older accounts`
-              : `Account age: ${accountAge.days} days`
-          }
-        />
-        
-        <StatItem
-          icon={<Mail className="w-3.5 h-3.5" />}
-          label="Email"
-          value={emailVerified ? 'Verified' : 'Not verified'}
-          status={emailStatus}
-          tooltip={
-            !emailVerified
-              ? 'Some subreddits require email verification to post'
-              : 'Email verified - good standing'
-          }
-        />
-        
-        {user.is_gold && (
-          <StatItem
-            icon={<Star className="w-3.5 h-3.5 text-amber-400" />}
-            label=""
-            value="Premium"
-            status="good"
-            tooltip="Reddit Premium member"
-          />
+    <Tooltip 
+      content={
+        <div className="text-xs space-y-1">
+          <p className="font-medium">{statusTooltip}</p>
+          <p>Karma: {totalKarma.toLocaleString()}</p>
+          <p>Account: {accountAge.label} old</p>
+          <p>Email: {emailVerified ? 'Verified' : 'Not verified'}</p>
+        </div>
+      } 
+      side="bottom"
+    >
+      <div className={`flex items-center gap-2 cursor-help ${className}`}>
+        <StatusOrb />
+        <span className="text-xs text-muted-foreground">
+          {totalKarma.toLocaleString()} karma
+        </span>
+        <span className="text-xs text-muted-foreground/50">·</span>
+        <span className="text-xs text-muted-foreground">
+          {accountAge.label}
+        </span>
+        {!emailVerified && (
+          <>
+            <span className="text-xs text-muted-foreground/50">·</span>
+            <span className="text-xs text-amber-500">Unverified</span>
+          </>
         )}
       </div>
-    </div>
+    </Tooltip>
   );
 };
 
