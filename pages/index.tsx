@@ -23,6 +23,8 @@ import { useSubredditFlairData } from '@/hooks/useSubredditFlairData';
 import { useQueueJob } from '@/hooks/useQueueJob';
 import { captureClientError, addActionBreadcrumb } from '@/lib/clientErrorHandler';
 import type { ValidationIssue } from '@/lib/preflightValidation';
+import { UserEligibilityIndicator } from '@/components/UserEligibilityIndicator';
+import type { RedditUser } from '@/utils/reddit';
 
 interface PlanLimits {
   maxSubreddits: number;
@@ -32,7 +34,7 @@ interface PlanLimits {
 
 interface MeResponse {
   authenticated: boolean;
-  me?: { name: string; icon_img?: string; id?: string };
+  me?: RedditUser;
   subs?: string[];
   userId?: string;
   entitlement?: 'free' | 'paid';
@@ -379,7 +381,7 @@ export default function Home() {
             upgradeLoading={upgradeLoading}
           />
 
-          <PwaOnboarding />
+          <PwaOnboarding hasQueueItems={items.length > 0} />
 
           {/* Main Content */}
           <main className="container mx-auto px-4 sm:px-6 py-4 lg:py-6 max-w-2xl lg:max-w-7xl">
@@ -486,6 +488,11 @@ export default function Home() {
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold hidden lg:block lg:mb-2">Where to post</h2>
 
+                {/* User Eligibility Indicator */}
+                {auth.authenticated && auth.me && (
+                  <UserEligibilityIndicator user={auth.me} className="mb-2" />
+                )}
+
                 {/* Communities Section */}
                 <section>
                   {/* Desktop: Card wrapper */}
@@ -522,6 +529,7 @@ export default function Home() {
                         contentOverrides={contentOverrides}
                         onCustomize={handleCustomize}
                         customizationEnabled={auth.entitlement === 'paid'}
+                        userData={auth.me}
                       />
 
                       {/* Post to Profile */}
@@ -577,6 +585,7 @@ export default function Home() {
                         contentOverrides={contentOverrides}
                         onCustomize={handleCustomize}
                         customizationEnabled={auth.entitlement === 'paid'}
+                        userData={auth.me}
                       />
 
                       {/* Post to Profile */}

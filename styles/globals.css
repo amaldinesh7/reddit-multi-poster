@@ -48,6 +48,13 @@
     --admin-success: 160 84% 39%;
     --admin-warning: 38 92% 50%;
     --admin-pro: 280 100% 65%;
+
+    /* Eligibility Status Colors */
+    --eligibility-ready: 160 84% 39%;        /* Emerald green */
+    --eligibility-warning: 38 92% 50%;       /* Amber */
+    --eligibility-blocked: 0 72% 51%;        /* Red */
+    --eligibility-approved: 160 84% 39%;     /* Emerald */
+    --eligibility-moderator: 280 100% 65%;   /* Purple (matches Pro) */
   }
 
   .dark {
@@ -89,6 +96,13 @@
     --admin-success: 160 84% 39%;
     --admin-warning: 38 92% 50%;
     --admin-pro: 280 100% 65%;
+
+    /* Eligibility Status Colors (Dark) */
+    --eligibility-ready: 160 60% 45%;
+    --eligibility-warning: 38 80% 55%;
+    --eligibility-blocked: 0 60% 55%;
+    --eligibility-approved: 160 60% 45%;
+    --eligibility-moderator: 280 80% 70%;
   }
 }
 
@@ -244,5 +258,194 @@
     background: 
       linear-gradient(hsl(var(--admin-card)), hsl(var(--admin-card))) padding-box,
       linear-gradient(135deg, hsl(var(--admin-glow) / 0.5), hsl(var(--admin-glow) / 0.1)) border-box;
+  }
+}
+
+/* Eligibility Status Animations */
+@keyframes eligibility-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--eligibility-ready) / 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 6px hsl(var(--eligibility-ready) / 0);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes eligibility-pulse-warning {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--eligibility-warning) / 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 6px hsl(var(--eligibility-warning) / 0);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes eligibility-pulse-blocked {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--eligibility-blocked) / 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 4px hsl(var(--eligibility-blocked) / 0);
+    transform: scale(1.02);
+  }
+}
+
+@layer utilities {
+  .animate-eligibility-pulse {
+    animation: eligibility-pulse 2s ease-in-out infinite;
+  }
+
+  .animate-eligibility-pulse-warning {
+    animation: eligibility-pulse-warning 2s ease-in-out infinite;
+  }
+
+  .animate-eligibility-pulse-blocked {
+    animation: eligibility-pulse-blocked 1.5s ease-in-out infinite;
+  }
+
+  /* Eligibility glow effects */
+  .glow-eligibility-ready {
+    box-shadow: 0 0 12px hsl(var(--eligibility-ready) / 0.3);
+  }
+
+  .glow-eligibility-warning {
+    box-shadow: 0 0 12px hsl(var(--eligibility-warning) / 0.3);
+  }
+
+  .glow-eligibility-blocked {
+    box-shadow: 0 0 12px hsl(var(--eligibility-blocked) / 0.3);
+  }
+
+  .glow-eligibility-approved {
+    box-shadow: 0 0 12px hsl(var(--eligibility-approved) / 0.3);
+  }
+
+  .glow-eligibility-moderator {
+    box-shadow: 0 0 12px hsl(var(--eligibility-moderator) / 0.3);
+  }
+}
+
+/* PWA Onboarding Animations */
+@keyframes pwa-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
+
+@keyframes pwa-highlight {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px hsl(var(--primary) / 0);
+  }
+}
+
+@keyframes pwa-success {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pwa-icon-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2px 8px hsl(var(--primary) / 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 4px 16px hsl(var(--primary) / 0.4);
+  }
+}
+
+@keyframes pwa-checkmark {
+  0% {
+    stroke-dashoffset: 100;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@layer utilities {
+  .animate-pwa-bounce {
+    animation: pwa-bounce 1s ease-in-out infinite;
+  }
+
+  .animate-pwa-highlight {
+    animation: pwa-highlight 2s ease-in-out infinite;
+  }
+
+  .animate-pwa-success {
+    animation: pwa-success 0.5s ease-out forwards;
+  }
+
+  .animate-pwa-icon-pulse {
+    animation: pwa-icon-pulse 2s ease-in-out infinite;
+  }
+
+  .animate-pwa-checkmark {
+    stroke-dasharray: 100;
+    animation: pwa-checkmark 0.6s ease-out forwards;
+  }
+}
+
+/* Reduced motion support for PWA animations */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pwa-bounce,
+  .animate-pwa-highlight,
+  .animate-pwa-icon-pulse {
+    animation: none;
+  }
+
+  .animate-pwa-success {
+    animation-duration: 0.01ms;
+  }
+}
+
+/* Pro Badge Shimmer Animation */
+@keyframes pro-shimmer {
+  0%, 85%, 100% {
+    background-position: 200% center;
+  }
+  40% {
+    background-position: -200% center;
+  }
+}
+
+@layer utilities {
+  .animate-pro-shimmer {
+    background: linear-gradient(
+      110deg,
+      transparent 0%,
+      transparent 40%,
+      rgba(167, 139, 250, 0.3) 50%,
+      transparent 60%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: pro-shimmer 4s ease-in-out infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pro-shimmer {
+    animation: none;
   }
 }

@@ -16,13 +16,15 @@ import {
   DropdownMenuContent,
   DropdownMenuItemPrimitive,
 } from '@/components/ui/dropdown-menu';
-import { AlertTriangle, AlertCircle, Info, ChevronDown, FileText, Hash, RefreshCw, Pencil, X, Tag, Clock, Ban, Key, Image, Wifi, Lock, Link as LinkIcon, Type, Sparkles } from 'lucide-react';
+import { AlertTriangle, AlertCircle, Info, ChevronDown, FileText, Hash, RefreshCw, Pencil, X, Tag, Clock, Ban, Key, Image, Wifi, Lock, Link as LinkIcon, Type, SlidersHorizontal } from 'lucide-react';
+import { Tooltip } from '@/components/ui/tooltip';
 import { TitleTag } from '../../utils/subredditCache';
-import { PostRequirements } from '@/utils/reddit';
+import { PostRequirements, SubredditEligibility, RedditUser } from '@/utils/reddit';
 import { FailedPost } from '@/hooks/useFailedPosts';
 import { ClassifiedError } from '@/lib/errorClassification';
-import { ValidationIssue } from '@/lib/preflightValidation';
+import { ValidationIssue, getEligibilityForSubreddit, EligibilityResult } from '@/lib/preflightValidation';
 import { PerSubredditOverride } from './CustomizePostDialog';
+import { EligibilityBadge } from '../UserEligibilityIndicator';
 
 export interface SubredditRules {
   requiresGenderTag: boolean;
@@ -63,6 +65,12 @@ export interface SubredditRowProps {
   onCustomize?: (name: string) => void;
   /** Whether customization is enabled (PRO feature) */
   customizationEnabled?: boolean;
+  /** Eligibility data for this subreddit */
+  eligibility?: SubredditEligibility;
+  /** User data for eligibility checks */
+  userData?: RedditUser;
+  /** Post kind for eligibility checks */
+  postKind?: 'self' | 'link' | 'image' | 'video' | 'gallery';
 }
 
 // Helper to get icon for error type
@@ -141,6 +149,9 @@ const SubredditRow = React.memo(({
   contentOverride,
   onCustomize,
   customizationEnabled,
+  eligibility,
+  userData,
+  postKind = 'self',
 }: SubredditRowProps) => {
   const checkboxId = `checkbox-${name}`;
   const [isExpanded, setIsExpanded] = useState(false);
@@ -208,6 +219,12 @@ const SubredditRow = React.memo(({
       label: validationWarnings.length === 1 ? 'Warning' : `${validationWarnings.length} warnings`,
     };
   }, [hasValidationIssues, hasValidationErrors, validationErrors.length, validationWarnings.length]);
+
+  // Compute eligibility result
+  const eligibilityResult = useMemo((): EligibilityResult | null => {
+    if (!isSelected) return null;
+    return getEligibilityForSubreddit(name, eligibility, userData, postKind);
+  }, [name, eligibility, userData, postKind, isSelected]);
 
   const handleRowClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -323,6 +340,19 @@ const SubredditRow = React.memo(({
                 Custom
               </Badge>
             )}
+
+            {/* Eligibility Badge */}
+            {!isLoading && isSelected && eligibilityResult && (
+              eligibilityResult.status === 'moderator' || 
+              eligibilityResult.status === 'approved' || 
+              eligibilityResult.status === 'blocked'
+            ) && (
+              <EligibilityBadge
+                status={eligibilityResult.status}
+                reason={eligibilityResult.reasons[0]}
+                compact={true}
+              />
+            )}
           </div>
         </div>
 
@@ -331,18 +361,19 @@ const SubredditRow = React.memo(({
           <div className="flex items-center gap-1.5 flex-shrink-0" onClick={handleControlsClick}>
             {/* Customize Button (PRO feature) */}
             {customizationEnabled && onCustomize && (
-              <button
-                onClick={() => onCustomize(name)}
-                className={`p-1.5 rounded-md cursor-pointer transition-colors ${
-                  contentOverride && (contentOverride.title || contentOverride.body)
-                    ? 'bg-primary/10 text-primary hover:bg-primary/20'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                }`}
-                aria-label="Customize content for this community"
-                title="Customize title/description"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-              </button>
+              <Tooltip content="Customize title & description for this community" side="left">
+                <button
+                  onClick={() => onCustomize(name)}
+                  className={`p-1.5 rounded-md cursor-pointer transition-colors ${
+                    contentOverride && (contentOverride.title || contentOverride.body)
+                      ? 'bg-violet-500/15 text-violet-400 hover:bg-violet-500/25'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  }`}
+                  aria-label="Customize content for this community"
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                </button>
+              </Tooltip>
             )}
             {/* Validation Issues Alert Icon with Dropdown - Pre-flight validation */}
             {hasValidationIssues && validationSummary && !failedPost && (

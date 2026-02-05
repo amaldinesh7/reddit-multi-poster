@@ -11,6 +11,7 @@ import SubredditRow from './subreddit-picker/SubredditRow';
 import { FailedPost } from '@/hooks/useFailedPosts';
 import { ValidationIssue } from '@/lib/preflightValidation';
 import { PerSubredditOverride } from './subreddit-picker';
+import { RedditUser } from '@/utils/reddit';
 
 interface SearchResult {
   name: string;
@@ -46,6 +47,8 @@ interface Props {
   onCustomize?: (name: string) => void;
   /** Whether customization is enabled (PRO feature) */
   customizationEnabled?: boolean;
+  /** User data for eligibility checks */
+  userData?: RedditUser;
 }
 
 const SubredditFlairPicker: React.FC<Props> = ({
@@ -66,6 +69,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
   contentOverrides,
   onCustomize,
   customizationEnabled,
+  userData,
 }) => {
   const {
     allSubreddits,
@@ -74,6 +78,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
     flairRequired,
     subredditRules,
     postRequirements,
+    eligibilityData,
     isLoaded,
     cacheLoading,
     reloadSelectedData,
@@ -411,6 +416,8 @@ const SubredditFlairPicker: React.FC<Props> = ({
                       onEditPost={onEditPost}
                       onRemovePost={onRemovePost}
                       validationIssues={validationIssuesBySubreddit?.[name]}
+                      eligibility={eligibilityData[name]}
+                      userData={userData}
                     />
                   );
                 })}
@@ -493,6 +500,8 @@ const SubredditFlairPicker: React.FC<Props> = ({
           titleSuffixValue={titleSuffixValue}
           subredditRules={subredditRules}
           postRequirements={postRequirements}
+          eligibilityData={eligibilityData}
+          userData={userData}
           cacheLoading={cacheLoading}
           showValidationErrors={showValidationErrors}
           failedPostsBySubreddit={failedPostsBySubreddit}

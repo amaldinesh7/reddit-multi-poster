@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServerSupabaseClient } from '../../../../lib/supabase';
-import { redditClient, refreshAccessToken, getFlairs, getSubredditRules, getPostRequirements, PostRequirements } from '../../../../utils/reddit';
+import { redditClient, refreshAccessToken, getFlairs, getSubredditRules, getPostRequirements, getSubredditEligibility, PostRequirements, SubredditEligibility } from '../../../../utils/reddit';
 
 interface ApiResponse {
   success: boolean;
@@ -18,6 +18,7 @@ interface CachedData {
   rules: unknown;
   title_tags: unknown[];
   post_requirements: PostRequirements | null;
+  eligibility: SubredditEligibility | null;
   cached_at: string;
   cache_version: number;
 }
@@ -69,6 +70,7 @@ export default async function handler(
                 rules: cached.rules,
                 title_tags: cached.title_tags,
                 post_requirements: cached.post_requirements,
+                eligibility: cached.eligibility,
                 cached: true,
                 cached_at: cached.cached_at,
               },
@@ -93,6 +95,7 @@ export default async function handler(
                 rules: cached.rules,
                 title_tags: cached.title_tags,
                 post_requirements: cached.post_requirements,
+                eligibility: cached.eligibility,
                 cached: true,
                 stale: true,
                 cached_at: cached.cached_at,
@@ -121,8 +124,8 @@ export default async function handler(
 
         const client = redditClient(token);
 
-        // Fetch data from Reddit (including post requirements)
-        const [flairsResult, rulesResult, postRequirementsResult] = await Promise.all([
+        // Fetch data from Reddit (including post requirements and eligibility)
+        const [flairsResult, rulesResult, postRequirementsResult, eligibilityResult] = await Promise.all([
           getFlairs(client, subredditName).catch(() => ({ flairs: [], required: false })),
           getSubredditRules(client, subredditName).catch(() => ({
             requiresGenderTag: false,
@@ -133,6 +136,7 @@ export default async function handler(
             submitText: '',
           })),
           getPostRequirements(client, subredditName).catch(() => ({} as PostRequirements)),
+          getSubredditEligibility(client, subredditName).catch(() => null),
         ]);
 
         // Parse title tags from submitText if available
@@ -166,8 +170,9 @@ export default async function handler(
           },
           title_tags: titleTags,
           post_requirements: postRequirementsResult,
+          eligibility: eligibilityResult,
           cached_at: new Date().toISOString(),
-          cache_version: 2,
+          cache_version: 3, // Bumped version for eligibility data
         };
 
         const { error: upsertError } = await supabase

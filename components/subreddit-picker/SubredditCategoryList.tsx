@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronDown, ChevronRight, AlertTriangle, Settings } from 'lucide-react';
 import SubredditRow, { SubredditRules } from './SubredditRow';
-import { PostRequirements } from '@/utils/reddit';
+import { PostRequirements, SubredditEligibility, RedditUser } from '@/utils/reddit';
 import { FailedPost } from '@/hooks/useFailedPosts';
 import { ValidationIssue } from '@/lib/preflightValidation';
 import { PerSubredditOverride } from './CustomizePostDialog';
@@ -21,6 +21,10 @@ interface SubredditCategoryListProps {
   titleSuffixValue: Record<string, string | undefined>;
   subredditRules: Record<string, SubredditRules>;
   postRequirements: Record<string, PostRequirements>;
+  /** Eligibility data for each subreddit */
+  eligibilityData?: Record<string, SubredditEligibility>;
+  /** User data for eligibility checks */
+  userData?: RedditUser;
   cacheLoading: Record<string, boolean>;
   showValidationErrors?: boolean;
   /** Map of subreddit name to failed post data */
@@ -57,6 +61,8 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
   titleSuffixValue,
   subredditRules,
   postRequirements,
+  eligibilityData,
+  userData,
   cacheLoading,
   showValidationErrors,
   failedPostsBySubreddit,
@@ -169,6 +175,8 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
                       contentOverride={contentOverrides?.[name]}
                       onCustomize={onCustomize}
                       customizationEnabled={customizationEnabled}
+                      eligibility={eligibilityData?.[name]}
+                      userData={userData}
                     />
                   );
                 })}

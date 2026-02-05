@@ -30,6 +30,10 @@ export interface UsePreflightValidationInput {
   flairOptions: Record<string, { id: string; text: string }[]>;
   postRequirements: Record<string, import('@/utils/reddit').PostRequirements>;
   titleSuffixes?: Record<string, string | undefined>;
+  /** User data for eligibility checks */
+  userData?: import('@/utils/reddit').RedditUser;
+  /** Eligibility data by subreddit */
+  eligibilityData?: Record<string, import('@/utils/reddit').SubredditEligibility>;
 }
 
 export interface UsePreflightValidationReturn {
@@ -73,6 +77,8 @@ export function usePreflightValidation(input: UsePreflightValidationInput): UseP
       flairOptions: input.flairOptions,
       postRequirements: input.postRequirements,
       titleSuffixes: input.titleSuffixes,
+      userData: input.userData,
+      eligibilityData: input.eligibilityData,
     };
 
     return validatePreflight(preflightInput);
@@ -87,6 +93,8 @@ export function usePreflightValidation(input: UsePreflightValidationInput): UseP
     input.flairOptions,
     input.postRequirements,
     input.titleSuffixes,
+    input.userData,
+    input.eligibilityData,
   ]);
 
   // Group issues by subreddit
