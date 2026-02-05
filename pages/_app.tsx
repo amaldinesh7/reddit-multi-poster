@@ -66,7 +66,7 @@ const RouteProgressBar = () => {
 
 /**
  * Wrapper that applies a subtle fade-in on every page mount.
- * Keeps transitions fast (200ms) so navigation feels instant but polished.
+ * Keeps transitions fast (150ms) so navigation feels instant but polished.
  */
 const PageTransition = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
@@ -89,7 +89,7 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
       className={
         transitionStage === "enter"
           ? "opacity-0 transition-none"
-          : "opacity-100 transition-opacity duration-200 ease-out"
+          : "opacity-100 transition-opacity duration-150 ease-out"
       }
     >
       {children}
@@ -98,10 +98,26 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
 };
 
 export default function App({ Component, pageProps }: AppProps) {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ua = navigator.userAgent || "";
+    const isAndroid = /Android/i.test(ua);
+    const isWebView = ua.includes("wv");
+    const isStandalone =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(display-mode: standalone)").matches;
+    if (isAndroid && (isWebView || isStandalone)) {
+      document.documentElement.classList.add("android-webview");
+    }
+  }, []);
+
   return (
     <>
       <Head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+        />
       </Head>
       <ErrorBoundary>
         <SWRConfig value={swrConfig}>

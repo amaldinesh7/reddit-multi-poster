@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { TrendingUp, Clock, Users } from 'lucide-react';
-import { Tooltip } from '@/components/ui/tooltip';
 
 interface UserStats {
   totalKarma?: number;
@@ -54,9 +53,9 @@ const useMobileStatsVisibility = () => {
     const updateVisibility = () => {
       const scrollY = window.scrollY;
       
-      // Only apply on mobile
+      // Only apply scroll-hide on mobile
       if (window.innerWidth >= 768) {
-        setIsVisible(false); // Always hidden on desktop
+        setIsVisible(true); // Always visible on desktop/tablet
         ticking.current = false;
         return;
       }
@@ -83,7 +82,7 @@ const useMobileStatsVisibility = () => {
     // Also handle resize
     const handleResize = () => {
       if (window.innerWidth >= 768) {
-        setIsVisible(false);
+        setIsVisible(true);
       } else if (window.scrollY < 50) {
         setIsVisible(true);
       }
@@ -127,77 +126,66 @@ export const MobileUserStatsBanner: React.FC<MobileUserStatsBannerProps> = ({
   return (
     <div
       className={cn(
-        // Only show on mobile
-        "md:hidden",
+        // Show on all sizes (mobile scroll-hides, desktop stays visible)
         // Positioning
         "sticky top-14 z-40",
         // Visual styling
         "bg-background/90 backdrop-blur-md",
         "border-b border-border/50",
         // Padding
-        "px-4 py-2",
+        "py-1 md:py-1.5",
         // Transition for smooth hide/show
         "transition-all duration-300 ease-out",
+        "bg-neutral-100 dark:bg-neutral-900",
         // Hide state
         !isVisible && "opacity-0 -translate-y-full pointer-events-none h-0 py-0 border-0 overflow-hidden",
         isVisible && "opacity-100 translate-y-0",
         className
       )}
     >
-      <Tooltip
-        content={
-          <div className="text-xs space-y-1 p-1">
-            <p className="font-medium">{statusLabels[eligibilityStatus]}</p>
-            <p>Karma: {(userStats.totalKarma ?? 0).toLocaleString()}</p>
-            <p>Followers: {(userStats.followers ?? 0).toLocaleString()}</p>
-            <p>Account: {userStats.accountAgeLabel || 'Unknown'} old</p>
-            <p>Email: {userStats.hasVerifiedEmail ? 'Verified' : 'Not verified'}</p>
-          </div>
-        }
-        side="bottom"
-      >
-        <div className="flex items-center justify-center gap-3 cursor-help">
-          {/* Status orb */}
-          <div className={cn(
-            "w-2 h-2 rounded-full shrink-0",
-            statusColors[eligibilityStatus],
-            eligibilityStatus === 'good' && "animate-eligibility-pulse",
-            eligibilityStatus === 'warning' && "animate-eligibility-pulse-warning",
-            eligibilityStatus === 'error' && "animate-eligibility-pulse-blocked"
-          )} />
-          
-          {/* Karma */}
-          <div className="flex items-center gap-1.5 text-sm">
-            <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="font-semibold">{(userStats.totalKarma ?? 0).toLocaleString()}</span>
-            <span className="text-muted-foreground text-xs">karma</span>
-          </div>
-          
-          <span className="text-muted-foreground/40">·</span>
-          
-          {/* Followers */}
-          <div className="flex items-center gap-1.5 text-sm">
-            <Users className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="font-semibold">{(userStats.followers ?? 0).toLocaleString()}</span>
-          </div>
-          
-          <span className="text-muted-foreground/40">·</span>
-          
-          {/* Account Age */}
-          <div className="flex items-center gap-1.5 text-sm">
-            <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="font-semibold">{userStats.accountAgeLabel || 'Unknown'}</span>
-          </div>
-          
-          {/* Unverified email indicator */}
-          {!userStats.hasVerifiedEmail && (
-            <>
-              <span className="text-muted-foreground/40">·</span>
-              <span className="text-xs text-amber-500 font-medium">Unverified</span>
-            </>
-          )}
+      <div className="app-container">
+        <div className="flex items-center justify-center gap-3">
+        {/* Status orb */}
+        <div className={cn(
+          "w-2 h-2 rounded-full shrink-0",
+          statusColors[eligibilityStatus],
+          eligibilityStatus === 'good' && "animate-eligibility-pulse",
+          eligibilityStatus === 'warning' && "animate-eligibility-pulse-warning",
+          eligibilityStatus === 'error' && "animate-eligibility-pulse-blocked"
+        )} />
+        
+        {/* Karma */}
+        <div className="flex items-center gap-1.5 text-xs">
+          <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="font-semibold">{(userStats.totalKarma ?? 0).toLocaleString()}</span>
+          <span className="text-muted-foreground text-xs">karma</span>
         </div>
-      </Tooltip>
+        
+        <span className="text-muted-foreground/40">·</span>
+        
+        {/* Followers */}
+        <div className="flex items-center gap-1.5 text-xs">
+          <Users className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="font-semibold">{(userStats.followers ?? 0).toLocaleString()}</span>
+        </div>
+        
+        <span className="text-muted-foreground/40">·</span>
+        
+        {/* Account Age */}
+        <div className="flex items-center gap-1.5 text-xs">
+          <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="font-semibold">{userStats.accountAgeLabel || 'Unknown'}</span>
+        </div>
+        
+        {/* Unverified email indicator */}
+        {!userStats.hasVerifiedEmail && (
+          <>
+            <span className="text-muted-foreground/40">·</span>
+            <span className="text-xs text-amber-500 font-medium">Unverified</span>
+          </>
+        )}
+        </div>
+      </div>
     </div>
   );
 };

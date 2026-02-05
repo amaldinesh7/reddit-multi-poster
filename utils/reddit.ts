@@ -461,17 +461,22 @@ export async function submitPost(client: AxiosInstance, params: SubmitParams): P
   form.set('sendreplies', 'true');
   
   // Handle different post types
-  // Handle different post types
   if (params.kind === 'self') {
     form.set('kind', 'self');
   } else if (params.kind === 'link') {
-    form.set('kind', 'link');
-    form.set('url', params.url || '');
-  } else if (params.kind === 'image' || params.kind === 'video') {
-    form.set('kind', 'image');
-    if (mediaAssetId) {
-      form.set('url', `https://reddit-uploaded-media.s3-accelerate.amazonaws.com/${mediaAssetId}`);
+    // Validate URL is provided for link posts
+    if (!params.url || params.url.trim() === '') {
+      throw new Error('URL is required for link posts');
     }
+    form.set('kind', 'link');
+    form.set('url', params.url);
+  } else if (params.kind === 'image' || params.kind === 'video') {
+    // For image/video posts, we need a media asset ID from file upload
+    if (!mediaAssetId) {
+      throw new Error('Media upload failed - no media asset ID available. Please try uploading the file again.');
+    }
+    form.set('kind', 'image');
+    form.set('url', `https://reddit-uploaded-media.s3-accelerate.amazonaws.com/${mediaAssetId}`);
   } else {
     // Fallback
     form.set('kind', 'self');

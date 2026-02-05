@@ -4,7 +4,7 @@ import { Home, ArrowLeft } from "lucide-react";
 
 const Custom404 = (): JSX.Element => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="min-h-viewport flex items-center justify-center bg-background">
       <div className="text-center px-4">
         <h1 className="text-8xl font-bold text-orange-500">404</h1>
         <h2 className="mt-4 text-2xl font-semibold text-foreground">

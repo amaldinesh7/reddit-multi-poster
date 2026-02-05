@@ -93,98 +93,66 @@ export default async function handler(
       }
     }
 
-    // Generate a temporary job ID for file uploads
-    // We'll use this as a folder name in storage
-    const tempJobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    // Generate meaningful folder path for file uploads
+    // Format: {username}/{date}/job_{shortId}/
+    const redditUsername = req.cookies['reddit_username'] || 'unknown';
+    const dateStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const shortId = Math.random().toString(36).slice(2, 8);
+    const jobFolder = `${redditUsername}/${dateStr}/job_${shortId}`;
 
-    // Process files and upload to Supabase Storage
+    // Process shared files (uploaded once, used by all items)
     const filePaths: QueueFileReference[] = [];
     const jobItems: QueueJobItem[] = [];
 
+    // Get shared file count from form data
+    const sharedFileCountField = Array.isArray(fields.sharedFileCount) 
+      ? fields.sharedFileCount[0] 
+      : fields.sharedFileCount;
+    const sharedFileCount = sharedFileCountField ? parseInt(sharedFileCountField as string) : 0;
+
+    // Upload shared files once (itemIndex = -1 indicates shared files)
+    for (let fileIndex = 0; fileIndex < sharedFileCount; fileIndex++) {
+      const fileKey = `sharedFile_${fileIndex}`;
+      const uploadedFile = files[fileKey];
+      
+      if (!uploadedFile) continue;
+
+      const file = Array.isArray(uploadedFile) ? uploadedFile[0] : uploadedFile;
+      if (!file || !file.filepath) continue;
+
+      // Check file size
+      if (file.size > QUEUE_LIMITS.MAX_SINGLE_FILE_SIZE_MB * 1024 * 1024) {
+        return res.status(400).json({
+          success: false,
+          error: `File "${file.originalFilename}" exceeds maximum size of ${QUEUE_LIMITS.MAX_SINGLE_FILE_SIZE_MB}MB`,
+        });
+      }
+
+      // Upload to Supabase Storage (shared files use itemIndex = -1)
+      const buffer = fs.readFileSync(file.filepath);
+      const storagePath = await uploadQueueFile(
+        jobFolder,
+        -1, // -1 indicates this is a shared file
+        fileIndex,
+        buffer,
+        file.originalFilename || 'file',
+        file.mimetype || 'application/octet-stream'
+      );
+
+      filePaths.push({
+        itemIndex: -1, // Shared file indicator
+        fileIndex,
+        storagePath,
+        originalName: file.originalFilename || 'file',
+        mimeType: file.mimetype || 'application/octet-stream',
+        size: file.size || buffer.length,
+      });
+    }
+
+    // Build job items (all items share the same files)
     for (let itemIndex = 0; itemIndex < parsedItems.length; itemIndex++) {
       const item = parsedItems[itemIndex];
       
-      // Count files for this item
-      const fileCountKey = `fileCount_${itemIndex}`;
-      const fileCountField = Array.isArray(fields[fileCountKey]) 
-        ? fields[fileCountKey][0] 
-        : fields[fileCountKey];
-      const expectedFileCount = fileCountField ? parseInt(fileCountField as string) : 0;
-
-      let actualFileCount = 0;
-
-      // Upload files for this item
-      for (let fileIndex = 0; fileIndex < Math.max(expectedFileCount, 20); fileIndex++) {
-        const fileKey = `file_${itemIndex}_${fileIndex}`;
-        const uploadedFile = files[fileKey];
-        
-        if (!uploadedFile) {
-          // Also try single file format
-          if (fileIndex === 0) {
-            const singleFileKey = `file_${itemIndex}`;
-            const singleFile = files[singleFileKey];
-            if (singleFile) {
-              const file = Array.isArray(singleFile) ? singleFile[0] : singleFile;
-              if (file && file.filepath) {
-                const buffer = fs.readFileSync(file.filepath);
-                const storagePath = await uploadQueueFile(
-                  tempJobId,
-                  itemIndex,
-                  0,
-                  buffer,
-                  file.originalFilename || 'file',
-                  file.mimetype || 'application/octet-stream'
-                );
-                
-                filePaths.push({
-                  itemIndex,
-                  fileIndex: 0,
-                  storagePath,
-                  originalName: file.originalFilename || 'file',
-                  mimeType: file.mimetype || 'application/octet-stream',
-                  size: file.size || buffer.length,
-                });
-                actualFileCount = 1;
-              }
-            }
-          }
-          continue;
-        }
-
-        const file = Array.isArray(uploadedFile) ? uploadedFile[0] : uploadedFile;
-        if (!file || !file.filepath) continue;
-
-        // Check file size
-        if (file.size > QUEUE_LIMITS.MAX_SINGLE_FILE_SIZE_MB * 1024 * 1024) {
-          return res.status(400).json({
-            success: false,
-            error: `File "${file.originalFilename}" exceeds maximum size of ${QUEUE_LIMITS.MAX_SINGLE_FILE_SIZE_MB}MB`,
-          });
-        }
-
-        // Upload to Supabase Storage
-        const buffer = fs.readFileSync(file.filepath);
-        const storagePath = await uploadQueueFile(
-          tempJobId,
-          itemIndex,
-          fileIndex,
-          buffer,
-          file.originalFilename || 'file',
-          file.mimetype || 'application/octet-stream'
-        );
-
-        filePaths.push({
-          itemIndex,
-          fileIndex,
-          storagePath,
-          originalName: file.originalFilename || 'file',
-          mimeType: file.mimetype || 'application/octet-stream',
-          size: file.size || buffer.length,
-        });
-        actualFileCount++;
-      }
-
-      // Build job item (without File objects)
       jobItems.push({
         subreddit: item.subreddit,
         flairId: item.flairId,
@@ -192,7 +160,7 @@ export default async function handler(
         kind: item.kind,
         url: item.url,
         text: item.text,
-        fileCount: actualFileCount,
+        fileCount: sharedFileCount, // All items use the shared files
       });
     }
 

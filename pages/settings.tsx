@@ -17,6 +17,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragOverlay,
@@ -120,6 +121,12 @@ export default function Settings() {
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -262,7 +269,7 @@ export default function Settings() {
   // Show loading state
   if (authLoading || !isLoaded) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-viewport bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
           <p className="text-muted-foreground">Loading…</p>
@@ -290,10 +297,10 @@ export default function Settings() {
           <meta name="robots" content="noindex, nofollow" />
         </Head>
 
-        <div className="min-h-screen bg-background">
+        <div className="min-h-viewport bg-background">
           {/* Header */}
           <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
-            <div className="container mx-auto px-4 sm:px-6">
+            <div className="app-container">
               <div className="flex h-14 items-center gap-4">
                 <Button
                   variant="ghost"
@@ -333,7 +340,7 @@ export default function Settings() {
           </header>
 
           {/* Main Content */}
-          <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-3xl pb-20 md:pb-0">
+          <main className="app-container py-4 sm:py-6 max-w-3xl safe-bottom">
             <div className="space-y-6">
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-3">

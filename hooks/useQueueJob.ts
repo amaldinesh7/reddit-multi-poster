@@ -350,18 +350,25 @@ export function useQueueJob(): UseQueueJobReturn {
       formData.append('caption', submission.caption);
       formData.append('prefixes', JSON.stringify(submission.prefixes));
 
-      // Add files
-      submission.items.forEach((item, index) => {
-        if (item.files && item.files.length > 0) {
-          item.files.forEach((file, fileIndex) => {
-            formData.append(`file_${index}_${fileIndex}`, file);
-          });
-          formData.append(`fileCount_${index}`, item.files.length.toString());
-        } else if (item.file) {
-          formData.append(`file_${index}`, item.file);
-          formData.append(`fileCount_${index}`, '1');
-        }
-      });
+      // Add shared files (uploaded once, used by all items)
+      const firstItemWithFiles = submission.items.find(item => item.files?.length || item.file);
+      const sharedFiles = firstItemWithFiles
+        ? (firstItemWithFiles.files || (firstItemWithFiles.file ? [firstItemWithFiles.file] : []))
+        : [];
+
+      const hasMediaKind = submission.items.some(item =>
+        item.kind === 'image' || item.kind === 'video' || item.kind === 'gallery'
+      );
+      if (hasMediaKind && sharedFiles.length === 0) {
+        throw new Error('Please attach a media file for image, video, or gallery posts.');
+      }
+
+      if (sharedFiles.length > 0) {
+        sharedFiles.forEach((file, fileIndex) => {
+          formData.append(`sharedFile_${fileIndex}`, file);
+        });
+        formData.append('sharedFileCount', sharedFiles.length.toString());
+      }
 
       // Submit to API
       const response = await fetch('/api/queue/submit', {

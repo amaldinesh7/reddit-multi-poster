@@ -42,6 +42,7 @@ const SortableSubreddit: React.FC<SortableSubredditProps> = ({
         subreddit={subreddit}
         category={category}
         dragHandleProps={{ ...attributes, ...listeners }}
+        dragContainerProps={{ ...attributes, ...listeners }}
         isDragging={isDragging}
       />
     </div>

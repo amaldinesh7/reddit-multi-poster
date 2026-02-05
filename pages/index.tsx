@@ -91,6 +91,7 @@ export default function Home() {
   const [upgradeLoading, setUpgradeLoading] = React.useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
+  const [mediaResetCounter, setMediaResetCounter] = React.useState(0);
 
   // Smooth loader exit: keep AppLoader mounted briefly to fade out
   const [showLoader, setShowLoader] = React.useState(true);
@@ -139,6 +140,18 @@ export default function Home() {
     clearSelection,
     clearAllState,
   } = useHomePageState({ authMe: me ?? undefined });
+
+  const resetMedia = React.useCallback(() => {
+    setMediaUrl('');
+    setMediaFiles([]);
+    setMediaMode('file');
+    setMediaResetCounter((prev) => prev + 1);
+  }, [setMediaUrl, setMediaFiles, setMediaMode]);
+
+  const handleClearAll = React.useCallback(() => {
+    clearAllState();
+    setMediaResetCounter((prev) => prev + 1);
+  }, [clearAllState]);
 
   // Failed posts tracking for inline error display
   const failedPostsHook = useFailedPosts();
@@ -450,7 +463,7 @@ export default function Home() {
       {showLoader && <AppLoader exiting={loaderExiting} />}
 
       {!authLoading && (
-        <div className="min-h-screen bg-background flex flex-col noise-texture noise-subtle">
+        <div className="min-h-viewport bg-background flex flex-col noise-texture noise-subtle">
           {/* Header */}
           <AppHeader
             userName={me?.name}
@@ -471,13 +484,13 @@ export default function Home() {
 
           <PwaOnboarding hasQueueItems={items.length > 0} />
 
-            <main className="flex-1 container mx-auto px-4 sm:px-6 py-4 lg:py-8 max-w-2xl lg:max-w-7xl safe-bottom pb-20 md:pb-0">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-start">
+            <main className="flex-1 app-container py-4 md:py-6 lg:py-8 max-w-2xl lg:max-w-7xl safe-bottom">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 items-start lg:divide-x lg:divide-border/50">
 
               {/* Left Column: Create Post */}
-              <div className="lg:space-y-8">
+              <div className="lg:pr-6">
                 {/* Section Header - Desktop only */}
-                <h2 className="text-xl mb-4 font-semibold tracking-tight hidden lg:block">Your post</h2>
+                <h2 className="text-xl mb-4 font-semibold tracking-tight hidden lg:block ">Your post</h2>
 
                 {/* Media Section - No card wrapper, flowing layout */}
                 <section className="space-y-4 mb-4">
@@ -512,8 +525,15 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
-                  <MediaUpload onUrl={setMediaUrl} onFile={setMediaFiles} mode={mediaMode} />
+                  <MediaUpload
+                    onUrl={setMediaUrl}
+                    onFile={setMediaFiles}
+                    mode={mediaMode}
+                    resetSignal={mediaResetCounter}
+                  />
                 </section>
+
+                <div className="border-t border-border/50 my-6" aria-hidden="true" />
 
                 {/* Title Section - No card wrapper, flowing layout */}
                 <section className="space-y-4 mb-4">
@@ -529,16 +549,17 @@ export default function Home() {
                 </section>
               </div>
 
+              <div className="border-t border-border/50 my-4 lg:hidden" aria-hidden="true" />
+
               {/* Right Column: Communities & Queue */}
-              <div className="space-y-4 lg:space-y-8">
+              <div className="lg:pl-6">
                 {/* Section Header - Desktop only */}
-                <h2 className="text-xl font-semibold tracking-tight hidden lg:block">Where to post</h2>
+                <h2 className="text-xl font-semibold tracking-tight hidden lg:block mb-4 lg:mb-6">Where to post</h2>
 
                 {/* Communities Section */}
                 <section 
                   className={cn(
-                    "space-y-4",
-                    "lg:rounded-lg lg:border lg:border-border/50 lg:p-6 lg:bg-card/50"
+                    "space-y-4"
                   )}
                 >
                   <div className="flex items-center justify-between">
@@ -598,12 +619,13 @@ export default function Home() {
                   )}
                 </section>
 
+                <div className="border-t border-border/50 my-4 lg:my-6" aria-hidden="true" />
+
                 {/* Queue Section */}
                 <section 
                   className={cn(
                     "lg:sticky lg:top-20",
-                    "lg:rounded-lg lg:border lg:border-border/50 lg:p-6 lg:bg-card/50",
-                    "pt-6  border-t border-border/50 lg:border-t-0"
+                    "pt-2 lg:pt-0"
                   )}
                 >
                   <PostingQueue
@@ -614,7 +636,8 @@ export default function Home() {
                     hasFlairErrors={hasFlairErrors}
                     onPostAttempt={handlePostWithLimitCheck}
                     onUnselectSuccessItems={handleUnselectSuccessItems}
-                    onClearAll={clearAllState}
+                    onClearAll={handleClearAll}
+                    onResetMedia={resetMedia}
                     onResultsAvailable={handleResultsAvailable}
                     onValidationChange={handleQueueValidationChange}
                   />

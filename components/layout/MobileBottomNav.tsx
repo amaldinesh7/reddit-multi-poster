@@ -131,7 +131,7 @@ const MobileBottomNav: React.FC = () => {
       {/* Bottom navigation bar */}
       <nav
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-50 md:hidden",
+          "fixed bottom-0 left-0 right-0 z-50 md:hidden mobile-bottom-nav",
           "bg-background/95 backdrop-blur-sm",
           "border-t border-border/50",
           "pb-[env(safe-area-inset-bottom)]"
@@ -179,14 +179,14 @@ const MobileBottomNav: React.FC = () => {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-[2px] md:hidden animate-in fade-in duration-200"
+            className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-[2px] md:hidden animate-in fade-in duration-200"
             onClick={() => setProfileOpen(false)}
             aria-hidden="true"
           />
           {/* Sheet */}
           <div
             className={cn(
-              "fixed bottom-0 left-0 right-0 z-[70] md:hidden",
+              "fixed bottom-0 left-0 right-0 z-[120] md:hidden",
               "bg-background rounded-t-2xl",
               "border-t border-border/50",
               "pb-[env(safe-area-inset-bottom)]",

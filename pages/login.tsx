@@ -57,7 +57,7 @@ export default function Login() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-viewport bg-[#0a0a0a] flex items-center justify-center">
         <div className="w-10 h-10 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
       </div>
     );
@@ -90,7 +90,7 @@ export default function Login() {
         <meta name="twitter:image" content="https://reddit-multi-poster.vercel.app/og-image.svg" />
       </Head>
 
-      <div className="min-h-screen relative overflow-hidden">
+      <div className="min-h-viewport relative overflow-hidden">
         {/* Animated gradient background */}
         <div className="absolute inset-0 bg-[#0a0a0a]">
           <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#12121a] to-[#1a1a2e]" />
@@ -102,7 +102,7 @@ export default function Login() {
         </div>
 
         {/* Content */}
-        <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-12">
+        <div className="relative z-10 min-h-full flex flex-col items-center justify-center px-4 py-6 sm:py-12">
           {/* Glass card */}
           <div className="w-full max-w-md">
             <div className="p-4 sm:p-8 sm:backdrop-blur-xl sm:bg-white/[0.03] sm:border sm:border-white/[0.08] sm:rounded-3xl sm:shadow-[0_0_80px_rgba(255,69,0,0.05),0_25px_50px_-12px_rgba(0,0,0,0.5)]">

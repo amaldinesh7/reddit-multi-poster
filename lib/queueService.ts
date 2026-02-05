@@ -328,20 +328,33 @@ export async function isJobCancelled(jobId: string): Promise<boolean> {
 
 /**
  * Get files for a specific item in a job.
+ * 
+ * Files are organized as:
+ * - Shared files (itemIndex = -1): Used by all items in the job
+ * - Item-specific files: Used only by a specific item
+ * 
+ * This function returns shared files first, then any item-specific files.
  */
 export async function getJobItemFiles(
   job: QueueJob,
   itemIndex: number
 ): Promise<{ file: Blob; name: string; mimeType: string }[]> {
+  // Get shared files (itemIndex = -1) that are used by all items
+  const sharedFiles = job.file_paths.filter(f => f.itemIndex === -1);
+  
+  // Get item-specific files (for backward compatibility with old jobs)
   const itemFiles = job.file_paths.filter(f => f.itemIndex === itemIndex);
   
-  if (itemFiles.length === 0) {
+  // Combine: shared files first, then item-specific files
+  const allFiles = [...sharedFiles, ...itemFiles];
+  
+  if (allFiles.length === 0) {
     return [];
   }
   
   const files: { file: Blob; name: string; mimeType: string }[] = [];
   
-  for (const fileRef of itemFiles) {
+  for (const fileRef of allFiles) {
     try {
       const blob = await downloadQueueFile(fileRef.storagePath);
       files.push({

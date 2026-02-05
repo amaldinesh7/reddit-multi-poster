@@ -15,10 +15,10 @@ export default function Terms() {
         <meta name="robots" content="index, follow" />
       </Head>
 
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="min-h-viewport bg-background flex flex-col">
         {/* Simple Header */}
         <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-          <div className="container mx-auto px-4 py-4 max-w-3xl">
+          <div className="app-container py-4 max-w-3xl">
             <Link 
               href="/" 
               className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
@@ -30,7 +30,7 @@ export default function Terms() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 container mx-auto px-4 py-8 sm:py-12 max-w-3xl">
+        <main className="flex-1 app-container py-8 sm:py-12 max-w-3xl">
           <article className="prose prose-neutral dark:prose-invert prose-headings:font-semibold prose-a:text-primary prose-a:no-underline hover:prose-a:underline max-w-none">
             <h1 className="text-3xl sm:text-4xl mb-2">Terms of Service</h1>
             <p className="text-muted-foreground text-sm mt-0 mb-8">

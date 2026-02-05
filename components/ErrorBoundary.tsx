@@ -73,7 +73,7 @@ class ErrorBoundary extends Component<Props, State> {
 
       // Default mobile-friendly error UI
       return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="min-h-viewport bg-background flex items-center justify-center p-4">
           <div className="max-w-md w-full space-y-6 text-center">
             {/* Error Icon */}
             <div className="flex justify-center">

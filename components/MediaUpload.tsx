@@ -7,13 +7,17 @@ interface Props {
   onUrl: (url: string) => void;
   onFile: (files: File[]) => void;
   mode: 'file' | 'url';
+  resetSignal?: number;
 }
 
-export default function MediaUpload({ onUrl, onFile, mode }: Props) {
+export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props) {
   const [mediaUrl, setMediaUrl] = React.useState('');
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = React.useState<string[]>([]);
   const [rejectionError, setRejectionError] = React.useState<string | null>(null);
+  const previewUrlsRef = React.useRef<string[]>([]);
+  const onFileRef = React.useRef(onFile);
+  const onUrlRef = React.useRef(onUrl);
 
   const handleDropRejected = React.useCallback((fileRejections: FileRejection[]) => {
     const errors: string[] = [];
@@ -85,20 +89,34 @@ export default function MediaUpload({ onUrl, onFile, mode }: Props) {
     onFile(newFiles);
   };
 
-  const clearMedia = () => {
+  const clearMedia = React.useCallback(() => {
     setSelectedFiles([]);
     setMediaUrl('');
-    onFile([]);
-    onUrl('');
-    previewUrls.forEach(url => URL.revokeObjectURL(url));
+    onFileRef.current([]);
+    onUrlRef.current('');
+    previewUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
     setPreviewUrls([]);
-  };
+  }, []);
+
+  React.useEffect(() => {
+    previewUrlsRef.current = previewUrls;
+  }, [previewUrls]);
+
+  React.useEffect(() => {
+    onFileRef.current = onFile;
+    onUrlRef.current = onUrl;
+  }, [onFile, onUrl]);
 
   React.useEffect(() => {
     return () => {
       previewUrls.forEach(url => URL.revokeObjectURL(url));
     };
   }, [previewUrls]);
+
+  React.useEffect(() => {
+    if (resetSignal === undefined) return;
+    clearMedia();
+  }, [resetSignal]);
 
   return (
     <div>

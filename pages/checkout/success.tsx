@@ -9,7 +9,7 @@ export default function CheckoutSuccess() {
       <Head>
         <title>Thank you - Reddit Multi Poster</title>
       </Head>
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4">
+      <div className="min-h-viewport bg-[#0a0a0a] flex flex-col items-center justify-center p-4">
         <div className="max-w-md w-full text-center space-y-6">
           <div className="flex justify-center">
             <CheckCircle className="h-16 w-16 text-green-500" aria-hidden="true" />

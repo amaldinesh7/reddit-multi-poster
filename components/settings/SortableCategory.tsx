@@ -31,6 +31,7 @@ const SortableCategory: React.FC<SortableCategoryProps> = ({ category, canDelete
       <CategoryCard
         category={category}
         dragHandleProps={{ ...attributes, ...listeners }}
+        dragContainerProps={{ ...attributes, ...listeners }}
         isDragging={isDragging}
         canDelete={canDelete}
       />

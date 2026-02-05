@@ -100,17 +100,17 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
   }
 
   return (
-    <div className="rounded-md border border-border overflow-hidden">
+    <div className="space-y-4">
       {categorizedSubreddits.map(({ categoryName, subreddits }) => {
         const hasErrors = categoryHasErrors(subreddits);
         const isExpanded = expandedCategories.includes(categoryName);
         const selectedCount = subreddits.filter(s => selected.includes(s)).length;
 
         return (
-          <div key={categoryName} className="border-b border-border last:border-b-0">
+          <div key={categoryName} className="space-y-3">
             <button
               onClick={() => onToggleCategory(categoryName)}
-              className="w-full px-4 py-3 bg-secondary flex items-center justify-between hover:bg-secondary/80 transition-colors cursor-pointer"
+              className="w-full px-1 py-1.5 flex items-center justify-between hover:text-foreground transition-colors cursor-pointer"
               aria-expanded={isExpanded}
               aria-label={`${categoryName} category, ${subreddits.length} subreddits`}
             >
@@ -144,7 +144,7 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
             </button>
 
             {isExpanded && (
-              <div>
+              <div className="space-y-2">
                 {subreddits.map((name) => {
                   const hasError = !!(showValidationErrors && hasMissingFlair(name));
                   const failedPost = failedPostsBySubreddit?.[name.toLowerCase()];

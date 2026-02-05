@@ -16,6 +16,10 @@ module.exports = {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-8px)' },
         },
+        subtleGlow: {
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(91, 33, 182, 0.35)' },
+          '50%': { boxShadow: '0 0 0 6px rgba(91, 33, 182, 0)' },
+        },
         fadeIn: {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
@@ -23,6 +27,7 @@ module.exports = {
       },
       animation: {
         float: 'float 3s ease-in-out infinite',
+        'subtle-glow': 'subtleGlow 2.6s ease-in-out infinite',
         fadeIn: 'fadeIn 0.2s ease-out',
       },
       borderRadius: {
