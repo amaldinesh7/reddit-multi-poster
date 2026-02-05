@@ -31,7 +31,25 @@ export async function createQueueJob(
 ): Promise<QueueJob> {
   const client = createServerSupabaseClient();
   
-  // Check if user already has too many pending jobs
+  // Auto-cancel any stale pending/processing jobs (older than 5 minutes)
+  // This prevents users from getting permanently blocked by stuck jobs
+  const staleThreshold = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const { error: cleanupError } = await client
+    .from('queue_jobs')
+    .update({
+      status: 'cancelled',
+      completed_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId)
+    .in('status', ['pending', 'processing'])
+    .lt('created_at', staleThreshold);
+  
+  if (cleanupError) {
+    console.error('Failed to cleanup stale jobs:', cleanupError);
+    // Continue anyway - don't block job creation for cleanup failures
+  }
+  
+  // Check if user already has an active job (single session model)
   const { count, error: countError } = await client
     .from('queue_jobs')
     .select('id', { count: 'exact', head: true })
@@ -43,7 +61,7 @@ export async function createQueueJob(
   }
   
   if (count && count >= QUEUE_JOB_CONSTANTS.MAX_JOBS_PER_USER) {
-    throw new Error(`Maximum ${QUEUE_JOB_CONSTANTS.MAX_JOBS_PER_USER} concurrent jobs allowed. Please wait for existing jobs to complete.`);
+    throw new Error('You have an active post in progress. Wait for it to complete or cancel it first.');
   }
   
   const { data, error } = await client

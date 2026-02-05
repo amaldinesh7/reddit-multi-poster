@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import { useSubreddits } from './useSubreddits';
 import { useSubredditCache } from './useSubredditCache';
-import { PostRequirements } from '../utils/reddit';
+import { PostRequirements, SubredditEligibility } from '../utils/reddit';
 import { TitleTag } from '../utils/subredditCache';
 
 export interface SubredditRulesData {
@@ -21,6 +21,7 @@ interface UseSubredditFlairDataReturn {
   flairRequired: Record<string, boolean>;
   subredditRules: Record<string, SubredditRulesData>;
   postRequirements: Record<string, PostRequirements>;
+  eligibilityData: Record<string, SubredditEligibility>;
   isLoaded: boolean;
   isInitialLoad: boolean;
   cacheLoading: Record<string, boolean>;
@@ -38,6 +39,7 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
   const [flairRequired, setFlairRequired] = useState<Record<string, boolean>>({});
   const [subredditRules, setSubredditRules] = useState<Record<string, SubredditRulesData>>({});
   const [postRequirements, setPostRequirements] = useState<Record<string, PostRequirements>>({});
+  const [eligibilityData, setEligibilityData] = useState<Record<string, SubredditEligibility>>({});
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isReloading, setIsReloading] = useState(false);
 
@@ -65,6 +67,7 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
       const newFlairRequired: Record<string, boolean> = {};
       const newSubredditRules: Record<string, SubredditRulesData> = {};
       const newPostRequirements: Record<string, PostRequirements> = {};
+      const newEligibilityData: Record<string, SubredditEligibility> = {};
 
       for (const subreddit of allSubreddits) {
         const cached = getCachedDataRef.current(subreddit);
@@ -75,6 +78,9 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
           if (cached.post_requirements) {
             newPostRequirements[subreddit] = cached.post_requirements;
           }
+          if (cached.eligibility) {
+            newEligibilityData[subreddit] = cached.eligibility;
+          }
         }
       }
 
@@ -83,6 +89,7 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
         setFlairRequired(prev => ({ ...prev, ...newFlairRequired }));
         setSubredditRules(prev => ({ ...prev, ...newSubredditRules }));
         setPostRequirements(prev => ({ ...prev, ...newPostRequirements }));
+        setEligibilityData(prev => ({ ...prev, ...newEligibilityData }));
       }
 
       const needsFetching = allSubreddits.filter(name => 
@@ -124,6 +131,7 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
                   contentTags: [] as string[]
                 },
                 post_requirements: undefined as PostRequirements | undefined,
+                eligibility: undefined as SubredditEligibility | undefined,
                 lastFetched: Date.now(),
                 version: 1
               }
@@ -137,6 +145,7 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
         const batchFlairRequired: Record<string, boolean> = {};
         const batchSubredditRules: Record<string, SubredditRulesData> = {};
         const batchPostRequirements: Record<string, PostRequirements> = {};
+        const batchEligibilityData: Record<string, SubredditEligibility> = {};
 
         batchResults.forEach(({ subreddit, cached }) => {
           batchFlairOptions[subreddit] = cached.flairs;
@@ -145,12 +154,16 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
           if (cached.post_requirements) {
             batchPostRequirements[subreddit] = cached.post_requirements;
           }
+          if (cached.eligibility) {
+            batchEligibilityData[subreddit] = cached.eligibility;
+          }
         });
 
         setFlairOptions(prev => ({ ...prev, ...batchFlairOptions }));
         setFlairRequired(prev => ({ ...prev, ...batchFlairRequired }));
         setSubredditRules(prev => ({ ...prev, ...batchSubredditRules }));
         setPostRequirements(prev => ({ ...prev, ...batchPostRequirements }));
+        setEligibilityData(prev => ({ ...prev, ...batchEligibilityData }));
 
         if (i + batchSize < needsFetching.length) {
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -228,6 +241,7 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
     flairRequired,
     subredditRules,
     postRequirements,
+    eligibilityData,
     isLoaded,
     isInitialLoad,
     cacheLoading,

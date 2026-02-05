@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronDown, ChevronRight, AlertTriangle, Settings } from 'lucide-react';
 import SubredditRow, { SubredditRules } from './SubredditRow';
-import { PostRequirements } from '@/utils/reddit';
+import { PostRequirements, SubredditEligibility, RedditUser } from '@/utils/reddit';
 import { FailedPost } from '@/hooks/useFailedPosts';
 import { ValidationIssue } from '@/lib/preflightValidation';
 import { PerSubredditOverride } from './CustomizePostDialog';
@@ -21,6 +21,10 @@ interface SubredditCategoryListProps {
   titleSuffixValue: Record<string, string | undefined>;
   subredditRules: Record<string, SubredditRules>;
   postRequirements: Record<string, PostRequirements>;
+  /** Eligibility data for each subreddit */
+  eligibilityData?: Record<string, SubredditEligibility>;
+  /** User data for eligibility checks */
+  userData?: RedditUser;
   cacheLoading: Record<string, boolean>;
   showValidationErrors?: boolean;
   /** Map of subreddit name to failed post data */
@@ -57,6 +61,8 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
   titleSuffixValue,
   subredditRules,
   postRequirements,
+  eligibilityData,
+  userData,
   cacheLoading,
   showValidationErrors,
   failedPostsBySubreddit,
@@ -119,25 +125,22 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
                 )}
                 <span className="font-medium text-sm">{categoryName}</span>
                 <span className="text-xs text-muted-foreground">
-                  ({subreddits.length})
+                  ({selectedCount}/{subreddits.length})
                 </span>
-                {selectedCount > 0 && (
-                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">
-                    {selectedCount} selected
-                  </span>
-                )}
               </div>
 
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectAllInCategory(subreddits);
-                }}
-                className="text-xs text-primary hover:text-primary/80 font-medium px-2 py-1 rounded-md hover:bg-primary/10 transition-colors cursor-pointer"
-                aria-label={`Select all subreddits in ${categoryName}`}
-              >
-                Select All
-              </button>
+              {isExpanded && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectAllInCategory(subreddits);
+                  }}
+                  className="text-xs text-primary hover:text-primary/80 font-medium px-2 py-1 rounded-md hover:bg-primary/10 transition-colors cursor-pointer"
+                  aria-label={`Select all subreddits in ${categoryName}`}
+                >
+                  Select All
+                </button>
+              )}
             </button>
 
             {isExpanded && (
@@ -169,6 +172,8 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
                       contentOverride={contentOverrides?.[name]}
                       onCustomize={onCustomize}
                       customizationEnabled={customizationEnabled}
+                      eligibility={eligibilityData?.[name]}
+                      userData={userData}
                     />
                   );
                 })}

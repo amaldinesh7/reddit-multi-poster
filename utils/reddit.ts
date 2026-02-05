@@ -12,6 +12,26 @@ export interface RedditUser {
   name: string;
   id: string;
   icon_img?: string;
+  // Enhanced user data for eligibility checks
+  comment_karma?: number;
+  link_karma?: number;
+  total_karma?: number;
+  has_verified_email?: boolean;
+  verified?: boolean;
+  created_utc?: number;
+  is_gold?: boolean;
+}
+
+// Subreddit eligibility data - user's relationship with a subreddit
+export interface SubredditEligibility {
+  subreddit: string;
+  subredditType: 'public' | 'private' | 'restricted' | 'gold_restricted' | 'archived' | 'user';
+  userIsBanned: boolean;
+  userIsContributor: boolean;  // "Approved submitter"
+  userIsSubscriber: boolean;
+  userIsModerator: boolean;
+  restrictPosting: boolean;
+  submissionType: 'any' | 'link' | 'self';
 }
 
 export interface FlairOption {
@@ -131,7 +151,57 @@ export function redditClient(accessToken: string): AxiosInstance {
 
 export async function getIdentity(client: AxiosInstance): Promise<RedditUser> {
   const { data } = await client.get('/api/v1/me');
-  return data;
+  // Return enhanced user data including karma, account age, and verification status
+  return {
+    name: data.name,
+    id: data.id,
+    icon_img: data.icon_img,
+    comment_karma: data.comment_karma,
+    link_karma: data.link_karma,
+    total_karma: data.total_karma,
+    has_verified_email: data.has_verified_email,
+    verified: data.verified,
+    created_utc: data.created_utc,
+    is_gold: data.is_gold,
+  };
+}
+
+/**
+ * Get user's eligibility status for a specific subreddit
+ * This includes banned status, approved submitter status, subscriber status, etc.
+ */
+export async function getSubredditEligibility(
+  client: AxiosInstance, 
+  subreddit: string
+): Promise<SubredditEligibility> {
+  try {
+    const { data } = await client.get(`/r/${subreddit}/about`, { params: { raw_json: 1 } });
+    const subData = data?.data || {};
+    
+    return {
+      subreddit,
+      subredditType: subData.subreddit_type || 'public',
+      userIsBanned: subData.user_is_banned || false,
+      userIsContributor: subData.user_is_contributor || false,
+      userIsSubscriber: subData.user_is_subscriber || false,
+      userIsModerator: subData.user_is_moderator || false,
+      restrictPosting: subData.restrict_posting || false,
+      submissionType: subData.submission_type || 'any',
+    };
+  } catch (error) {
+    // Return safe defaults if we can't fetch eligibility
+    console.error(`Failed to get eligibility for r/${subreddit}:`, error);
+    return {
+      subreddit,
+      subredditType: 'public',
+      userIsBanned: false,
+      userIsContributor: false,
+      userIsSubscriber: false,
+      userIsModerator: false,
+      restrictPosting: false,
+      submissionType: 'any',
+    };
+  }
 }
 
 export async function listMySubreddits(client: AxiosInstance, maxPages: number = 10): Promise<string[]> {

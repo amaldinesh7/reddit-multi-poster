@@ -5,7 +5,7 @@
  * Provides detailed warnings and errors with suggested fixes.
  */
 
-import { PostRequirements } from '../utils/reddit';
+import { PostRequirements, RedditUser, SubredditEligibility } from '../utils/reddit';
 import { ErrorCategory } from './errorClassification';
 
 // ============================================================================
@@ -67,6 +67,33 @@ export interface PreflightInput {
   postRequirements: Record<string, PostRequirements>;
   /** Title suffixes by subreddit */
   titleSuffixes?: Record<string, string | undefined>;
+  /** User data for eligibility checks */
+  userData?: RedditUser;
+  /** Eligibility data by subreddit */
+  eligibilityData?: Record<string, SubredditEligibility>;
+}
+
+// ============================================================================
+// Eligibility Types
+// ============================================================================
+
+export type EligibilityStatus = 'ready' | 'warning' | 'blocked' | 'approved' | 'moderator';
+
+export interface EligibilityResult {
+  /** Overall status for the subreddit */
+  status: EligibilityStatus;
+  /** Detailed breakdown of checks */
+  checks: {
+    banned: boolean;
+    approved: boolean;
+    moderator: boolean;
+    subscriber: boolean;
+    restrictedPosting: boolean;
+    subredditType: string;
+    submissionTypeAllowed: boolean;
+  };
+  /** Human-readable reasons */
+  reasons: string[];
 }
 
 // ============================================================================
@@ -543,6 +570,227 @@ function validateGeneral(input: PreflightInput): ValidationIssue[] {
 }
 
 // ============================================================================
+// Eligibility Validation
+// ============================================================================
+
+/**
+ * Calculates account age in days from the created_utc timestamp
+ */
+function getAccountAgeDays(createdUtc: number): number {
+  const now = Date.now() / 1000; // Current time in seconds
+  const ageSeconds = now - createdUtc;
+  return Math.floor(ageSeconds / (60 * 60 * 24));
+}
+
+/**
+ * Determines eligibility status for a specific subreddit
+ */
+export function getEligibilityForSubreddit(
+  subreddit: string,
+  eligibility: SubredditEligibility | undefined,
+  userData: RedditUser | undefined,
+  postKind: 'self' | 'link' | 'image' | 'video' | 'gallery'
+): EligibilityResult {
+  const checks = {
+    banned: false,
+    approved: false,
+    moderator: false,
+    subscriber: false,
+    restrictedPosting: false,
+    subredditType: 'public',
+    submissionTypeAllowed: true,
+  };
+
+  const reasons: string[] = [];
+
+  // If no eligibility data, assume ready with warning
+  if (!eligibility) {
+    return {
+      status: 'warning',
+      checks,
+      reasons: ['Unable to verify eligibility - proceed with caution'],
+    };
+  }
+
+  // Update checks from eligibility data
+  checks.banned = eligibility.userIsBanned;
+  checks.approved = eligibility.userIsContributor;
+  checks.moderator = eligibility.userIsModerator;
+  checks.subscriber = eligibility.userIsSubscriber;
+  checks.restrictedPosting = eligibility.restrictPosting;
+  checks.subredditType = eligibility.subredditType;
+
+  // Check submission type compatibility
+  const isLinkPost = postKind === 'link';
+  const isSelfPost = postKind === 'self';
+  const isMediaPost = ['image', 'video', 'gallery'].includes(postKind);
+
+  if (eligibility.submissionType === 'link' && (isSelfPost)) {
+    checks.submissionTypeAllowed = false;
+  } else if (eligibility.submissionType === 'self' && (isLinkPost || isMediaPost)) {
+    checks.submissionTypeAllowed = false;
+  }
+
+  // Determine status based on checks
+
+  // BLOCKED: User is banned - definitive block
+  if (checks.banned) {
+    return {
+      status: 'blocked',
+      checks,
+      reasons: [`You are banned from r/${subreddit}`],
+    };
+  }
+
+  // BLOCKED: Subreddit doesn't allow this post type
+  if (!checks.submissionTypeAllowed) {
+    const typeLabel = eligibility.submissionType === 'link' ? 'link posts' : 'text posts';
+    return {
+      status: 'blocked',
+      checks,
+      reasons: [`r/${subreddit} only allows ${typeLabel}`],
+    };
+  }
+
+  // BLOCKED: Subreddit is restricted and user is not approved
+  if (eligibility.subredditType === 'restricted' && !checks.approved && !checks.moderator) {
+    return {
+      status: 'blocked',
+      checks,
+      reasons: [`r/${subreddit} is restricted - only approved users can post`],
+    };
+  }
+
+  // BLOCKED: Subreddit is private and user may not have access
+  if (eligibility.subredditType === 'private' && !checks.subscriber && !checks.approved && !checks.moderator) {
+    return {
+      status: 'blocked',
+      checks,
+      reasons: [`r/${subreddit} is private - you need an invitation to post`],
+    };
+  }
+
+  // BLOCKED: Posting is restricted
+  if (checks.restrictedPosting && !checks.approved && !checks.moderator) {
+    return {
+      status: 'blocked',
+      checks,
+      reasons: [`r/${subreddit} has restricted posting - only approved users can submit`],
+    };
+  }
+
+  // MODERATOR: User is a mod - highest privilege
+  if (checks.moderator) {
+    return {
+      status: 'moderator',
+      checks,
+      reasons: [`You are a moderator of r/${subreddit}`],
+    };
+  }
+
+  // APPROVED: User is an approved submitter
+  if (checks.approved) {
+    return {
+      status: 'approved',
+      checks,
+      reasons: [`You are an approved submitter in r/${subreddit}`],
+    };
+  }
+
+  // WARNINGS: Check user data for potential issues
+  if (userData) {
+    // Low karma warning (common AutoModerator threshold)
+    const totalKarma = userData.total_karma ?? 0;
+    if (totalKarma < 100) {
+      reasons.push(`Low karma (${totalKarma}) - some subreddits require higher karma`);
+    }
+
+    // New account warning (common AutoModerator threshold is 7-30 days)
+    if (userData.created_utc) {
+      const accountAgeDays = getAccountAgeDays(userData.created_utc);
+      if (accountAgeDays < 7) {
+        reasons.push(`New account (${accountAgeDays} days) - some subreddits require older accounts`);
+      } else if (accountAgeDays < 30) {
+        reasons.push(`Account age ${accountAgeDays} days - some subreddits may have age requirements`);
+      }
+    }
+
+    // Email not verified warning
+    if (userData.has_verified_email === false) {
+      reasons.push('Email not verified - some subreddits require email verification');
+    }
+
+    // Not subscribed warning
+    if (!checks.subscriber) {
+      reasons.push(`Not subscribed to r/${subreddit} - some subreddits require membership`);
+    }
+  }
+
+  // If there are warnings, return warning status
+  if (reasons.length > 0) {
+    return {
+      status: 'warning',
+      checks,
+      reasons,
+    };
+  }
+
+  // All clear
+  return {
+    status: 'ready',
+    checks,
+    reasons: ['Ready to post'],
+  };
+}
+
+/**
+ * Validates user eligibility across all selected subreddits
+ */
+function validateEligibility(input: PreflightInput): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+
+  // Skip if no eligibility data provided
+  if (!input.eligibilityData) {
+    return issues;
+  }
+
+  for (const subreddit of input.subreddits) {
+    const eligibility = input.eligibilityData[subreddit];
+    const result = getEligibilityForSubreddit(
+      subreddit,
+      eligibility,
+      input.userData,
+      input.kind
+    );
+
+    if (result.status === 'blocked') {
+      issues.push({
+        code: 'ELIGIBILITY_BLOCKED',
+        severity: 'error',
+        subreddit,
+        message: result.reasons[0] || `Cannot post to r/${subreddit}`,
+        suggestion: 'Remove this subreddit or contact the moderators',
+        expectedCategory: 'unfixable',
+      });
+    } else if (result.status === 'warning') {
+      // Add warnings for potential issues
+      for (const reason of result.reasons) {
+        issues.push({
+          code: 'ELIGIBILITY_WARNING',
+          severity: 'warning',
+          subreddit,
+          message: reason,
+          suggestion: 'Post may be automatically removed - proceed with caution',
+          expectedCategory: 'fixable_later',
+        });
+      }
+    }
+  }
+
+  return issues;
+}
+
+// ============================================================================
 // Main Validation Function
 // ============================================================================
 
@@ -552,6 +800,7 @@ function validateGeneral(input: PreflightInput): ValidationIssue[] {
 export function validatePreflight(input: PreflightInput): PreflightResult {
   const allIssues: ValidationIssue[] = [
     ...validateGeneral(input),
+    ...validateEligibility(input),
     ...validateTitle(input),
     ...validateBody(input),
     ...validateBlacklistedStrings(input),

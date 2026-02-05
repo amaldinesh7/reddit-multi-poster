@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Send, Loader2, AlertTriangle, CheckCircle, X } from 'lucide-react';
+import { Send, Loader2, AlertTriangle, CheckCircle, X, Trash2 } from 'lucide-react';
 import { QueueItem } from '@/types';
 
 interface Props {
@@ -30,35 +29,35 @@ export const MobileStickyQueue: React.FC<Props> = ({
     return (
         <div className="fixed bottom-0 left-0 right-0 z-[100] lg:hidden">
             <div className="bg-background/90 backdrop-blur-2xl border-t border-border/50 shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
-                <div className="px-5 py-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-4">
+                <div className="px-5 py-3 pb-[calc(1rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2.5">
-                            <span className="font-bold text-sm tracking-tight">Queue</span>
-                            <Badge variant="secondary" className="px-2 h-5.5 text-[11px] font-bold bg-primary/10 text-primary border-none shadow-none">
-                                {items.length}
-                            </Badge>
+                        <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm">
+                                Queue ({items.length})
+                            </span>
+                            {hasErrors && (
+                                <AlertTriangle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+                            )}
                         </div>
-                        {hasErrors ? (
-                            <div className="flex items-center gap-1.5 text-red-500 mt-1.5 transition-all">
-                                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                                <span className="text-[11px] font-bold uppercase tracking-widest truncate">
-                                    Action Required
-                                </span>
-                            </div>
-                        ) : (
-                            <div className="text-[11px] font-medium text-muted-foreground mt-1 truncate">
-                                {isPosting ? 'Posting in progress...' : isCompleted ? 'All done!' : 'Ready to post'}
-                            </div>
-                        )}
+                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                            {hasErrors 
+                                ? 'Needs attention' 
+                                : isPosting 
+                                    ? 'Posting...' 
+                                    : isCompleted 
+                                        ? 'All done!' 
+                                        : 'Ready'}
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-4 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
                         {!isPosting && !isCompleted && onClearClick && items.length > 0 && (
                             <button
                                 onClick={onClearClick}
-                                className="text-muted-foreground hover:text-red-500 text-xs font-bold uppercase tracking-wider px-2 py-2 transition-colors active:scale-90"
+                                className="p-2 text-muted-foreground hover:text-red-500 transition-colors active:scale-90 rounded-md hover:bg-red-500/10"
+                                aria-label="Clear queue"
                             >
-                                Clear
+                                <Trash2 className="w-4 h-4" />
                             </button>
                         )}
 
@@ -66,9 +65,9 @@ export const MobileStickyQueue: React.FC<Props> = ({
                             <Button
                                 onClick={onResetClick}
                                 size="sm"
-                                className="bg-green-600 hover:bg-green-700 h-11 px-5 font-bold shadow-lg shadow-green-500/20 active:scale-95 transition-all text-sm"
+                                className="bg-green-600 hover:bg-green-700 h-10 px-4 font-medium shadow-lg shadow-green-500/20 active:scale-95 transition-all text-sm"
                             >
-                                <CheckCircle className="w-4.5 h-4.5 mr-2" />
+                                <CheckCircle className="w-4 h-4 mr-1.5" />
                                 Done
                             </Button>
                         ) : isPosting ? (
@@ -76,9 +75,9 @@ export const MobileStickyQueue: React.FC<Props> = ({
                                 onClick={onStopClick}
                                 variant="destructive"
                                 size="sm"
-                                className="h-11 px-5 font-bold shadow-lg shadow-red-500/20 active:scale-95 transition-all text-sm"
+                                className="h-10 px-4 font-medium shadow-lg shadow-red-500/20 active:scale-95 transition-all text-sm"
                             >
-                                <X className="w-4.5 h-4.5 mr-2" />
+                                <X className="w-4 h-4 mr-1.5" />
                                 Stop
                             </Button>
                         ) : (
@@ -86,9 +85,9 @@ export const MobileStickyQueue: React.FC<Props> = ({
                                 onClick={onPostClick}
                                 disabled={hasErrors || items.length === 0}
                                 size="sm"
-                                className={`h-11 px-5 font-bold shadow-xl shadow-primary/30 active:scale-95 transition-all text-sm ${hasErrors ? 'opacity-50' : 'bg-primary'}`}
+                                className={`h-10 px-4 font-medium shadow-xl shadow-primary/30 active:scale-95 transition-all text-sm ${hasErrors ? 'opacity-50' : 'bg-primary'}`}
                             >
-                                <Send className="w-4.5 h-4.5 mr-2" />
+                                <Send className="w-4 h-4 mr-1.5" />
                                 Post All
                             </Button>
                         )}

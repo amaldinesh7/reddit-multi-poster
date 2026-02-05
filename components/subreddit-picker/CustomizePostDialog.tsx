@@ -220,7 +220,7 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
           </div>
 
           {/* Requirements hint */}
-          {(postRequirements?.title_blacklisted_strings?.length || postRequirements?.body_blacklisted_strings?.length) && (
+          {(postRequirements?.title_blacklisted_strings?.length ?? 0) + (postRequirements?.body_blacklisted_strings?.length ?? 0) > 0 && (
             <div className="text-xs text-muted-foreground bg-yellow-500/10 px-3 py-2 rounded-md">
               This community has content restrictions. Check the community rules for blacklisted words.
             </div>
