@@ -15,13 +15,26 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 const getSystemTheme = (): 'light' | 'dark' =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 
-const applyTheme = (resolved: 'light' | 'dark') => {
+const applyTheme = (resolved: 'light' | 'dark', skipTransition = false) => {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
+
+  // Enable smooth cross-fade transition (skipped on initial mount)
+  if (!skipTransition) {
+    root.classList.add('theme-transitioning');
+  }
+
   if (resolved === 'dark') {
     root.classList.add('dark');
   } else {
     root.classList.remove('dark');
+  }
+
+  // Remove transition class after animation to avoid permanent perf cost
+  if (!skipTransition) {
+    setTimeout(() => {
+      root.classList.remove('theme-transitioning');
+    }, 300);
   }
 };
 
@@ -45,7 +58,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setThemeState(stored);
     const resolved = stored === 'system' ? getSystemTheme() : stored;
     setResolvedTheme(resolved);
-    applyTheme(resolved);
+    applyTheme(resolved, true); // Skip transition on initial mount
     setMounted(true);
   }, []);
 

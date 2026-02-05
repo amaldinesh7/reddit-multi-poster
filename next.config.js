@@ -3,6 +3,72 @@ const { withSentryConfig } = require("@sentry/nextjs");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  
+  // Compiler optimizations
+  compiler: {
+    // Remove console.log in production
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
+  
+  // Experimental features for faster builds and smaller bundles
+  experimental: {
+    // Enable optimized package imports for commonly used packages
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+  },
+  
+  // Image optimization configuration
+  images: {
+    // Support Reddit CDN for user avatars
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'styles.redditmedia.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.redd.it',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.redditstatic.com',
+      },
+    ],
+    // Use modern formats for better compression
+    formats: ['image/avif', 'image/webp'],
+  },
+  
+  // Headers for caching static assets
+  async headers() {
+    return [
+      {
+        source: '/logo.png',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/:path*.png',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/:path*.ico',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 module.exports = withSentryConfig(nextConfig, {
@@ -34,6 +100,22 @@ module.exports = withSentryConfig(nextConfig, {
   // Disable Sentry webpack plugin if no auth token (for local development)
   disableServerWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
   disableClientWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
+
+  // Source maps configuration for Debug IDs
+  sourcemaps: {
+    // Delete source maps after uploading to Sentry (keeps them out of production bundles)
+    deleteSourcemapsAfterUpload: true,
+  },
+
+  // Release configuration
+  release: {
+    // Use git commit SHA for release versioning
+    name: process.env.VERCEL_GIT_COMMIT_SHA || process.env.SENTRY_RELEASE,
+    // Create release and associate commits
+    create: true,
+    // Finalize release after upload
+    finalize: true,
+  },
 
   webpack: {
     // Enables automatic instrumentation of Vercel Cron Monitors

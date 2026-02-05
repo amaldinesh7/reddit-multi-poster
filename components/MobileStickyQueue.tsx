@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Send, Loader2, AlertTriangle, CheckCircle, X, Trash2 } from 'lucide-react';
+import { Send, Loader2, AlertTriangle, CheckCircle, X, RotateCcw } from 'lucide-react';
 import { QueueItem } from '@/types';
 
 interface Props {
@@ -27,9 +27,9 @@ export const MobileStickyQueue: React.FC<Props> = ({
     if (items.length === 0 && !isCompleted) return null;
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-[100] lg:hidden">
+        <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-[100] lg:hidden">
             <div className="bg-background/90 backdrop-blur-2xl border-t border-border/50 shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
-                <div className="px-5 py-3 pb-[calc(1rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-3">
+                <div className="px-5 py-3 flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                             <span className="font-semibold text-sm">
@@ -54,10 +54,11 @@ export const MobileStickyQueue: React.FC<Props> = ({
                         {!isPosting && !isCompleted && onClearClick && items.length > 0 && (
                             <button
                                 onClick={onClearClick}
-                                className="p-2 text-muted-foreground hover:text-red-500 transition-colors active:scale-90 rounded-md hover:bg-red-500/10"
-                                aria-label="Clear queue"
+                                className="p-2 text-muted-foreground hover:text-foreground/70 transition-colors active:scale-90 rounded-md hover:bg-muted"
+                                aria-label="Reset queue"
+                                tabIndex={0}
                             >
-                                <Trash2 className="w-4 h-4" />
+                                <RotateCcw className="w-4 h-4" />
                             </button>
                         )}
 
@@ -85,7 +86,7 @@ export const MobileStickyQueue: React.FC<Props> = ({
                                 onClick={onPostClick}
                                 disabled={hasErrors || items.length === 0}
                                 size="sm"
-                                className={`h-10 px-4 font-medium shadow-xl shadow-primary/30 active:scale-95 transition-all text-sm ${hasErrors ? 'opacity-50' : 'bg-primary'}`}
+                                className={`h-9 px-3 font-medium active:scale-95 transition-all text-sm ${hasErrors ? 'opacity-50' : 'bg-primary'}`}
                             >
                                 <Send className="w-4 h-4 mr-1.5" />
                                 Post All

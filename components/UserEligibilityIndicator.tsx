@@ -97,7 +97,7 @@ const StatItem = ({ icon, label, value, status = 'good', tooltip }: StatItemProp
   };
 
   const content = (
-    <div className="flex items-center gap-1.5 cursor-help">
+    <div className="flex items-center gap-1.5 cursor-default">
       <span className={statusColors[status]}>{icon}</span>
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="text-xs font-medium">{value}</span>
@@ -159,7 +159,7 @@ export const UserEligibilityIndicator = ({
 
     return (
       <Tooltip content={<p className="text-xs font-medium">{statusLabels[overallStatus]}</p>} side="bottom">
-        <div className={`w-2 h-2 rounded-full ${orbColors[overallStatus]} cursor-help`} />
+        <div className={`w-2 h-2 rounded-full ${orbColors[overallStatus]} cursor-default`} />
       </Tooltip>
     );
   };
@@ -195,7 +195,7 @@ export const UserEligibilityIndicator = ({
       } 
       side="bottom"
     >
-      <div className={`flex items-center gap-2 cursor-help ${className}`}>
+      <div className={`flex items-center gap-2 cursor-default ${className}`}>
         <StatusOrb />
         <span className="text-xs text-muted-foreground">
           {totalKarma.toLocaleString()} karma
@@ -238,8 +238,8 @@ export const EligibilityBadge = ({ status, reason, compact = false }: Eligibilit
       className: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
     },
     blocked: {
-      icon: <XCircle className="w-3 h-3" />,
-      label: 'Blocked',
+      icon: <AlertTriangle className="w-3 h-3" />,
+      label: 'Restricted',
       className: 'text-red-500 bg-red-500/10 border-red-500/20',
     },
     approved: {
@@ -258,10 +258,10 @@ export const EligibilityBadge = ({ status, reason, compact = false }: Eligibilit
 
   const badge = (
     <span
-      className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded border ${className} cursor-help`}
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded border ${className} cursor-default`}
     >
       {icon}
-      {!compact && <span>{label}</span>}
+      {(!compact || status === 'blocked') && <span>{label}</span>}
     </span>
   );
 

@@ -35,7 +35,7 @@ export const AppFooter: React.FC = () => {
         className={cn(
           "noise-texture noise-subtle",
           "relative overflow-hidden",
-          "px-4 sm:px-6 py-3.5 sm:py-4",
+          "px-4 sm:px-6 py-2 sm:py-4",
           "bg-muted/30"
         )}
       >
