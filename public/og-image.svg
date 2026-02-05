@@ -1,0 +1,58 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a0a"/>
+      <stop offset="50%" style="stop-color:#12121a"/>
+      <stop offset="100%" style="stop-color:#1a1a2e"/>
+    </linearGradient>
+    <radialGradient id="glow-orange" cx="25%" cy="30%" r="50%">
+      <stop offset="0%" style="stop-color:#FF4500;stop-opacity:0.15"/>
+      <stop offset="100%" style="stop-color:#FF4500;stop-opacity:0"/>
+    </radialGradient>
+    <radialGradient id="glow-purple" cx="75%" cy="70%" r="50%">
+      <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:0.1"/>
+      <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:0"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg-gradient)"/>
+  <rect width="1200" height="630" fill="url(#glow-orange)"/>
+  <rect width="1200" height="630" fill="url(#glow-purple)"/>
+  
+  <!-- Reddit icon -->
+  <g transform="translate(540, 140)">
+    <circle cx="60" cy="60" r="60" fill="#FF4500"/>
+    <path d="M60 20C38.95 20 22 36.95 22 58C22 79.05 38.95 96 60 96C81.05 96 98 79.05 98 58C98 36.95 81.05 20 60 20ZM82.51 31.74C85.96 31.74 88.76 34.54 88.76 37.99C88.76 40.44 87.33 42.55 85.24 43.52C85.5 44.67 85.64 45.86 85.64 47.08C85.64 60.58 74.14 71.58 60 71.58C45.86 71.58 34.36 60.58 34.36 47.08C34.36 45.86 34.5 44.67 34.76 43.52C32.67 42.55 31.24 40.44 31.24 37.99C31.24 34.54 34.04 31.74 37.49 31.74C39.17 31.74 40.7 32.42 41.81 33.53C46.41 30.51 52.35 28.53 58.93 28.19L62.37 15.47C62.5 14.94 62.81 14.47 63.26 14.17C63.71 13.87 64.26 13.77 64.79 13.89L77.35 16.53C78.21 14.67 80.07 13.33 82.24 13.33C85.24 13.33 87.67 15.76 87.67 18.76C87.67 21.76 85.24 24.19 82.24 24.19C79.31 24.19 76.93 21.86 76.82 18.96L65.72 16.62L62.69 27.99C69.63 28.22 75.86 30.24 80.63 33.41C81.74 32.36 83.22 31.74 82.51 31.74ZM45 42C41.69 42 39 44.69 39 48C39 51.31 41.69 54 45 54C48.31 54 51 51.31 51 48C51 44.69 48.31 42 45 42ZM75 42C71.69 42 69 44.69 69 48C69 51.31 71.69 54 75 54C78.31 54 81 51.31 81 48C81 44.69 78.31 42 75 42ZM46.03 61.99C45.67 61.63 45.67 61.05 46.03 60.69C46.39 60.33 46.97 60.33 47.33 60.69C49.73 63.09 54.16 63.53 60.02 63.53C65.88 63.53 70.27 63.05 72.71 60.69C73.07 60.33 73.65 60.33 74.01 60.69C74.37 61.05 74.37 61.63 74.01 61.99C70.67 65.33 64.81 65.53 60.02 65.53C55.23 65.53 49.33 65.29 46.03 61.99Z" fill="white"/>
+  </g>
+  
+  <!-- Title -->
+  <text x="600" y="320" font-family="system-ui, -apple-system, sans-serif" font-size="56" font-weight="700" fill="white" text-anchor="middle">
+    Reddit Multi Poster
+  </text>
+  
+  <!-- Tagline -->
+  <text x="600" y="380" font-family="system-ui, -apple-system, sans-serif" font-size="28" fill="#9CA3AF" text-anchor="middle">
+    Share once. Reach everywhere.
+  </text>
+  
+  <!-- Feature pills -->
+  <g transform="translate(300, 440)">
+    <rect x="0" y="0" width="180" height="44" rx="22" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <text x="90" y="28" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#D1D5DB" text-anchor="middle">Post to 30+ subs</text>
+  </g>
+  <g transform="translate(510, 440)">
+    <rect x="0" y="0" width="180" height="44" rx="22" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <text x="90" y="28" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#D1D5DB" text-anchor="middle">Auto scheduling</text>
+  </g>
+  <g transform="translate(720, 440)">
+    <rect x="0" y="0" width="180" height="44" rx="22" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <text x="90" y="28" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#D1D5DB" text-anchor="middle">Smart flairs</text>
+  </g>
+  
+  <!-- URL -->
+  <text x="600" y="570" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#6B7280" text-anchor="middle">
+    reddit-multi-poster.vercel.app
+  </text>
+</svg>

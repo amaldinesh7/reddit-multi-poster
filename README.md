@@ -1,155 +1,137 @@
-# Reddit Multi-Poster
+<p align="center">
+  <img src="public/logo.png" alt="Reddit Multi Poster Logo" width="120" height="120" />
+</p>
 
-A web application that lets you post the same content to multiple Reddit communities at once, with automatic scheduling to respect Reddit's posting limits.
+<h1 align="center">Reddit Multi Poster</h1>
 
-## What It Does
+<p align="center">
+  <strong>Share once. Reach everywhere.</strong>
+</p>
 
-- **Upload Once, Post Everywhere**: Upload an image or paste a URL and post it to up to 30 different subreddits with a single click
-- **Smart Scheduling**: Automatically spaces out your posts with 15-minute delays between each subreddit to avoid spam detection
-- **Flair Management**: Automatically selects appropriate flairs for each subreddit, or lets you customize them
-- **Queue System**: Shows you the status of all your posts in real-time as they're being submitted
-- **Reddit OAuth**: Securely connects to your Reddit account - no password storage required
+<p align="center">
+  <a href="https://reddit-multi-poster.vercel.app">
+    <img src="https://img.shields.io/badge/Try%20It-Live%20Demo-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="Live Demo" />
+  </a>
+</p>
 
-## How To Use
+<p align="center">
+  <img src="https://img.shields.io/badge/version-1.0.0-blue?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License" />
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome" />
+</p>
 
-1. **Login**: Click "Login with Reddit" and authorize the app
-2. **Upload Content**: Either upload an image file or paste a URL to content you want to share
-3. **Choose Subreddits**: Select which communities you want to post to (the app comes pre-configured with popular subreddits)
-4. **Write Your Post**: Add a title/caption for your post (100 character limit)
-5. **Configure Options**: 
-   - Set custom flairs for specific subreddits
-6. **Start Posting**: Hit "Start Posting" and watch as your content gets submitted to each subreddit automatically
+---
+
+## The Problem
+
+You create something amazing and want to share it across Reddit. But then:
+
+- Copy. Paste. Select flair. Submit. Repeat for every subreddit.
+- 20 minutes later, you've posted to maybe 5 communities
+- Reddit's spam filter flags you for posting too quickly
+- Half your audience never sees your content
+
+**Your time should be spent creating, not copying and pasting.**
+
+---
+
+## The Solution
+
+**One upload. One click. 30+ communities.**
+
+Reddit Multi Poster handles the tedious work so you can focus on what matters.
+
+- Upload your image or paste a URL once
+- Select all the communities you want to reach
+- Hit "Start Posting" and watch it happen
+- Smart 15-minute delays keep you safe from spam filters
+- Automatic flair detection means no more "Post removed: Missing flair" messages
+
+---
 
 ## Features
 
-- **Bulk Posting**: Post to multiple subreddits simultaneously
-- **Rate Limiting**: Built-in delays prevent you from hitting Reddit's spam filters
-- **Flair Detection**: Automatically finds and applies appropriate flairs for each subreddit
-- **Progress Tracking**: Real-time status updates for each post in your queue
-- **Error Handling**: Shows you which posts succeeded and which failed, with reasons
-
-## Quick Setup
-
-1. Get Reddit API credentials (takes 2 minutes - see SETUP.md for details)
-2. Create a `.env.local` file with your credentials
-3. Run `npm install` and `npm run dev`
-4. Open http://localhost:3000 and start posting!
+| Feature | What It Means For You |
+|---------|----------------------|
+| **Bulk Posting** | Post to up to 30 subreddits with a single click |
+| **Smart Scheduling** | Automatic 15-minute delays prevent spam flags |
+| **Auto Flair Detection** | No more "post removed" surprises |
+| **Real-Time Progress** | Watch each post succeed (or see exactly why it didn't) |
+| **Secure OAuth** | We never see your Reddit password |
+| **Free Tier** | Get started without paying a dime |
 
 ---
 
-## Local Development with Supabase
+## Getting Started
 
-This project uses Supabase for data persistence. You can run Supabase locally for development.
+### Use the Live App
 
-### Prerequisites
+1. Visit [reddit-multi-poster.vercel.app](https://reddit-multi-poster.vercel.app)
+2. Click "Continue with Reddit" to connect your account
+3. Upload your content and select your communities
+4. Hit "Start Posting" — done!
 
-- [Docker](https://docs.docker.com/get-docker/) installed and running
-- Node.js 18+ and npm
-
-### Setup Local Supabase
-
-1. **Install Supabase CLI** (if not already installed):
-   ```bash
-   npm install supabase --save-dev
-   ```
-
-2. **Start Supabase locally**:
-   ```bash
-   npx supabase start
-   ```
-   
-   This will start all Supabase services (PostgreSQL, Auth, Storage, etc.) in Docker containers.
-   
-   After starting, you'll see output like:
-   ```
-   Studio URL: http://127.0.0.1:54323
-   API URL: http://127.0.0.1:54321
-   DB URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-   ```
-
-3. **Configure environment variables** in `.env.local`:
-   ```env
-   # Local Supabase
-   NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-   SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key-from-supabase-start-output>
-   
-   # Reddit OAuth (required)
-   REDDIT_CLIENT_ID=your_client_id
-   REDDIT_CLIENT_SECRET=your_client_secret
-   REDDIT_REDIRECT_URI=http://localhost:3000/api/auth/callback
-   REDDIT_USER_AGENT=reddit-multi-poster/1.0
-   ```
-
-### Database Migrations
-
-Migrations are stored in `supabase/migrations/` and are applied automatically when you run:
+### Run It Yourself
 
 ```bash
-# Apply all migrations to local database
-npx supabase db reset
-
-# Or just push new migrations without resetting
-npx supabase db push
+git clone https://github.com/amaldinesh7/reddit-multi-poster.git
+cd reddit-multi-poster
+npm install
+npm run dev
 ```
 
-**Current migrations:**
-- `001_initial_schema.sql` - Core tables (users, categories, user_subreddits, subreddit_cache)
-- `002_add_post_requirements.sql` - Adds post_requirements column for Reddit posting rules
+Open [http://localhost:3000](http://localhost:3000) to start posting.
 
-### Useful Supabase Commands
-
-```bash
-# Check status of local Supabase
-npx supabase status
-
-# Stop local Supabase
-npx supabase stop
-
-# View database in browser (Supabase Studio)
-# Open http://127.0.0.1:54323
-
-# Generate TypeScript types from database schema
-npx supabase gen types typescript --local > types/database.ts
-
-# Create a new migration
-npx supabase migration new <migration_name>
-
-# View migration history
-npx supabase migration list
-
-# Connect to local database via psql
-PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres
-```
-
-### Production Deployment
-
-Migrations are automatically deployed to production via GitHub Actions when you push to `main` branch. See `.github/workflows/deploy-supabase.yml`.
-
-To manually deploy to production:
-```bash
-# Link to your Supabase project (one-time setup)
-npx supabase link --project-ref YOUR_PROJECT_ID
-
-# Push migrations to production
-npx supabase db push
-```
-
-### Preventing Supabase from Pausing
-
-Supabase free tier projects pause after 7 days of inactivity. This project includes an automatic keep-alive solution using Vercel Cron Jobs.
-
-**Setup**: See [VERCEL_SETUP.md](./VERCEL_SETUP.md) for complete instructions.
-
-**What it does**: The `/api/keep-alive` endpoint runs every 6 hours via Vercel Cron to perform a lightweight database query, keeping your Supabase instance active.
+> For full setup instructions including Supabase and Reddit API credentials, see the [Development Guide](./docs/DEVELOPMENT.md).
 
 ---
 
-## Perfect For
+## Who This Is For
 
-- Content creators who want to share across multiple communities
-- Anyone tired of manually posting the same content to different subreddits
-- Users who want to maximize their content's reach while respecting Reddit's rules
+- **Content Creators** — Artists, photographers, and makers who want their work seen
+- **Community Members** — Redditors who participate in multiple related communities
+- **Anyone Tired of Repetition** — If you've thought "there has to be a better way," this is it
 
 ---
 
-**Note**: This tool respects Reddit's API terms of service and includes built-in rate limiting to prevent spam. Always follow individual subreddit rules and Reddit's content policy.
+## Respecting Reddit's Rules
+
+We take Reddit's guidelines seriously:
+
+- Built-in rate limiting prevents spam detection
+- Respects individual subreddit rules and requirements
+- Uses official Reddit OAuth for secure authentication
+- Never stores your Reddit password
+
+Always follow individual subreddit rules and Reddit's content policy.
+
+---
+
+## Contributing
+
+We welcome contributions! Feel free to:
+
+- [Report bugs](https://github.com/amaldinesh7/reddit-multi-poster/issues)
+- Suggest features
+- Submit pull requests
+- Improve documentation
+
+See the [Development Guide](./docs/DEVELOPMENT.md) to get started.
+
+---
+
+## License
+
+MIT License — feel free to use this for your own projects.
+
+---
+
+<p align="center">
+  <strong>Stop copy-pasting. Start creating.</strong>
+</p>
+
+<p align="center">
+  <a href="https://reddit-multi-poster.vercel.app">
+    <img src="https://img.shields.io/badge/Try%20Reddit%20Multi%20Poster-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="Try It Now" />
+  </a>
+</p>
