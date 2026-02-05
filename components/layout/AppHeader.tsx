@@ -72,12 +72,28 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 className="flex min-h-[44px] min-w-[44px] sm:min-w-0 items-center justify-center gap-2 rounded-md px-3 py-1.5 hover:bg-secondary transition-colors cursor-pointer"
                 aria-label="User menu"
               >
-                <Avatar
-                  src={userAvatar}
-                  alt={userName || 'User'}
-                  fallback={userName || 'U'}
-                  size="sm"
-                />
+                {/* Avatar with mobile Pro indicator */}
+                <div className="relative">
+                  <Avatar
+                    src={userAvatar}
+                    alt={userName || 'User'}
+                    fallback={userName || 'U'}
+                    size="sm"
+                  />
+                  {/* Mobile-only Pro indicator dot */}
+                  {entitlement === 'paid' && (
+                    <span 
+                      className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 ring-2 ring-background sm:hidden"
+                      aria-label="Pro member"
+                    />
+                  )}
+                </div>
+                {/* Desktop Pro badge */}
+                {entitlement === 'paid' && (
+                  <span className="hidden sm:inline-flex text-[10px] font-semibold uppercase tracking-wide bg-gradient-to-r from-violet-500/15 to-purple-500/15 text-violet-400 px-1.5 py-0.5 rounded-md border border-violet-500/20">
+                    Pro
+                  </span>
+                )}
                 <span className="text-sm font-medium hidden sm:inline">
                   u/{userName}
                 </span>

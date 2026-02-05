@@ -255,6 +255,163 @@ function validateBody(input: PreflightInput): ValidationIssue[] {
         expectedCategory: 'fixable_now',
       });
     }
+
+    // Body regex patterns (only check if body exists)
+    if (body && reqs.body_regexes && reqs.body_regexes.length > 0) {
+      const matchesAny = reqs.body_regexes.some(pattern => {
+        try {
+          const regex = new RegExp(pattern, 'i');
+          return regex.test(body);
+        } catch {
+          return false; // Invalid regex, skip
+        }
+      });
+
+      if (!matchesAny) {
+        issues.push({
+          code: 'BODY_PATTERN_MISMATCH',
+          severity: 'warning',
+          subreddit,
+          message: `r/${subreddit}: Description may not match required format`,
+          suggestion: 'Check the subreddit rules for description requirements',
+          field: 'body',
+          expectedCategory: 'fixable_now',
+        });
+      }
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * Helper to find blacklisted words in text (case-insensitive)
+ */
+function findBlacklistedWords(text: string, blacklist: string[]): string[] {
+  const lowerText = text.toLowerCase();
+  return blacklist.filter(word => {
+    const lowerWord = word.toLowerCase();
+    // Use word boundary matching to avoid partial matches
+    // e.g., "teen" should not match "canteen"
+    const regex = new RegExp(`\\b${lowerWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    return regex.test(lowerText);
+  });
+}
+
+/**
+ * Validates title and body against blacklisted strings
+ */
+function validateBlacklistedStrings(input: PreflightInput): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const baseTitle = input.title || '';
+  const body = input.body || '';
+
+  for (const subreddit of input.subreddits) {
+    const reqs = input.postRequirements[subreddit];
+    if (!reqs) continue;
+
+    const suffix = input.titleSuffixes?.[subreddit] || '';
+    const fullTitle = `${baseTitle}${suffix}`;
+
+    // Check title blacklist
+    if (reqs.title_blacklisted_strings && reqs.title_blacklisted_strings.length > 0) {
+      const foundWords = findBlacklistedWords(fullTitle, reqs.title_blacklisted_strings);
+      if (foundWords.length > 0) {
+        issues.push({
+          code: 'TITLE_BLACKLISTED_WORD',
+          severity: 'error',
+          subreddit,
+          message: `r/${subreddit}: Title contains blacklisted word${foundWords.length > 1 ? 's' : ''}: "${foundWords.join('", "')}"`,
+          suggestion: 'Remove or replace the blacklisted words from your title',
+          field: 'title',
+          expectedCategory: 'fixable_now',
+        });
+      }
+    }
+
+    // Check body blacklist
+    if (body && reqs.body_blacklisted_strings && reqs.body_blacklisted_strings.length > 0) {
+      const foundWords = findBlacklistedWords(body, reqs.body_blacklisted_strings);
+      if (foundWords.length > 0) {
+        issues.push({
+          code: 'BODY_BLACKLISTED_WORD',
+          severity: 'error',
+          subreddit,
+          message: `r/${subreddit}: Description contains blacklisted word${foundWords.length > 1 ? 's' : ''}: "${foundWords.join('", "')}"`,
+          suggestion: 'Remove or replace the blacklisted words from your description',
+          field: 'body',
+          expectedCategory: 'fixable_now',
+        });
+      }
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * Validates that required strings exist in title/body
+ */
+function validateRequiredStrings(input: PreflightInput): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const baseTitle = input.title || '';
+  const body = input.body || '';
+
+  for (const subreddit of input.subreddits) {
+    const reqs = input.postRequirements[subreddit];
+    if (!reqs) continue;
+
+    const suffix = input.titleSuffixes?.[subreddit] || '';
+    const fullTitle = `${baseTitle}${suffix}`;
+
+    // Check title required strings (at least one must be present)
+    if (reqs.title_required_strings && reqs.title_required_strings.length > 0) {
+      const lowerTitle = fullTitle.toLowerCase();
+      const hasRequired = reqs.title_required_strings.some(required => 
+        lowerTitle.includes(required.toLowerCase())
+      );
+      
+      if (!hasRequired) {
+        // Format the required strings for display
+        const formattedStrings = reqs.title_required_strings.length <= 5
+          ? reqs.title_required_strings.join(', ')
+          : `${reqs.title_required_strings.slice(0, 5).join(', ')}... (${reqs.title_required_strings.length} options)`;
+        
+        issues.push({
+          code: 'TITLE_MISSING_REQUIRED_STRING',
+          severity: 'warning',
+          subreddit,
+          message: `r/${subreddit}: Title should include one of: ${formattedStrings}`,
+          suggestion: 'Add a required tag to your title using the dropdown or include it manually',
+          field: 'title',
+          expectedCategory: 'fixable_now',
+        });
+      }
+    }
+
+    // Check body required strings (at least one must be present)
+    if (body && reqs.body_required_strings && reqs.body_required_strings.length > 0) {
+      const lowerBody = body.toLowerCase();
+      const hasRequired = reqs.body_required_strings.some(required => 
+        lowerBody.includes(required.toLowerCase())
+      );
+      
+      if (!hasRequired) {
+        const formattedStrings = reqs.body_required_strings.length <= 5
+          ? reqs.body_required_strings.join(', ')
+          : `${reqs.body_required_strings.slice(0, 5).join(', ')}... (${reqs.body_required_strings.length} options)`;
+        
+        issues.push({
+          code: 'BODY_MISSING_REQUIRED_STRING',
+          severity: 'warning',
+          subreddit,
+          message: `r/${subreddit}: Description should include one of: ${formattedStrings}`,
+          suggestion: 'Include a required string in your description',
+          field: 'body',
+          expectedCategory: 'fixable_now',
+        });
+      }
+    }
   }
 
   return issues;
@@ -397,6 +554,8 @@ export function validatePreflight(input: PreflightInput): PreflightResult {
     ...validateGeneral(input),
     ...validateTitle(input),
     ...validateBody(input),
+    ...validateBlacklistedStrings(input),
+    ...validateRequiredStrings(input),
     ...validateFlairs(input),
     ...validateUrl(input),
     ...validateMedia(input),
