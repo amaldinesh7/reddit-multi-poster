@@ -14,6 +14,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { AppHeader } from '@/components/layout';
 import { useHomePageState } from '@/hooks/useHomePageState';
+import { useFailedPosts, FailedPost } from '@/hooks/useFailedPosts';
+import type { ValidationIssue } from '@/lib/preflightValidation';
 
 interface PlanLimits {
   maxSubreddits: number;
@@ -72,6 +74,69 @@ export default function Home() {
     clearSelection,
     clearAllState,
   } = useHomePageState({ authMe: auth.me });
+
+  // Failed posts tracking for inline error display
+  const failedPostsHook = useFailedPosts();
+
+  // Validation issues by subreddit for inline display
+  const [validationIssuesBySubreddit, setValidationIssuesBySubreddit] = React.useState<Record<string, ValidationIssue[]>>({});
+
+  // Handle validation changes from PostingQueue
+  const handleQueueValidationChange = React.useCallback((issuesBySubreddit: Record<string, ValidationIssue[]>) => {
+    setValidationIssuesBySubreddit(issuesBySubreddit);
+  }, []);
+
+  // Handle posting results and track failed posts
+  const handleResultsAvailable = React.useCallback((
+    results: Array<{ index: number; status: 'success' | 'error' | 'skipped'; subreddit: string; error?: string; url?: string }>,
+    postedItems: typeof items
+  ) => {
+    // Convert to the format expected by addFromResults
+    // Note: addFromResults expects QueueJobResult[] with 'skipped' as possible status
+    const queueJobResults = results.map(r => ({
+      index: r.index,
+      subreddit: r.subreddit,
+      status: r.status as 'success' | 'error' | 'skipped',
+      url: r.url,
+      error: r.error,
+      postedAt: new Date().toISOString(),
+    }));
+
+    // Convert items to QueueJobItem format
+    const queueJobItems = postedItems.map(item => ({
+      subreddit: item.subreddit,
+      flairId: item.flairId,
+      titleSuffix: item.titleSuffix,
+      kind: item.kind,
+      url: item.url,
+      text: item.text,
+      file: item.file,
+      files: item.files,
+    }));
+
+    // Add failed results to the tracker
+    failedPostsHook.addFromResults(queueJobResults, queueJobItems, caption, prefixes);
+  }, [caption, prefixes, failedPostsHook]);
+
+  // Action handlers for inline error display
+  const handleRetryPost = React.useCallback((id: string) => {
+    const postToRetry = failedPostsHook.retryOne(id);
+    // Note: The actual retry logic would need to resubmit to the queue
+    // For now, we just mark it and the user can start a new posting
+    if (postToRetry) {
+      console.log('Retrying post:', postToRetry);
+    }
+  }, [failedPostsHook]);
+
+  const handleEditPost = React.useCallback((post: FailedPost) => {
+    // TODO: Open edit dialog with the failed post data
+    // For now, just log it - this will be implemented with EditFailedPostDialog
+    console.log('Edit post:', post);
+  }, []);
+
+  const handleRemovePost = React.useCallback((id: string) => {
+    failedPostsHook.remove(id);
+  }, [failedPostsHook]);
 
   React.useEffect(() => {
     const load = async () => {
@@ -333,6 +398,11 @@ export default function Home() {
                         onValidationChange={handleValidationChange}
                         showValidationErrors={showValidationErrors}
                         temporarySelectionEnabled={auth.limits?.temporarySelectionEnabled ?? true}
+                        failedPosts={failedPostsHook.state.posts}
+                        onRetryPost={handleRetryPost}
+                        onEditPost={handleEditPost}
+                        onRemovePost={handleRemovePost}
+                        validationIssuesBySubreddit={validationIssuesBySubreddit}
                       />
 
                       {/* Post to Profile */}
@@ -380,6 +450,11 @@ export default function Home() {
                         onValidationChange={handleValidationChange}
                         showValidationErrors={showValidationErrors}
                         temporarySelectionEnabled={auth.limits?.temporarySelectionEnabled ?? true}
+                        failedPosts={failedPostsHook.state.posts}
+                        onRetryPost={handleRetryPost}
+                        onEditPost={handleEditPost}
+                        onRemovePost={handleRemovePost}
+                        validationIssuesBySubreddit={validationIssuesBySubreddit}
                       />
 
                       {/* Post to Profile */}
@@ -416,6 +491,8 @@ export default function Home() {
                       onPostAttempt={handlePostWithLimitCheck}
                       onUnselectSuccessItems={handleUnselectSuccessItems}
                       onClearAll={clearAllState}
+                      onResultsAvailable={handleResultsAvailable}
+                      onValidationChange={handleQueueValidationChange}
                     />
                   </div>
 
@@ -431,6 +508,8 @@ export default function Home() {
                       onPostAttempt={handlePostWithLimitCheck}
                       onUnselectSuccessItems={handleUnselectSuccessItems}
                       onClearAll={clearAllState}
+                      onResultsAvailable={handleResultsAvailable}
+                      onValidationChange={handleQueueValidationChange}
                     />
                   </div>
                 </section>

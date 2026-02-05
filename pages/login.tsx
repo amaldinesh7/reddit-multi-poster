@@ -105,12 +105,7 @@ export default function Login() {
         <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-12">
           {/* Glass card */}
           <div className="w-full max-w-md">
-            <div
-              className="backdrop-blur-xl bg-white/[0.03] border border-white/[0.08] rounded-3xl p-8 shadow-2xl"
-              style={{
-                boxShadow: '0 0 80px rgba(255, 69, 0, 0.05), 0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-              }}
-            >
+            <div className="p-4 sm:p-8 sm:backdrop-blur-xl sm:bg-white/[0.03] sm:border sm:border-white/[0.08] sm:rounded-3xl sm:shadow-[0_0_80px_rgba(255,69,0,0.05),0_25px_50px_-12px_rgba(0,0,0,0.5)]">
               {/* Logo */}
               <div className="flex flex-col items-center mb-8">
                 <div

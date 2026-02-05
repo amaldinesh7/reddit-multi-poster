@@ -21,7 +21,7 @@ import { LogEntry } from './posting-queue/types';
 import { useFailedPosts, FailedPost } from '../hooks/useFailedPosts';
 import { useSubredditFlairData } from '../hooks/useSubredditFlairData';
 import { ErrorCategory } from '@/lib/errorClassification';
-import { usePreflightValidation } from '../hooks/usePreflightValidation';
+import { usePreflightValidation, ValidationIssue } from '../hooks/usePreflightValidation';
 
 interface Item {
   subreddit: string;
@@ -46,6 +46,10 @@ interface Props {
   onClearAll?: () => void;
   /** Max items allowed (e.g. 5 for paid). Falls back to QUEUE_LIMITS.MAX_TOTAL_ITEMS */
   maxItems?: number;
+  /** Callback when posting results are available (for failed post tracking) */
+  onResultsAvailable?: (results: Array<{ index: number; status: 'success' | 'error' | 'skipped'; subreddit: string; error?: string; url?: string }>, items: Item[]) => void;
+  /** Callback when validation issues change (for inline error display) */
+  onValidationChange?: (issuesBySubreddit: Record<string, ValidationIssue[]>) => void;
 }
 
 // ============================================================================
@@ -157,6 +161,8 @@ const PostingQueue: React.FC<Props> = ({
   onUnselectSuccessItems,
   onClearAll,
   maxItems: maxItemsProp,
+  onResultsAvailable,
+  onValidationChange,
 }) => {
   const maxItems = maxItemsProp ?? QUEUE_LIMITS.MAX_TOTAL_ITEMS;
   const {
@@ -224,13 +230,22 @@ const PostingQueue: React.FC<Props> = ({
   // Run pre-flight validation
   const validation = usePreflightValidation(validationInput);
 
+  // Notify parent about validation changes for inline display
+  useEffect(() => {
+    if (onValidationChange) {
+      onValidationChange(validation.issuesBySubreddit);
+    }
+  }, [validation.issuesBySubreddit, onValidationChange]);
+
   // Reset validation dismissed state when items change
   useEffect(() => {
     setValidationDismissed(false);
   }, [items, caption, body]);
 
   // Show validation warnings only when there are issues and not dismissed
-  const showValidationWarnings = !validationDismissed &&
+  // When onValidationChange is provided, we use inline display instead of the panel
+  const showValidationWarnings = !onValidationChange &&
+    !validationDismissed &&
     items.length > 0 &&
     (validation.errors.length > 0 || validation.warnings.length > 0) &&
     !state.isProcessing &&
@@ -455,6 +470,29 @@ const PostingQueue: React.FC<Props> = ({
   const completed = state.status === 'completed';
   const cancelled = state.status === 'cancelled';
   const failed = state.status === 'failed';
+
+  // Notify parent when results are available (for failed post tracking)
+  const prevStatusRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    // Only notify when status changes to a terminal state
+    const isTerminal = completed || cancelled || failed;
+    const wasProcessing = prevStatusRef.current === 'processing';
+    
+    if (isTerminal && wasProcessing && state.results.length > 0 && onResultsAvailable) {
+      // Map results to the expected format
+      const resultsWithSubreddit = state.results.map(r => ({
+        index: r.index,
+        status: r.status,
+        subreddit: state.items[r.index]?.subreddit || '',
+        error: r.error,
+        url: r.url,
+      }));
+      onResultsAvailable(resultsWithSubreddit, items);
+    }
+    
+    prevStatusRef.current = state.status;
+  }, [state.status, state.results, state.items, completed, cancelled, failed, onResultsAvailable, items]);
+
   // Build error object with proper typing
   // Detect limit errors to filter them out from display
   const isLimitError = state.error && (

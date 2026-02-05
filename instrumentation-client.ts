@@ -87,8 +87,7 @@ Sentry.init({
   // Debug mode
   debug: process.env.SENTRY_DEBUG === "true",
 
-  // Session tracking
-  autoSessionTracking: true,
+  // Session tracking (Note: autoSessionTracking removed as it's no longer supported)
   attachStacktrace: true,
   maxBreadcrumbs: 50,
 
