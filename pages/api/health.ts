@@ -16,12 +16,14 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== 'GET') {
+  // Accept both GET and HEAD requests for health checks
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const startTime = Date.now();
   const deepCheck = req.query.deep === 'true';
+  const isHeadRequest = req.method === 'HEAD';
 
   try {
     const response: {
@@ -69,8 +71,18 @@ export default async function handler(
 
     // Return 200 even if degraded - Render will keep the service alive
     // Only return 503 for complete failure
+    // For HEAD requests, return status without body
+    if (isHeadRequest) {
+      return res.status(200).end();
+    }
+    
     return res.status(200).json(response);
   } catch (error) {
+    // For HEAD requests, return status without body
+    if (isHeadRequest) {
+      return res.status(503).end();
+    }
+    
     return res.status(503).json({
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
