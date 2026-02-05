@@ -181,23 +181,10 @@ export default function Home() {
     router.replace('/login');
   };
 
-  const handleUpgrade = React.useCallback(async () => {
-    if (upgradeLoading) return;
-    setUpgradeLoading(true);
-    try {
-      const { data } = await axios.post<{ checkout_url: string }>('/api/checkout/create-session');
-      if (data?.checkout_url) {
-        window.location.href = data.checkout_url;
-      } else {
-        console.error('Checkout session creation failed: no URL returned');
-      }
-    } catch (error) {
-      console.error('Failed to create checkout session:', error);
-      // Keep user on page; they can retry via the modal
-    } finally {
-      setUpgradeLoading(false);
-    }
-  }, [upgradeLoading]);
+  const handleUpgrade = React.useCallback(() => {
+    // Navigate to inline checkout page
+    router.push('/checkout');
+  }, [router]);
 
   // Wrapper for post attempt that checks free user limit
   const handlePostWithLimitCheck = React.useCallback(() => {

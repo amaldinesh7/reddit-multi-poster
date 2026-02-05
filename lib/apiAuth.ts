@@ -102,7 +102,7 @@ export async function getUserId(req: NextApiRequest, res: NextApiResponse): Prom
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 30, // 30 days
+      maxAge: 60 * 60 * 24 * 7, // 7 days
     }));
     
     return userId;

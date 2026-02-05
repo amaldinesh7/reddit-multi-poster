@@ -88,6 +88,11 @@ export const postingRateLimit = rateLimit({
   windowMs: 60 * 1000, // 10 requests per minute
 });
 
+export const authRateLimit = rateLimit({
+  limit: 10,
+  windowMs: 60 * 1000, // 10 auth attempts per minute (prevents brute force)
+});
+
 export const settingsRateLimit = rateLimit({
   limit: 60,
   windowMs: 60 * 1000, // 60 requests per minute

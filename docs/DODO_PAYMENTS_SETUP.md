@@ -43,15 +43,19 @@ This adds `entitlement`, `dodo_payment_id`, and `paid_at` to `users`.
 Add these to your `.env` (or hosting env) and **never commit** them:
 
 ```env
-# Dodo Payments
+# Dodo Payments (server-side)
 DODO_PAYMENTS_API_KEY=your_api_key_here
 DODO_PAYMENTS_WEBHOOK_SECRET=your_webhook_secret_here
 DODO_PAYMENTS_PRODUCT_ID=pdt_xxxxx
 DODO_PAYMENTS_ENVIRONMENT=test_mode
 DODO_PAYMENTS_RETURN_URL=https://yourdomain.com/checkout/success
+
+# Dodo Payments (client-side for inline checkout SDK)
+NEXT_PUBLIC_DODO_PAYMENTS_ENVIRONMENT=test_mode
 ```
 
-- **DODO_PAYMENTS_ENVIRONMENT**: `test_mode` for testing, `live_mode` for production.
+- **DODO_PAYMENTS_ENVIRONMENT**: `test_mode` for testing, `live_mode` for production (server-side API calls).
+- **NEXT_PUBLIC_DODO_PAYMENTS_ENVIRONMENT**: Same value as above, but exposed to client for the inline checkout SDK.
 - **DODO_PAYMENTS_RETURN_URL**: Full URL of your success page (e.g. `https://yourdomain.com/checkout/success`).
 
 ---
@@ -69,12 +73,14 @@ DODO_PAYMENTS_RETURN_URL=https://yourdomain.com/checkout/success
 
 ## 6. Test the flow
 
-1. Set `DODO_PAYMENTS_ENVIRONMENT=test_mode` and use **test** API key and webhook secret.
-2. Log in, click **Upgrade – ₹199**; you should be redirected to Dodo checkout.
-3. Complete a test payment (use Dodo’s test card if available).
-4. You should be redirected to `/checkout/success`.
-5. Confirm in your app (refresh or re-open) that you’re treated as paid (5/5 limits, no temporary selection, no upgrade CTA).
-6. In Dodo Dashboard **Webhooks** tab, confirm the `payment.succeeded` event was delivered and returned 200.
+1. Set both `DODO_PAYMENTS_ENVIRONMENT=test_mode` and `NEXT_PUBLIC_DODO_PAYMENTS_ENVIRONMENT=test_mode`.
+2. Use **test** API key and webhook secret.
+3. Log in, click **Get lifetime access** or **Get Pro**; you'll be navigated to `/checkout`.
+4. The inline checkout page shows the Dodo payment form embedded alongside your order summary.
+5. Complete a test payment (use test card: `4242 4242 4242 4242`, any future date, any CVC).
+6. On success, you'll be redirected to `/checkout/success`.
+7. Confirm in your app (refresh or re-open) that you are treated as paid (unlimited limits, no upgrade CTA).
+8. In Dodo Dashboard **Webhooks** tab, confirm the `payment.succeeded` event was delivered and returned 200.
 
 ---
 

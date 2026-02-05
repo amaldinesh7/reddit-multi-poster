@@ -2,11 +2,17 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { exchangeCodeForToken, redditClient, getIdentity } from '../../../utils/reddit';
 import { upsertUser } from '../../../lib/supabase';
 import { serialize } from 'cookie';
+import { applyRateLimit, authRateLimit } from '../../../lib/rateLimit';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).end();
+  
+  // Apply rate limiting to prevent auth abuse
+  if (!applyRateLimit(req, res, authRateLimit)) {
+    return; // Response already sent by applyRateLimit
+  }
   
   console.log('--- Reddit OAuth Callback Started ---');
   const { code, state, error: redditError } = req.query as { code?: string; state?: string; error?: string };
@@ -105,13 +111,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       token.refresh_token
         ? serialize('reddit_refresh', token.refresh_token, {
             ...cookieOptions,
-            maxAge: 60 * 60 * 24 * 30, // 30 days
+            maxAge: 60 * 60 * 24 * 7, // 7 days
           })
         : '',
       userId
         ? serialize('supabase_user_id', userId, {
             ...cookieOptions,
-            maxAge: 60 * 60 * 24 * 30, // 30 days
+            maxAge: 60 * 60 * 24 * 7, // 7 days
           })
         : '',
       serialize('reddit_oauth_state', '', { path: '/', maxAge: 0 }),
