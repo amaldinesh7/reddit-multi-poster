@@ -86,7 +86,7 @@ export const MobileStickyQueue: React.FC<Props> = ({
                                 onClick={onPostClick}
                                 disabled={hasErrors || items.length === 0}
                                 size="sm"
-                                className={`h-10 px-4 font-medium shadow-xl shadow-primary/30 active:scale-95 transition-all text-sm ${hasErrors ? 'opacity-50' : 'bg-primary'}`}
+                                className={`h-9 px-3 font-medium active:scale-95 transition-all text-sm ${hasErrors ? 'opacity-50' : 'bg-primary'}`}
                             >
                                 <Send className="w-4 h-4 mr-1.5" />
                                 Post All
