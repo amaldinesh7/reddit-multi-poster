@@ -51,6 +51,28 @@ services:
         value: production
 
       # ===========================================
+      # Dodo Payments (Required for paid features)
+      # ===========================================
+      - key: DODO_PAYMENTS_API_KEY
+        sync: false
+      - key: DODO_PAYMENTS_WEBHOOK_SECRET
+        sync: false
+      - key: DODO_PAYMENTS_PRODUCT_ID
+        sync: false
+      - key: DODO_PAYMENTS_ENVIRONMENT
+        value: live_mode # Use test_mode for testing
+      - key: DODO_PAYMENTS_RETURN_URL
+        sync: false # e.g., https://your-app.onrender.com/checkout/success
+      - key: NEXT_PUBLIC_DODO_PAYMENTS_ENVIRONMENT
+        value: live_mode
+
+      # ===========================================
+      # Admin (Required)
+      # ===========================================
+      - key: ADMIN_REDDIT_USERNAME
+        sync: false # Reddit username(s) with admin access
+
+      # ===========================================
       # Optional
       # ===========================================
       # - key: GROQ_API_KEY

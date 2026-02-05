@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { useSubreddits } from './useSubreddits';
 import { useSubredditCache } from './useSubredditCache';
 import { PostRequirements } from '../utils/reddit';
@@ -105,7 +106,12 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
             const cached = await fetchAndCacheRef.current(subreddit);
             return { subreddit, cached };
           } catch (error) {
-            console.error(`Failed to fetch data for ${subreddit}:`, error);
+            Sentry.addBreadcrumb({
+              category: 'subreddit.cache',
+              message: `Failed to fetch data for ${subreddit}`,
+              level: 'warning',
+              data: { subreddit },
+            });
             return {
               subreddit,
               cached: {
@@ -173,7 +179,12 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
             const cached = await fetchAndCacheRef.current(subreddit, true);
             return { subreddit, cached };
           } catch (error) {
-            console.error(`Failed to reload data for ${subreddit}:`, error);
+            Sentry.addBreadcrumb({
+              category: 'subreddit.cache',
+              message: `Failed to reload data for ${subreddit}`,
+              level: 'warning',
+              data: { subreddit },
+            });
             return null;
           }
         });

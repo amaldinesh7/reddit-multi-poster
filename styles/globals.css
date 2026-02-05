@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -37,6 +39,15 @@
     --ring: 16 100% 50%;
 
     --radius: 0.5rem;
+
+    /* Admin Panel - Command Center Colors */
+    --admin-bg: 222 47% 97%;
+    --admin-card: 222 47% 99%;
+    --admin-glow: 186 100% 50%;
+    --admin-glow-muted: 186 70% 70%;
+    --admin-success: 160 84% 39%;
+    --admin-warning: 38 92% 50%;
+    --admin-pro: 280 100% 65%;
   }
 
   .dark {
@@ -69,6 +80,15 @@
     --border: 220 13% 25%;
     --input: 220 13% 18%;
     --ring: 16 100% 50%;
+
+    /* Admin Panel - Command Center Colors (Dark) */
+    --admin-bg: 222 47% 8%;
+    --admin-card: 222 47% 11%;
+    --admin-glow: 186 100% 50%;
+    --admin-glow-muted: 186 50% 35%;
+    --admin-success: 160 84% 39%;
+    --admin-warning: 38 92% 50%;
+    --admin-pro: 280 100% 65%;
   }
 }
 
@@ -98,5 +118,131 @@
 
   [draggable="true"]:active {
     cursor: grabbing;
+  }
+}
+
+/* Admin Panel Typography */
+@layer utilities {
+  .font-mono-admin {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  .font-display {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+}
+
+/* Admin Panel Animations */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 8px hsl(var(--admin-glow) / 0.4);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 16px hsl(var(--admin-glow) / 0.6);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@layer utilities {
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--admin-card)) 0%,
+      hsl(var(--admin-glow) / 0.1) 50%,
+      hsl(var(--admin-card)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.2s ease-out forwards;
+  }
+
+  .animate-fadeOut {
+    animation: fadeOut 0.15s ease-in forwards;
+  }
+
+  .animate-slideIn {
+    animation: slideInFromBottom 0.3s ease-out forwards;
+  }
+
+  /* Staggered animation delays */
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
+  .stagger-5 { animation-delay: 0.25s; }
+
+  /* Admin glow effects */
+  .glow-cyan {
+    box-shadow: 0 0 20px hsl(var(--admin-glow) / 0.3);
+  }
+
+  .glow-pro {
+    box-shadow: 0 0 12px hsl(var(--admin-pro) / 0.4);
+  }
+
+  /* Grid pattern background */
+  .bg-grid-pattern {
+    background-image: 
+      linear-gradient(hsl(var(--border) / 0.3) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.3) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Gradient borders */
+  .border-gradient-cyan {
+    border: 1px solid transparent;
+    background: 
+      linear-gradient(hsl(var(--admin-card)), hsl(var(--admin-card))) padding-box,
+      linear-gradient(135deg, hsl(var(--admin-glow) / 0.5), hsl(var(--admin-glow) / 0.1)) border-box;
   }
 }

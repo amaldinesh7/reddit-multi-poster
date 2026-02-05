@@ -6,6 +6,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import { 
   redditClient, 
   refreshAccessToken, 
@@ -15,6 +16,7 @@ import {
 } from '../../../utils/reddit';
 import { getUserId } from '../../../lib/apiAuth';
 import { logPostAttempt, classifyPostError } from '../../../lib/supabase';
+import { addApiBreadcrumb } from '../../../lib/apiErrorHandler';
 import {
   getQueueJob,
   claimQueueJob,
@@ -218,7 +220,21 @@ export default async function handler(
 
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to post';
-        console.error(`Error posting to r/${item.subreddit}:`, error);
+        
+        // Capture error to Sentry
+        Sentry.captureException(error, {
+          tags: {
+            component: 'queue.process',
+            subreddit: item.subreddit,
+          },
+          extra: {
+            jobId,
+            itemIndex,
+            totalItems: currentJob.items.length,
+          },
+        });
+        
+        addApiBreadcrumb('Post failed', { subreddit: item.subreddit, error: errorMessage }, 'error');
 
         result = {
           index: itemIndex,
@@ -266,8 +282,16 @@ export default async function handler(
     res.end();
 
   } catch (error) {
-    console.error('Failed to process queue job:', error);
     const message = error instanceof Error ? error.message : 'Failed to process job';
+    
+    // Capture error to Sentry
+    Sentry.captureException(error, {
+      tags: {
+        component: 'queue.process',
+        endpoint: '/api/queue/process',
+      },
+      extra: { jobId },
+    });
     
     // Try to mark job as failed
     try {

@@ -9,12 +9,16 @@ import SubredditFlairPicker from '../components/SubredditFlairPicker';
 import PostComposer from '../components/PostComposer';
 import PostingQueue from '../components/PostingQueue';
 import UpgradeModal from '../components/UpgradeModal';
+import EditFailedPostDialog from '../components/posting-queue/EditFailedPostDialog';
 import { AppLoader } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { AppHeader } from '@/components/layout';
 import { useHomePageState } from '@/hooks/useHomePageState';
 import { useFailedPosts, FailedPost } from '@/hooks/useFailedPosts';
+import { useSubredditFlairData } from '@/hooks/useSubredditFlairData';
+import { useQueueJob } from '@/hooks/useQueueJob';
+import { captureClientError, addActionBreadcrumb } from '@/lib/clientErrorHandler';
 import type { ValidationIssue } from '@/lib/preflightValidation';
 
 interface PlanLimits {
@@ -78,6 +82,16 @@ export default function Home() {
   // Failed posts tracking for inline error display
   const failedPostsHook = useFailedPosts();
 
+  // Flair data for edit dialog
+  const { flairOptions, flairRequired, cacheLoading: flairLoading } = useSubredditFlairData();
+
+  // Queue job hook for retrying failed posts
+  const queueJobHook = useQueueJob();
+
+  // State for edit dialog
+  const [editingPost, setEditingPost] = React.useState<FailedPost | null>(null);
+  const [isRetryingEdit, setIsRetryingEdit] = React.useState(false);
+
   // Validation issues by subreddit for inline display
   const [validationIssuesBySubreddit, setValidationIssuesBySubreddit] = React.useState<Record<string, ValidationIssue[]>>({});
 
@@ -119,19 +133,97 @@ export default function Home() {
   }, [caption, prefixes, failedPostsHook]);
 
   // Action handlers for inline error display
-  const handleRetryPost = React.useCallback((id: string) => {
+  const handleRetryPost = React.useCallback(async (id: string) => {
     const postToRetry = failedPostsHook.retryOne(id);
-    // Note: The actual retry logic would need to resubmit to the queue
-    // For now, we just mark it and the user can start a new posting
-    if (postToRetry) {
-      console.log('Retrying post:', postToRetry);
+    if (!postToRetry) return;
+
+    addActionBreadcrumb('Retry failed post', { subreddit: postToRetry.subreddit, id });
+
+    try {
+      const jobId = await queueJobHook.retryItem(
+        {
+          subreddit: postToRetry.subreddit,
+          flairId: postToRetry.flairId,
+          titleSuffix: postToRetry.titleSuffix,
+          kind: postToRetry.kind,
+          url: postToRetry.url,
+          text: postToRetry.text,
+          file: postToRetry.originalItem.file,
+          files: postToRetry.originalItem.files,
+        },
+        postToRetry.originalCaption,
+        postToRetry.originalPrefixes
+      );
+
+      if (jobId) {
+        // Job submitted successfully, mark as success (will be removed from failed list)
+        failedPostsHook.markSuccess(id);
+      } else {
+        // Submission failed
+        failedPostsHook.markFailed(id, 'Failed to submit retry');
+      }
+    } catch (error) {
+      captureClientError(error, 'index.handleRetryPost', {
+        toastTitle: 'Retry Failed',
+        context: { subreddit: postToRetry.subreddit },
+      });
+      failedPostsHook.markFailed(id, error instanceof Error ? error.message : 'Retry failed');
     }
-  }, [failedPostsHook]);
+  }, [failedPostsHook, queueJobHook]);
 
   const handleEditPost = React.useCallback((post: FailedPost) => {
-    // TODO: Open edit dialog with the failed post data
-    // For now, just log it - this will be implemented with EditFailedPostDialog
-    console.log('Edit post:', post);
+    addActionBreadcrumb('Open edit failed post dialog', { subreddit: post.subreddit });
+    setEditingPost(post);
+  }, []);
+
+  const handleEditDialogSubmit = React.useCallback(async (
+    post: FailedPost, 
+    updates: { flairId?: string; titleSuffix?: string }
+  ) => {
+    setIsRetryingEdit(true);
+    addActionBreadcrumb('Submit edit and retry', { subreddit: post.subreddit, updates });
+
+    try {
+      // Update the post with new values
+      failedPostsHook.updatePost(post.id, updates);
+
+      // Submit retry with updated values
+      const jobId = await queueJobHook.retryItem(
+        {
+          subreddit: post.subreddit,
+          flairId: updates.flairId || post.flairId,
+          titleSuffix: updates.titleSuffix || post.titleSuffix,
+          kind: post.kind,
+          url: post.url,
+          text: post.text,
+          file: post.originalItem.file,
+          files: post.originalItem.files,
+        },
+        post.originalCaption,
+        post.originalPrefixes
+      );
+
+      if (jobId) {
+        // Job submitted successfully
+        failedPostsHook.markSuccess(post.id);
+        setEditingPost(null);
+      } else {
+        // Submission failed
+        failedPostsHook.markFailed(post.id, 'Failed to submit retry');
+      }
+    } catch (error) {
+      captureClientError(error, 'index.handleEditDialogSubmit', {
+        toastTitle: 'Retry Failed',
+        context: { subreddit: post.subreddit },
+      });
+      failedPostsHook.markFailed(post.id, error instanceof Error ? error.message : 'Retry failed');
+    } finally {
+      setIsRetryingEdit(false);
+    }
+  }, [failedPostsHook, queueJobHook]);
+
+  const handleEditDialogCancel = React.useCallback(() => {
+    setEditingPost(null);
   }, []);
 
   const handleRemovePost = React.useCallback((id: string) => {
@@ -514,6 +606,19 @@ export default function Home() {
         upgradeLoading={upgradeLoading}
         context={upgradeModalContext}
       />
+
+      {/* Edit Failed Post Dialog */}
+      {editingPost && (
+        <EditFailedPostDialog
+          post={editingPost}
+          flairOptions={flairOptions[editingPost.subreddit] || []}
+          flairLoading={flairLoading[editingPost.subreddit] || false}
+          flairRequired={flairRequired[editingPost.subreddit] || false}
+          onSubmit={handleEditDialogSubmit}
+          onCancel={handleEditDialogCancel}
+          isRetrying={isRetryingEdit}
+        />
+      )}
     </>
   );
 }

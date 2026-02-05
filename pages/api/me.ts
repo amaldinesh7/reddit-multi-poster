@@ -1,7 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import { getIdentity, listMySubreddits, redditClient, refreshAccessToken } from '../../utils/reddit';
 import { serialize } from 'cookie';
 import { getEntitlement, getLimits } from '../../lib/entitlement';
+import { handleApiError, addApiBreadcrumb } from '../../lib/apiErrorHandler';
 
 /** Normalize non-finite values for JSON serialization (Infinity becomes MAX_SAFE_INTEGER) */
 const normalizeForJson = (value: number): number => 
@@ -19,6 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let client = token ? redditClient(token) : undefined as ReturnType<typeof redditClient> | undefined;
     try {
       if (!client && refresh) {
+        addApiBreadcrumb('Refreshing access token');
         const t = await refreshAccessToken(refresh);
         token = t.access_token;
         res.setHeader('Set-Cookie', serialize('reddit_access', token, { 
@@ -32,6 +35,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       if (!client) return res.status(401).json({ authenticated: false });
       const me = await getIdentity(client);
+      
+      // Set Sentry user context
+      if (me) {
+        Sentry.setUser({ id: me.id, username: me.name });
+      }
       
       // Only fetch subreddits if explicitly requested (for settings page, etc.)
       const fetchSubs = req.query.include_subs === 'true';
@@ -54,6 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     } catch (e: unknown) {
       if (refresh) {
+        addApiBreadcrumb('Retrying with token refresh');
         const t = await refreshAccessToken(refresh);
         token = t.access_token;
         res.setHeader('Set-Cookie', serialize('reddit_access', token, { 
@@ -65,6 +74,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }));
         const client2 = redditClient(token);
         const me = await getIdentity(client2);
+        
+        // Set Sentry user context
+        if (me) {
+          Sentry.setUser({ id: me.id, username: me.name });
+        }
         
         // Only fetch subreddits if explicitly requested
         const fetchSubs = req.query.include_subs === 'true';
@@ -89,7 +103,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       throw e;
     }
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Error';
-    return res.status(500).json({ error: msg });
+    return handleApiError(req, res, e, {
+      statusCode: 500,
+      errorCode: 'INTERNAL_ERROR',
+      userMessage: 'Failed to fetch user information',
+    });
   }
 }

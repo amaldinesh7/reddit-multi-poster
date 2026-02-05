@@ -1,7 +1,7 @@
 import React from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { ChevronDown, User, Settings, LogOut, BarChart3, Sun, Moon, Monitor, Infinity } from 'lucide-react';
+import { ChevronDown, User, Settings, LogOut, Shield, Sun, Moon, Monitor, Infinity } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { Theme } from '@/contexts/ThemeContext';
 
@@ -37,8 +37,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     window.location.href = '/settings';
   };
 
-  const handleAnalytics = () => {
-    window.location.href = '/analytics';
+  const handleAdminPanel = () => {
+    window.location.href = '/admin';
   };
 
   return (
@@ -110,9 +110,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               Settings
             </DropdownMenuItem>
             {isAdmin && (
-              <DropdownMenuItem onClick={handleAnalytics}>
-                <BarChart3 className="h-4 w-4 mr-2" aria-hidden="true" />
-                Analytics
+              <DropdownMenuItem onClick={handleAdminPanel}>
+                <Shield className="h-4 w-4 mr-2" aria-hidden="true" />
+                Admin Panel
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />

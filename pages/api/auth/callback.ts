@@ -1,10 +1,21 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import { exchangeCodeForToken, redditClient, getIdentity } from '../../../utils/reddit';
 import { upsertUser } from '../../../lib/supabase';
 import { serialize } from 'cookie';
 import { applyRateLimit, authRateLimit } from '../../../lib/rateLimit';
 
 const isProduction = process.env.NODE_ENV === 'production';
+
+// Helper to add OAuth breadcrumbs
+const addOAuthBreadcrumb = (message: string, data?: Record<string, unknown>, level: Sentry.SeverityLevel = 'info') => {
+  Sentry.addBreadcrumb({
+    category: 'auth.oauth',
+    message,
+    level,
+    data,
+  });
+};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -14,72 +25,65 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return; // Response already sent by applyRateLimit
   }
   
-  console.log('--- Reddit OAuth Callback Started ---');
+  addOAuthBreadcrumb('OAuth callback started');
   const { code, state, error: redditError } = req.query as { code?: string; state?: string; error?: string };
   
   // Handle OAuth errors from Reddit
   if (redditError) {
-    console.error('OAuth error from Reddit:', redditError);
+    addOAuthBreadcrumb('OAuth error from Reddit', { error: redditError }, 'warning');
     return res.redirect(302, `/login?error=${encodeURIComponent(redditError)}`);
   }
   
   const expected = req.cookies['reddit_oauth_state'];
-  console.log('OAuth State Debug:', { 
-    receivedState: state, 
-    expectedState: expected, 
+  addOAuthBreadcrumb('State validation', { 
+    hasState: !!state, 
+    hasExpected: !!expected, 
     hasCode: !!code,
-    isProduction 
   });
   
   if (!code) {
-    console.error('Missing code in callback');
+    addOAuthBreadcrumb('Missing code in callback', undefined, 'warning');
     return res.redirect(302, '/login?error=missing_code');
   }
   
   if (!state) {
-    console.error('Missing state in callback');
+    addOAuthBreadcrumb('Missing state in callback', undefined, 'warning');
     return res.redirect(302, '/login?error=missing_state');
   }
   
   // Strict state validation in production
   if (isProduction) {
     if (!expected || state !== expected) {
-      console.error('OAuth state mismatch', { state, expected });
+      addOAuthBreadcrumb('OAuth state mismatch', { stateMatch: false }, 'warning');
       return res.redirect(302, '/login?error=invalid_state');
-    }
-  } else {
-    // Development: warn but proceed
-    if (!expected) {
-      console.warn('Missing state cookie in development');
-    } else if (state !== expected) {
-      console.warn(`State mismatch in development: Got ${state}, Expected ${expected}`);
     }
   }
 
   try {
     // 1. Exchange code for tokens
-    console.log('Step 1: Exchanging code for token...');
+    addOAuthBreadcrumb('Exchanging code for token');
     const token = await exchangeCodeForToken(code);
     
     if (!token.access_token) {
-      console.error('No access token received from Reddit', token);
       throw new Error('Failed to obtain access token from Reddit');
     }
-    console.log('Step 1 Success: Token obtained (expires in ' + token.expires_in + 's)');
+    addOAuthBreadcrumb('Token obtained', { expiresIn: token.expires_in });
     
     // 2. Get user identity from Reddit
-    console.log('Step 2: Fetching user identity from Reddit...');
+    addOAuthBreadcrumb('Fetching user identity');
     const client = redditClient(token.access_token);
     const redditUser = await getIdentity(client);
     
     if (!redditUser || !redditUser.id) {
-      console.error('Failed to fetch user identity', redditUser);
       throw new Error('Failed to fetch user identity from Reddit');
     }
-    console.log('Step 2 Success: User identity fetched:', { name: redditUser.name, id: redditUser.id });
+    addOAuthBreadcrumb('User identity fetched', { username: redditUser.name });
+    
+    // Set Sentry user context
+    Sentry.setUser({ id: redditUser.id, username: redditUser.name });
     
     // 3. Sync user to Supabase
-    console.log('Step 3: Syncing user to Supabase...');
+    addOAuthBreadcrumb('Syncing user to Supabase');
     let userId: string | undefined;
     try {
       const supabaseUser = await upsertUser({
@@ -88,14 +92,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         reddit_avatar_url: redditUser.icon_img,
       });
       userId = supabaseUser.id;
-      console.log('Step 3 Success: User synced to Supabase:', { userId, redditUsername: redditUser.name });
+      addOAuthBreadcrumb('User synced to Supabase', { userId });
     } catch (supabaseError) {
       // Log but don't fail - user can still use the app without Supabase features
-      console.error('Step 3 Error: Failed to sync user to Supabase:', supabaseError);
+      addOAuthBreadcrumb('Failed to sync user to Supabase', undefined, 'warning');
+      Sentry.captureException(supabaseError, {
+        level: 'warning',
+        tags: { component: 'auth.callback', step: 'supabase_sync' },
+      });
     }
     
     // 4. Set cookies
-    console.log('Step 4: Setting cookies and redirecting...');
+    addOAuthBreadcrumb('Setting cookies');
     const cookieOptions = {
       path: '/',
       httpOnly: true,
@@ -124,15 +132,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ].filter(Boolean) as string[];
     
     res.setHeader('Set-Cookie', cookies);
-    console.log('Step 4 Success: Cookies set. Redirecting to home...');
+    addOAuthBreadcrumb('OAuth callback completed successfully');
     res.redirect(302, '/');
-  } catch (e: any) {
-    console.error('--- OAuth Callback Error ---');
-    console.error('Error Details:', {
-      message: e.message,
-      stack: e.stack,
-      name: e.name,
-      code: e.code
+  } catch (e) {
+    // Capture error to Sentry with full context
+    Sentry.captureException(e, {
+      tags: { component: 'auth.callback' },
+      extra: {
+        hasCode: !!code,
+        hasState: !!state,
+      },
     });
     
     const errorMsg = e instanceof Error ? e.message : 'Authentication failed';

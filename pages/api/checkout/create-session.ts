@@ -5,8 +5,10 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import { getUserId } from '../../../lib/apiAuth';
 import { getEntitlement } from '../../../lib/entitlement';
+import { addApiBreadcrumb } from '../../../lib/apiErrorHandler';
 
 const DODO_BASE_URL =
   process.env.DODO_PAYMENTS_ENVIRONMENT === 'live_mode'
@@ -28,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const returnUrl = process.env.DODO_PAYMENTS_RETURN_URL;
 
   if (!apiKey || !productId) {
-    console.error('Dodo Payments: missing DODO_PAYMENTS_API_KEY or DODO_PAYMENTS_PRODUCT_ID');
+    Sentry.captureMessage('Missing DODO_PAYMENTS_API_KEY or DODO_PAYMENTS_PRODUCT_ID', { level: 'error' });
     return res.status(500).json({ error: 'Checkout not configured' });
   }
 
@@ -55,24 +57,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('Dodo checkout create failed:', response.status, errText);
+      Sentry.captureException(new Error(`Dodo checkout create failed: ${response.status}`), {
+        tags: { component: 'checkout.create-session' },
+        extra: { hasUserId: true, status: response.status, responseBody: errText },
+      });
       return res.status(502).json({ error: 'Could not create checkout session' });
     }
 
-    const data = (await response.json()) as { checkout_url?: string; checkout_session_id?: string };
+    const data = (await response.json()) as { checkout_url?: string; session_id?: string };
     const checkoutUrl = data.checkout_url;
-    const sessionId = data.checkout_session_id;
+    const sessionId = data.session_id;
 
     if (!checkoutUrl) {
+      addApiBreadcrumb('Dodo checkout: no checkout URL in response', {}, 'warning');
       return res.status(502).json({ error: 'No checkout URL in response' });
     }
 
+    if (!sessionId) {
+      addApiBreadcrumb('Dodo checkout: no session ID in response', {}, 'warning');
+    }
+
+    addApiBreadcrumb('Checkout session created', {});
     return res.status(200).json({ 
       checkout_url: checkoutUrl,
       session_id: sessionId,
     });
   } catch (error) {
-    console.error('Checkout create-session error:', error);
+    Sentry.captureException(error, {
+      tags: { component: 'checkout.create-session' },
+      extra: { hasUserId: true },
+    });
     return res.status(500).json({ error: 'Checkout failed' });
   }
 }

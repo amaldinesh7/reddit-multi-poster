@@ -66,10 +66,16 @@ type CheckoutStatus = 'loading' | 'ready' | 'opening' | 'processing' | 'succeede
 export default function CheckoutPage() {
   const router = useRouter();
   const [status, setStatus] = useState<CheckoutStatus>('loading');
+  const statusRef = useRef<CheckoutStatus>(status);
   const [error, setError] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [sdkInitialized, setSdkInitialized] = useState(false);
   const initRef = useRef(false);
+
+  // Keep statusRef in sync with status state
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   // Default to test mode for safety - only use live mode when explicitly set
   const isDodoLiveMode = process.env.NEXT_PUBLIC_DODO_PAYMENTS_ENVIRONMENT === 'live_mode';
@@ -119,12 +125,13 @@ export default function CheckoutPage() {
 
               case 'checkout.closed':
                 // User closed the overlay - go back to ready state
-                if (status !== 'succeeded' && status !== 'processing') {
+                // Use statusRef.current to get latest status (avoids stale closure)
+                if (statusRef.current !== 'succeeded' && statusRef.current !== 'processing') {
                   setStatus('ready');
                 }
                 break;
 
-              case 'checkout.status':
+              case 'checkout.status': {
                 const statusData = event.data?.message as { status?: string };
                 if (statusData?.status === 'succeeded') {
                   setStatus('succeeded');
@@ -133,14 +140,16 @@ export default function CheckoutPage() {
                   setError('Payment failed. Please try again.');
                 }
                 break;
+              }
 
-              case 'checkout.redirect_requested':
+              case 'checkout.redirect_requested': {
                 // Handle 3DS or other redirects
                 const redirectData = event.data?.message as { redirect_to?: string };
                 if (redirectData?.redirect_to) {
                   window.location.href = redirectData.redirect_to;
                 }
                 break;
+              }
 
               case 'checkout.error':
                 console.error('Checkout error:', event.data?.message);

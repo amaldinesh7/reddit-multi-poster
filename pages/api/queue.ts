@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import { redditClient, refreshAccessToken, submitPost, addSmartPrefixesToTitle, getSubredditRules } from '../../utils/reddit';
 import { applyRateLimit, postingRateLimit } from '../../lib/rateLimit';
 import { 
@@ -7,6 +8,7 @@ import {
 } from '../../lib/queueLimits';
 import { getUserId } from '../../lib/apiAuth';
 import { logPostAttempt, classifyPostError } from '../../lib/supabase';
+import { addApiBreadcrumb } from '../../lib/apiErrorHandler';
 import formidable from 'formidable';
 import fs from 'fs';
 
@@ -94,8 +96,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const [parsedFields, uploadedFiles] = await form.parse(req);
     fields = parsedFields as Record<string, string | string[]>;
     
-    console.log('Received form fields:', Object.keys(fields));
-    console.log('Received files:', Object.keys(uploadedFiles));
+    addApiBreadcrumb('Multipart form parsed', {
+      fieldCount: Object.keys(fields).length,
+      fileCount: Object.keys(uploadedFiles).length,
+    });
     
     const itemsJson = Array.isArray(fields.items) ? fields.items[0] : fields.items;
     const captionJson = Array.isArray(fields.caption) ? fields.caption[0] : fields.caption;
@@ -112,12 +116,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     files = uploadedFiles;
     
-    console.log('Parsed items count:', items.length);
-    console.log('Items structure:', items.map((item, i) => ({ 
-      index: i, 
-      subreddit: item.subreddit, 
-      kind: item.kind 
-    })));
+    addApiBreadcrumb('Queue items parsed', {
+      itemCount: items.length,
+      subreddits: items.map(item => item.subreddit),
+    });
 
     // Validate batch limits for file uploads
     const validation = validateBatchLimits(items, files);
@@ -129,8 +131,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } else {
     // Parse JSON body (fallback for URL-only posts)
-    console.log('Raw req.body:', req.body);
-    console.log('Type of req.body:', typeof req.body);
+    addApiBreadcrumb('Parsing JSON body');
     
     let bodyStr = '';
     if (typeof req.body === 'string') {
@@ -148,21 +149,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       bodyStr = Buffer.concat(chunks).toString();
     }
     
-    console.log('Body string:', bodyStr);
     let body;
     try {
       body = JSON.parse(bodyStr || '{}');
     } catch {
       return res.status(400).json({ error: 'Invalid JSON in request body' });
     }
-    console.log('Parsed body:', body);
     
     items = body.items || [];
     caption = body.caption || '';
     prefixes = body.prefixes || {};
     
-    console.log('Extracted items:', items);
-    console.log('Items length:', items.length);
+    addApiBreadcrumb('JSON body parsed', {
+      itemCount: items.length,
+      hasCaption: !!caption,
+    });
 
     // Validate batch limits for JSON requests (item count only, no files)
     if (items.length > QUEUE_LIMITS.MAX_ITEMS_PER_BATCH) {
@@ -196,9 +197,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   let userId: string | null = null;
   try {
     userId = await getUserId(req, res);
+    if (userId) {
+      Sentry.setUser({ id: userId });
+    }
   } catch {
     // Don't block posting if user ID lookup fails
-    console.warn('Failed to get user ID for analytics');
+    addApiBreadcrumb('User ID lookup failed (non-blocking)', {}, 'warning');
   }
   
   try {
@@ -224,7 +228,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       try {
         subredditRules = await getSubredditRules(client, item.subreddit);
       } catch (error) {
-        console.warn(`Failed to get rules for r/${item.subreddit}:`, error);
+        addApiBreadcrumb('Subreddit rules fetch failed', { subreddit: item.subreddit }, 'warning');
         subredditRules = undefined;
       }
       
@@ -244,13 +248,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const fileCountField = Array.isArray(fields[fileCountKey]) ? fields[fileCountKey][0] : fields[fileCountKey];
         const fileCount = fileCountField ? parseInt(fileCountField as string) : 1;
         
-        console.log(`Item ${i}: Looking for fileCount at key '${fileCountKey}', found:`, fileCountField);
-        console.log(`Item ${i}: Expected file count: ${fileCount}`);
         
         // Collect all files for this item
         for (let fileIndex = 0; fileIndex < fileCount; fileIndex++) {
           const fileKey = `file_${i}_${fileIndex}`;
-          console.log(`Item ${i}: Looking for file at key '${fileKey}', exists:`, !!files[fileKey]);
           if (files[fileKey]) {
             const uploadedFile = Array.isArray(files[fileKey]) ? files[fileKey][0] : files[fileKey];
             if (uploadedFile) {
@@ -285,11 +286,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           postKind = 'gallery';
         }
         
-        console.log(`Processing item ${i} for r/${item.subreddit}:`, {
-          originalKind: item.kind,
-          finalKind: postKind,
-          filesCount: itemFiles.length,
-          fileNames: itemFiles.map(f => f.name),
+        addApiBreadcrumb(`Processing post ${i + 1}/${items.length}`, {
+          subreddit: item.subreddit,
+          kind: postKind,
+          hasFiles: itemFiles.length > 0,
         });
         
         const result = await submitPost(client, {
@@ -303,7 +303,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           file: itemFiles.length === 1 ? itemFiles[0] : undefined,
         });
         
-        console.log(`Post result for r/${item.subreddit}:`, result);
+        addApiBreadcrumb('Post successful', {
+          subreddit: item.subreddit,
+          hasUrl: !!result.url,
+        });
         
         // Log success for analytics (non-blocking, privacy-first)
         if (userId) {
@@ -326,7 +329,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'Failed';
-        console.error(`Error posting to r/${item.subreddit}:`, e);
+        
+        // Capture error to Sentry
+        Sentry.captureException(e, {
+          tags: {
+            component: 'queue.post',
+            subreddit: item.subreddit,
+          },
+          extra: {
+            postIndex: i,
+            totalPosts: items.length,
+            postKind: item.kind,
+          },
+        });
+        
+        addApiBreadcrumb('Post failed', {
+          subreddit: item.subreddit,
+          error: msg,
+        }, 'error');
         
         // Log error for analytics (non-blocking, privacy-first)
         if (userId) {
@@ -356,6 +376,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.end();
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Error';
+    
+    // Capture critical queue error
+    Sentry.captureException(e, {
+      tags: {
+        component: 'queue',
+        endpoint: '/api/queue',
+      },
+      extra: {
+        totalItems: items?.length,
+      },
+    });
+    
     res.status(500).end(JSON.stringify({ error: msg }));
   }
 }

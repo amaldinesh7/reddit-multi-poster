@@ -6,6 +6,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import formidable from 'formidable';
 import fs from 'fs';
 import { getUserId } from '../../../lib/apiAuth';
@@ -16,9 +17,9 @@ import {
   QueueJobItem,
   QueueFileReference,
   SubmitJobResponse,
-  QUEUE_JOB_CONSTANTS,
 } from '../../../lib/queueJob';
 import { QUEUE_LIMITS } from '../../../lib/queueLimits';
+import { addApiBreadcrumb } from '../../../lib/apiErrorHandler';
 
 // Disable default body parser for file uploads
 export const config = {
@@ -198,18 +199,26 @@ export default async function handler(
     // Create the queue job in database
     const job = await createQueueJob(userId, jobItems, caption, prefixes, filePaths);
 
-    // Update file paths to use actual job ID
-    // Note: Files are already uploaded with tempJobId, but job.id is what we return
-    // The file paths in the database already contain the correct paths
-
-    console.log(`Created queue job ${job.id} with ${jobItems.length} items and ${filePaths.length} files`);
+    // Log successful job creation
+    addApiBreadcrumb('Queue job created', {
+      jobId: job.id,
+      itemCount: jobItems.length,
+      fileCount: filePaths.length,
+    });
 
     return res.status(200).json({
       success: true,
       jobId: job.id,
     });
   } catch (error) {
-    console.error('Failed to submit queue job:', error);
+    // Capture error to Sentry with context
+    Sentry.captureException(error, {
+      tags: { 
+        component: 'queue.submit',
+        endpoint: '/api/queue/submit',
+      },
+    });
+    
     const message = error instanceof Error ? error.message : 'Failed to submit job';
     return res.status(500).json({
       success: false,

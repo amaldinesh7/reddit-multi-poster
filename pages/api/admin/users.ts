@@ -22,18 +22,80 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const client = createServerSupabaseClient();
 
-  // GET: List users
+  // GET: List users with search, filter, sort, and post counts
   if (req.method === 'GET') {
     try {
-      const { data: users, error } = await client
+      const { 
+        search, 
+        entitlement: filterEntitlement, 
+        sortBy = 'created_at', 
+        sortOrder = 'desc' 
+      } = req.query;
+
+      // Build query
+      let query = client
         .from('users')
-        .select('id, reddit_username, reddit_avatar_url, entitlement, paid_at, created_at')
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .select('id, reddit_username, reddit_avatar_url, entitlement, paid_at, created_at');
+
+      // Apply search filter (case-insensitive)
+      if (search && typeof search === 'string' && search.trim()) {
+        query = query.ilike('reddit_username', `%${search.trim()}%`);
+      }
+
+      // Apply entitlement filter
+      if (filterEntitlement && (filterEntitlement === 'free' || filterEntitlement === 'paid')) {
+        query = query.eq('entitlement', filterEntitlement);
+      }
+
+      // Apply sorting (for non-post_count sorts)
+      const validSortFields = ['created_at', 'reddit_username'];
+      const sortField = validSortFields.includes(sortBy as string) ? sortBy as string : 'created_at';
+      const ascending = sortOrder === 'asc';
+      
+      if (sortBy !== 'post_count') {
+        query = query.order(sortField, { ascending });
+      }
+
+      query = query.limit(200);
+
+      const { data: users, error } = await query;
 
       if (error) throw error;
 
-      return res.status(200).json({ users: users || [] });
+      // Get post counts for all users
+      const userIds = (users || []).map(u => u.id);
+      let postCounts: Record<string, number> = {};
+
+      if (userIds.length > 0) {
+        const { data: postLogs } = await client
+          .from('post_logs')
+          .select('user_id')
+          .in('user_id', userIds);
+
+        if (postLogs) {
+          postCounts = postLogs.reduce((acc, log) => {
+            acc[log.user_id] = (acc[log.user_id] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+        }
+      }
+
+      // Add post_count to each user
+      let enrichedUsers = (users || []).map(user => ({
+        ...user,
+        post_count: postCounts[user.id] || 0,
+      }));
+
+      // Sort by post_count if requested
+      if (sortBy === 'post_count') {
+        enrichedUsers = enrichedUsers.sort((a, b) => {
+          return ascending 
+            ? a.post_count - b.post_count 
+            : b.post_count - a.post_count;
+        });
+      }
+
+      return res.status(200).json({ users: enrichedUsers });
     } catch (error) {
       console.error('Admin users GET error:', error);
       return res.status(500).json({ error: 'Failed to fetch users' });
