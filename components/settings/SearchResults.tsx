@@ -3,6 +3,13 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X, Users, ExternalLink } from 'lucide-react';
 import { Category } from './types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface SearchResult {
   name: string;
@@ -32,11 +39,16 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   onClose,
   onAddSubreddit,
 }) => {
-  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>, subredditName: string) => {
-    const categoryId = e.target.value;
-    if (categoryId) {
-      onAddSubreddit(categoryId, subredditName);
-      // Reset is handled by value="" in the select element
+  const [addingSub, setAddingSub] = React.useState<string | null>(null);
+
+  const handleAdd = async (categoryId: string, subredditName: string) => {
+    if (!categoryId) return;
+    setAddingSub(subredditName);
+    try {
+      await onAddSubreddit(categoryId, subredditName);
+    } finally {
+      // Small delay for visual feedback
+      setTimeout(() => setAddingSub(null), 1000);
     }
   };
 
@@ -90,19 +102,27 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                 </div>
 
                 {categories.length > 0 && (
-                  <select
-                    className="text-xs px-2 py-1.5 rounded-lg border border-border/50 bg-secondary/30 cursor-pointer"
-                    value="" // Always reset to empty since it's an action, not a state
-                    onChange={(e) => handleSelectChange(e, subreddit.name)}
-                    aria-label={`Add r/${subreddit.name} to category`}
-                  >
-                    <option value="" disabled>Save to list…</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex-shrink-0 ml-4">
+                    <Select
+                      value=""
+                      onValueChange={(value) => handleAdd(value, subreddit.name)}
+                      disabled={addingSub === subreddit.name}
+                    >
+                      <SelectTrigger
+                        className="h-8 w-[110px] text-[11px] font-medium bg-secondary/50 border-border/50 hover:bg-secondary transition-colors cursor-pointer"
+                        aria-label={`Add r/${subreddit.name} to list`}
+                      >
+                        <SelectValue placeholder={addingSub === subreddit.name ? "Adding..." : "Add to list"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id} className="text-xs">
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 )}
               </div>
             ))}

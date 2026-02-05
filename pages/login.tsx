@@ -66,24 +66,28 @@ export default function Login() {
   return (
     <>
       <Head>
-        <title>Login - Reddit Multi Poster</title>
-        <meta name="description" content="Log in to Reddit Multi Poster to manage your posts and share content across multiple subreddits simultaneously." />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Sign In - Reddit Multi Poster | Start Sharing to Multiple Subreddits</title>
+        <meta name="description" content="Sign in with your Reddit account to start posting to multiple communities at once. Secure OAuth login - we never see your password. Free to get started." />
+        <meta name="keywords" content="reddit login, reddit multi poster sign in, cross-post tool, reddit automation login" />
+        <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://reddit-multi-poster.vercel.app/login" />
 
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://reddit-multi-poster.vercel.app/login" />
-        <meta property="og:title" content="Login - Reddit Multi Poster" />
-        <meta property="og:description" content="Log in to Reddit Multi Poster to manage your posts and share content across multiple subreddits simultaneously." />
-        <meta property="og:image" content="https://reddit-multi-poster.vercel.app/og-image.png" />
+        <meta property="og:title" content="Sign In - Reddit Multi Poster" />
+        <meta property="og:description" content="Connect your Reddit account and start sharing to 30+ communities with one click. Secure OAuth - your password stays with Reddit." />
+        <meta property="og:image" content="https://reddit-multi-poster.vercel.app/og-image.svg" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:site_name" content="Reddit Multi Poster" />
 
         {/* Twitter */}
-        <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://reddit-multi-poster.vercel.app/login" />
-        <meta property="twitter:title" content="Login - Reddit Multi Poster" />
-        <meta property="twitter:description" content="Log in to Reddit Multi Poster to manage your posts and share content across multiple subreddits simultaneously." />
-        <meta property="twitter:image" content="https://reddit-multi-poster.vercel.app/og-image.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://reddit-multi-poster.vercel.app/login" />
+        <meta name="twitter:title" content="Sign In - Reddit Multi Poster" />
+        <meta name="twitter:description" content="Connect your Reddit account and start sharing to 30+ communities with one click. Secure OAuth authentication." />
+        <meta name="twitter:image" content="https://reddit-multi-poster.vercel.app/og-image.svg" />
       </Head>
 
       <div className="min-h-screen relative overflow-hidden">

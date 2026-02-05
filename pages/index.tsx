@@ -1,4 +1,5 @@
 import React from 'react';
+import { Settings } from 'lucide-react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import axios from 'axios';
@@ -69,6 +70,7 @@ export default function Home() {
     handlePostAttempt,
     handleUnselectSuccessItems,
     clearSelection,
+    clearAllState,
   } = useHomePageState({ authMe: auth.me });
 
   React.useEffect(() => {
@@ -151,24 +153,31 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Reddit Multi Poster - Post to Multiple Subreddits</title>
-        <meta name="description" content="Post to multiple communities at once. Share to many subreddits in one go with Reddit Multi Poster." />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Reddit Multi Poster - Share Once, Reach Everywhere | Post to 30+ Subreddits</title>
+        <meta name="description" content="Tired of copy-pasting posts to multiple subreddits? Reddit Multi Poster lets you share content to 30+ communities with one click. Smart scheduling, auto-flairs, real-time tracking. Free to use." />
+        <meta name="keywords" content="reddit, multi poster, cross-post, subreddit, bulk posting, reddit automation, content sharing, social media tool, reddit scheduler" />
+        <meta name="author" content="Reddit Multi Poster" />
+        <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://reddit-multi-poster.vercel.app/" />
 
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://reddit-multi-poster.vercel.app/" />
-        <meta property="og:title" content="Reddit Multi Poster - Post to Multiple Subreddits" />
-        <meta property="og:description" content="Post to multiple communities at once. Share to many subreddits in one go with Reddit Multi Poster." />
-        <meta property="og:image" content="https://reddit-multi-poster.vercel.app/og-image.png" />
+        <meta property="og:title" content="Reddit Multi Poster - Share Once, Reach Everywhere" />
+        <meta property="og:description" content="Stop wasting time copy-pasting. Post to 30+ subreddits with one click. Smart scheduling prevents spam flags. Auto-flair detection. Real-time progress tracking." />
+        <meta property="og:image" content="https://reddit-multi-poster.vercel.app/og-image.svg" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:site_name" content="Reddit Multi Poster" />
+        <meta property="og:locale" content="en_US" />
 
         {/* Twitter */}
-        <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://reddit-multi-poster.vercel.app/" />
-        <meta property="twitter:title" content="Reddit Multi Poster - Post to Multiple Subreddits" />
-        <meta property="twitter:description" content="Post to multiple communities at once. Share to many subreddits in one go with Reddit Multi Poster." />
-        <meta property="twitter:image" content="https://reddit-multi-poster.vercel.app/og-image.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://reddit-multi-poster.vercel.app/" />
+        <meta name="twitter:title" content="Reddit Multi Poster - Share Once, Reach Everywhere" />
+        <meta name="twitter:description" content="Post to 30+ subreddits with one click. Smart scheduling, auto-flairs, real-time tracking. The tool every Reddit content creator needs." />
+        <meta name="twitter:image" content="https://reddit-multi-poster.vercel.app/og-image.svg" />
+        <meta name="twitter:creator" content="@redditposter" />
       </Head>
 
       {loading ? (
@@ -192,7 +201,7 @@ export default function Home() {
           <PwaOnboarding />
 
           {/* Main Content */}
-          <main className="container mx-auto px-4 py-4 lg:py-6 max-w-2xl lg:max-w-7xl">
+          <main className="container mx-auto px-4 sm:px-6 py-4 lg:py-6 max-w-2xl lg:max-w-7xl">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-x-6 items-start">
 
               {/* Left Column: Create Post */}
@@ -300,15 +309,16 @@ export default function Home() {
                 <section>
                   {/* Desktop: Card wrapper */}
                   <div className="hidden lg:block rounded-lg border border-border bg-card p-6">
-                    <div className="flex items-center gap-2 mb-4 flex-wrap">
+                    <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold">Communities</h3>
                       <Button
-                        variant="link"
+                        variant="ghost"
                         size="sm"
                         onClick={() => router.push('/settings')}
-                        className="h-8 px-2 text-xs font-medium cursor-pointer"
+                        className="h-8 px-2 text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground"
                         aria-label="Manage communities and flairs"
                       >
+                        <Settings className="w-3.5 h-3.5 mr-1.5" />
                         Manage list
                       </Button>
                     </div>
@@ -335,9 +345,9 @@ export default function Home() {
                           />
                           <label
                             htmlFor="post-to-profile-desktop"
-                            className="text-sm cursor-pointer"
+                            className="text-sm cursor-pointer select-none font-medium text-foreground"
                           >
-                            Also post to my profile (u/{auth.me.name}) so it appears on your profile too.
+                            Post to profile <span className="text-muted-foreground/50 text-xs font-normal ml-1">(u/{auth.me.name})</span>
                           </label>
                         </div>
                       )}
@@ -346,15 +356,16 @@ export default function Home() {
 
                   {/* Mobile: No card wrapper */}
                   <div className="lg:hidden">
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <div className="flex items-center justify-between mb-3">
                       <h3 className="text-base font-semibold">Communities</h3>
                       <Button
-                        variant="link"
+                        variant="ghost"
                         size="sm"
                         onClick={() => router.push('/settings')}
-                        className="h-8 px-2 text-xs font-medium cursor-pointer"
+                        className="h-8 px-2 text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground"
                         aria-label="Manage communities and flairs"
                       >
+                        <Settings className="w-3.5 h-3.5 mr-1.5" />
                         Manage list
                       </Button>
                     </div>
@@ -381,9 +392,9 @@ export default function Home() {
                           />
                           <label
                             htmlFor="post-to-profile-mobile"
-                            className="text-sm cursor-pointer"
+                            className="text-sm cursor-pointer select-none font-medium text-foreground"
                           >
-                            Also post to my profile (u/{auth.me.name}) so it appears on your profile too.
+                            Post to profile <span className="text-muted-foreground/50 text-xs font-normal ml-1">(u/{auth.me.name})</span>
                           </label>
                         </div>
                       )}
@@ -399,10 +410,12 @@ export default function Home() {
                     <PostingQueue
                       items={items}
                       caption={caption}
+                      body={body}
                       prefixes={prefixes}
                       hasFlairErrors={hasFlairErrors}
                       onPostAttempt={handlePostWithLimitCheck}
                       onUnselectSuccessItems={handleUnselectSuccessItems}
+                      onClearAll={clearAllState}
                     />
                   </div>
 
@@ -412,10 +425,12 @@ export default function Home() {
                     <PostingQueue
                       items={items}
                       caption={caption}
+                      body={body}
                       prefixes={prefixes}
                       hasFlairErrors={hasFlairErrors}
                       onPostAttempt={handlePostWithLimitCheck}
                       onUnselectSuccessItems={handleUnselectSuccessItems}
+                      onClearAll={clearAllState}
                     />
                   </div>
                 </section>

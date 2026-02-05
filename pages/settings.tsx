@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { ArrowLeft, Loader2, Search, FolderPlus, Sparkles, RefreshCw, GripVertical, FlaskConical, Crown } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, FolderPlus, RefreshCw, GripVertical, FlaskConical, Crown } from 'lucide-react';
 import { useSubreddits } from '../hooks/useSubreddits';
 import { useSubredditCache } from '../hooks/useSubredditCache';
 import { useAuth } from '../hooks/useAuth';
@@ -305,26 +305,21 @@ export default function Settings() {
 
         <div className="min-h-screen bg-background">
           {/* Header */}
-          <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
+          <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
             <div className="container mx-auto px-4 sm:px-6">
-              <div className="flex h-16 items-center gap-4">
+              <div className="flex h-14 items-center gap-4">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => router.push('/')}
-                  className="p-2 rounded-lg hover:bg-secondary cursor-pointer"
+                  className="min-h-[44px] min-w-[44px] p-2 rounded-lg hover:bg-secondary cursor-pointer"
                   aria-label="Go back to home"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-lg font-semibold">Settings</h1>
-                    <p className="text-xs text-muted-foreground hidden sm:block">Your communities and lists</p>
-                  </div>
+                <div>
+                  <h1 className="text-lg font-semibold">Settings</h1>
+                  <p className="text-xs text-muted-foreground hidden sm:block">Your communities and lists</p>
                 </div>
 
                 {/* Refresh button */}
@@ -340,7 +335,7 @@ export default function Settings() {
                     size="sm"
                     onClick={() => refresh()}
                     disabled={isLoading}
-                    className="p-2 cursor-pointer"
+                    className="min-h-[44px] min-w-[44px] p-2 cursor-pointer"
                     aria-label="Refresh lists"
                   >
                     <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -351,7 +346,7 @@ export default function Settings() {
           </header>
 
           {/* Main Content */}
-          <main className="container mx-auto px-4 sm:px-6 py-6 max-w-3xl">
+          <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-3xl">
             <div className="space-y-6">
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-3">
@@ -387,7 +382,7 @@ export default function Settings() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
                   <Input
-                    placeholder="Search for communities on Reddit"
+                    placeholder="Search and add communities"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10 pr-10 h-11 rounded-xl bg-secondary/30 border-border/50"
