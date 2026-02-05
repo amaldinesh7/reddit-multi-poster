@@ -262,7 +262,7 @@ export default function Settings() {
   // Show loading state
   if (authLoading || !isLoaded) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-viewport bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
           <p className="text-muted-foreground">Loading…</p>
@@ -290,7 +290,7 @@ export default function Settings() {
           <meta name="robots" content="noindex, nofollow" />
         </Head>
 
-        <div className="min-h-screen bg-background">
+        <div className="min-h-viewport bg-background">
           {/* Header */}
           <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
             <div className="container mx-auto px-4 sm:px-6">
@@ -333,7 +333,7 @@ export default function Settings() {
           </header>
 
           {/* Main Content */}
-          <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-3xl pb-20 md:pb-0">
+          <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-3xl safe-bottom">
             <div className="space-y-6">
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-3">

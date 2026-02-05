@@ -66,7 +66,7 @@ const HelpPage: React.FC = () => {
       <Head>
         <title>Help & Feedback | Poststation</title>
       </Head>
-      <div className="min-h-screen bg-background pb-20 md:pb-0">
+      <div className="min-h-viewport bg-background safe-bottom">
         <div className="max-w-2xl mx-auto px-4 pt-8 pb-4">
           <h1 className="text-xl font-bold flex items-center gap-2 mb-6">
             <HelpCircle className="w-5 h-5 text-primary" />

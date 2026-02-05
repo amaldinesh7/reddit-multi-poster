@@ -169,7 +169,7 @@ export default function AdminPanel() {
   // Loading state - simple centered spinner
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-viewport bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
       </div>
     );
@@ -178,7 +178,7 @@ export default function AdminPanel() {
   // Error state (including access denied)
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-viewport bg-background flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-3 text-center">
           <XCircle className="w-10 h-10 text-red-400" />
           <p className="text-foreground font-medium">{error}</p>
@@ -194,7 +194,7 @@ export default function AdminPanel() {
   // No data state
   if (!data) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-viewport bg-background flex items-center justify-center">
         <p className="text-muted-foreground">No data available</p>
       </div>
     );
@@ -208,7 +208,7 @@ export default function AdminPanel() {
         <meta name="robots" content="noindex, nofollow" />
       </Head>
 
-      <div className="min-h-screen bg-background">
+      <div className="min-h-viewport bg-background">
         {/* Command Center Header */}
         <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
           <div className="container mx-auto px-4 sm:px-6">

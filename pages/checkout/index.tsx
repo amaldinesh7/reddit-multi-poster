@@ -249,7 +249,7 @@ export default function CheckoutPage() {
         <meta name="robots" content="noindex" />
       </Head>
 
-      <div className="min-h-screen bg-[#0a0a0a]">
+      <div className="min-h-viewport bg-[#0a0a0a]">
         {/* Header */}
         <header className="border-b border-zinc-800 bg-[#0a0a0a]/80 backdrop-blur-sm sticky top-0 z-10 pt-[env(safe-area-inset-top)]">
           <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-4">

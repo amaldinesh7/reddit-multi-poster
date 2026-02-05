@@ -8,7 +8,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { MobileBottomNav } from "@/components/layout";
+import { AppFooter, MobileBottomNav } from "@/components/layout";
 import { inter, fontVariables } from "@/lib/fonts";
 import { swrConfig } from "@/lib/swr";
 
@@ -66,7 +66,7 @@ const RouteProgressBar = () => {
 
 /**
  * Wrapper that applies a subtle fade-in on every page mount.
- * Keeps transitions fast (200ms) so navigation feels instant but polished.
+ * Keeps transitions fast (150ms) so navigation feels instant but polished.
  */
 const PageTransition = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
@@ -89,7 +89,7 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
       className={
         transitionStage === "enter"
           ? "opacity-0 transition-none"
-          : "opacity-100 transition-opacity duration-200 ease-out"
+          : "opacity-100 transition-opacity duration-150 ease-out"
       }
     >
       {children}
@@ -112,6 +112,7 @@ export default function App({ Component, pageProps }: AppProps) {
                 <PageTransition>
                   <Component {...pageProps} />
                 </PageTransition>
+                <AppFooter />
                 <MobileBottomNav />
                 <Toaster />
               </div>

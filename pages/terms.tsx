@@ -2,7 +2,6 @@ import React from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { AppFooter } from '@/components/layout';
 
 const LAST_UPDATED = 'February 5, 2026';
 
@@ -15,7 +14,7 @@ export default function Terms() {
         <meta name="robots" content="index, follow" />
       </Head>
 
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="min-h-viewport bg-background flex flex-col">
         {/* Simple Header */}
         <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
           <div className="container mx-auto px-4 py-4 max-w-3xl">
@@ -206,7 +205,6 @@ export default function Terms() {
           </article>
         </main>
 
-        <AppFooter />
       </div>
     </>
   );

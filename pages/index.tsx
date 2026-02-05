@@ -12,7 +12,7 @@ import PostComposer from '../components/PostComposer';
 import { AppLoader, Skeleton, SubredditRowSkeleton, CardSkeleton } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { AppHeader, MobileUserStatsBanner, AppFooter } from '@/components/layout';
+import { AppHeader, MobileUserStatsBanner } from '@/components/layout';
 import { useHomePageState } from '@/hooks/useHomePageState';
 import { useFailedPosts, FailedPost } from '@/hooks/useFailedPosts';
 import { useSubredditFlairData } from '@/hooks/useSubredditFlairData';
@@ -450,7 +450,7 @@ export default function Home() {
       {showLoader && <AppLoader exiting={loaderExiting} />}
 
       {!authLoading && (
-        <div className="min-h-screen bg-background flex flex-col noise-texture noise-subtle">
+        <div className="min-h-viewport bg-background flex flex-col noise-texture noise-subtle">
           {/* Header */}
           <AppHeader
             userName={me?.name}
@@ -471,7 +471,7 @@ export default function Home() {
 
           <PwaOnboarding hasQueueItems={items.length > 0} />
 
-            <main className="flex-1 container mx-auto px-4 sm:px-6 py-4 lg:py-8 max-w-2xl lg:max-w-7xl safe-bottom pb-20 md:pb-0">
+            <main className="flex-1 container mx-auto px-4 sm:px-6 py-4 lg:py-8 max-w-2xl lg:max-w-7xl safe-bottom">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-start">
 
               {/* Left Column: Create Post */}
@@ -623,8 +623,6 @@ export default function Home() {
             </div>
           </main>
 
-          {/* Footer */}
-          <AppFooter />
         </div>
       )}
 

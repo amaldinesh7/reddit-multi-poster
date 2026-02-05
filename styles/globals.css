@@ -165,6 +165,26 @@ html.theme-transitioning *::after {
   [draggable="true"]:active {
     cursor: grabbing;
   }
+
+  .safe-bottom {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 768px) {
+    .safe-bottom {
+      padding-bottom: 0;
+    }
+  }
+
+  .min-h-viewport {
+    min-height: 100svh;
+  }
+
+  @supports (height: 100dvh) {
+    .min-h-viewport {
+      min-height: 100dvh;
+    }
+  }
 }
 
 /* Admin Panel Typography - Uses CSS variables from next/font */
