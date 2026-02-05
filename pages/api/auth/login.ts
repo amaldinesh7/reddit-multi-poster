@@ -1,9 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getAuthUrl } from '../../../utils/reddit';
 import { serialize } from 'cookie';
+import { applyRateLimit, authRateLimit } from '../../../lib/rateLimit';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).end();
+  
+  // Apply rate limiting to prevent auth abuse
+  if (!applyRateLimit(req, res, authRateLimit)) {
+    return; // Response already sent by applyRateLimit
+  }
   const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
   const redirect = getAuthUrl(state);
   

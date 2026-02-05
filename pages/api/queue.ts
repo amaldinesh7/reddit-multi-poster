@@ -103,9 +103,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     if (!itemsJson) return res.status(400).json({ error: 'No items' });
     
-    items = JSON.parse(itemsJson as string);
-    caption = captionJson as string || '';
-    prefixes = prefixesJson ? JSON.parse(prefixesJson as string) : {};
+    try {
+      items = JSON.parse(itemsJson as string);
+      caption = captionJson as string || '';
+      prefixes = prefixesJson ? JSON.parse(prefixesJson as string) : {};
+    } catch {
+      return res.status(400).json({ error: 'Invalid JSON in form data' });
+    }
     files = uploadedFiles;
     
     console.log('Parsed items count:', items.length);
@@ -145,7 +149,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     console.log('Body string:', bodyStr);
-    const body = JSON.parse(bodyStr || '{}');
+    let body;
+    try {
+      body = JSON.parse(bodyStr || '{}');
+    } catch {
+      return res.status(400).json({ error: 'Invalid JSON in request body' });
+    }
     console.log('Parsed body:', body);
     
     items = body.items || [];

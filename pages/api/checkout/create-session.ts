@@ -1,7 +1,7 @@
 /**
  * POST /api/checkout/create-session
  * Creates a Dodo Payments checkout session for the ₹199 one-time product.
- * Returns checkout_url for client redirect.
+ * Returns checkout_url for inline checkout SDK.
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -59,14 +59,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(502).json({ error: 'Could not create checkout session' });
     }
 
-    const data = (await response.json()) as { checkout_url?: string; session_id?: string };
+    const data = (await response.json()) as { checkout_url?: string; checkout_session_id?: string };
     const checkoutUrl = data.checkout_url;
+    const sessionId = data.checkout_session_id;
 
     if (!checkoutUrl) {
       return res.status(502).json({ error: 'No checkout URL in response' });
     }
 
-    return res.status(200).json({ checkout_url: checkoutUrl });
+    return res.status(200).json({ 
+      checkout_url: checkoutUrl,
+      session_id: sessionId,
+    });
   } catch (error) {
     console.error('Checkout create-session error:', error);
     return res.status(500).json({ error: 'Checkout failed' });

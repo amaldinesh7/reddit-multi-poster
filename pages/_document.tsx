@@ -36,8 +36,6 @@ const Document = (): JSX.Element => {
   return (
     <Html lang="en" suppressHydrationWarning>
       <Head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        
         {/* JSON-LD Structured Data */}
         <script
           type="application/ld+json"

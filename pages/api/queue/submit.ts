@@ -61,7 +61,12 @@ export default async function handler(
       return res.status(400).json({ success: false, error: 'No items provided' });
     }
 
-    const parsedItems: ParsedItem[] = JSON.parse(itemsJson);
+    let parsedItems: ParsedItem[];
+    try {
+      parsedItems = JSON.parse(itemsJson);
+    } catch {
+      return res.status(400).json({ success: false, error: 'Invalid JSON in items field' });
+    }
     if (!Array.isArray(parsedItems) || parsedItems.length === 0) {
       return res.status(400).json({ success: false, error: 'Items must be a non-empty array' });
     }
@@ -78,7 +83,14 @@ export default async function handler(
     // Extract caption and prefixes
     const caption = Array.isArray(fields.caption) ? fields.caption[0] : fields.caption || '';
     const prefixesJson = Array.isArray(fields.prefixes) ? fields.prefixes[0] : fields.prefixes;
-    const prefixes = prefixesJson ? JSON.parse(prefixesJson) : {};
+    let prefixes = {};
+    if (prefixesJson) {
+      try {
+        prefixes = JSON.parse(prefixesJson);
+      } catch {
+        return res.status(400).json({ success: false, error: 'Invalid JSON in prefixes field' });
+      }
+    }
 
     // Generate a temporary job ID for file uploads
     // We'll use this as a folder name in storage
