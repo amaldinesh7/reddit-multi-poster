@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AlertTriangle, ChevronDown, FileText, Hash } from 'lucide-react';
+import { AlertTriangle, ChevronDown, FileText, Hash, X } from 'lucide-react';
 import { TitleTag } from '../../utils/subredditCache';
 import { PostRequirements } from '@/utils/reddit';
 
@@ -141,8 +141,9 @@ const SubredditRow = React.memo(({
       {/* Main Row */}
       <div
         className={`
-          flex flex-col sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3 transition-colors cursor-pointer gap-2
-          ${hasError ? 'bg-red-500/20 border-l-2 border-red-500' : 'hover:bg-secondary/50'}
+          flex flex-col sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3.5 sm:py-3 transition-colors cursor-pointer gap-3
+          ${hasError ? 'bg-red-500/10 border-l-4 border-red-500' : 'hover:bg-secondary/50 active:bg-secondary/80'}
+          active:scale-[0.99] transition-transform duration-75
         `}
         onClick={handleRowClick}
         role="button"
@@ -155,45 +156,46 @@ const SubredditRow = React.memo(({
           }
         }}
       >
-        <div className="flex items-center gap-2 flex-grow min-w-0 pr-2">
-          <div className="flex items-center" onClick={handleCheckboxContainerClick}>
+        <div className="flex items-center gap-3 flex-grow min-w-0">
+          <div className="flex items-center justify-center w-6 h-6" onClick={handleCheckboxContainerClick}>
             <Checkbox
               id={checkboxId}
               checked={isSelected}
               onCheckedChange={() => onToggle(name)}
+              className="h-5 w-5"
             />
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
             {hasError && (
-              <AlertTriangle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" aria-hidden="true" />
+              <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" aria-hidden="true" />
             )}
             <span
-              className={`text-sm truncate select-none font-medium ${hasError ? 'text-red-400' : ''}`}
+              className={`text-[15px] sm:text-sm truncate select-none font-semibold sm:font-medium ${hasError ? 'text-red-400' : ''}`}
             >
               r/{name}
             </span>
 
             {/* Loading indicator */}
             {isLoading && (
-              <div className="w-3 h-3 border-2 border-muted border-t-primary rounded-full animate-spin" aria-label="Loading" />
+              <div className="w-3.5 h-3.5 border-2 border-muted border-t-primary rounded-full animate-spin" aria-label="Loading" />
             )}
 
             {/* Info Trigger */}
             {!isLoading && isSelected && canExpand && (
               <button
                 onClick={handleExpandClick}
-                className="bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full w-4 h-4 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0"
+                className="bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0"
                 aria-label="Community rules"
                 title="Community rules"
               >
-                <span className="font-serif font-bold italic text-[10px]">i</span>
+                <span className="font-serif font-bold italic text-[11px]">i</span>
               </button>
             )}
 
             {/* Flair Required Badge - Subtler */}
             {!isLoading && isSelected && flairRequired && (
-              <Badge variant="secondary" className="h-4 px-1 text-[9px] uppercase font-bold tracking-wider text-muted-foreground bg-muted hover:bg-muted flex-shrink-0" title="This community requires a flair">
+              <Badge variant="secondary" className="h-4.5 px-1.5 text-[9px] uppercase font-bold tracking-wider text-muted-foreground bg-muted hover:bg-muted flex-shrink-0" title="This community requires a flair">
                 Flair
               </Badge>
             )}
@@ -202,7 +204,7 @@ const SubredditRow = React.memo(({
 
         {/* Row 2: Controls (Flair/Tag Selection) - Only when selected */}
         {isSelected && (showTagControls || flairOptions.length > 0) && (
-          <div className={`flex items-center gap-2 flex-nowrap sm:justify-end w-full sm:w-auto mt-1 sm:mt-0 flex-shrink-0 ${!isSelected ? 'hidden' : ''}`} onClick={handleControlsClick}>
+          <div className="flex items-center gap-2 flex-nowrap sm:justify-end w-full sm:w-auto sm:mt-0 flex-shrink-0" onClick={handleControlsClick}>
 
             {/* Flair Dropdown - Only show when there are flair options */}
             {flairOptions.length > 0 && (
@@ -211,13 +213,13 @@ const SubredditRow = React.memo(({
                 onValueChange={(value) => onFlairChange(name, value === '__none__' ? '' : value)}
               >
                 <SelectTrigger
-                  className={`h-7 flex-1 w-full min-w-[80px] sm:max-w-[140px] text-xs cursor-pointer flex-shrink-0 ${hasError
+                  className={`h-9 sm:h-8 flex-1 w-full min-w-[100px] sm:max-w-[140px] text-xs cursor-pointer flex-shrink-0 font-medium ${hasError
                     ? 'border-red-500 bg-red-500/10 text-red-400'
                     : ''
                     }`}
                   aria-label={`Pick flair for r/${name}`}
                 >
-                  <SelectValue placeholder={flairRequired ? 'Flair (required)' : 'Flair'} />
+                  <SelectValue placeholder={flairRequired ? 'Flair (req)' : 'Flair'} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">{flairRequired ? 'Flair (required)' : 'Flair'}</SelectItem>
@@ -228,8 +230,8 @@ const SubredditRow = React.memo(({
               </Select>
             )}
 
-              {/* Title Suffix - Only show when required strings exist */}
-              {showTagControls && (
+            {/* Title Suffix - Only show when required strings exist */}
+            {showTagControls && (
               <>
                 {!showCustomInput ? (
                   <Select
@@ -237,7 +239,7 @@ const SubredditRow = React.memo(({
                     onValueChange={handleSuffixSelectChange}
                   >
                     <SelectTrigger
-                      className="h-7 flex-1 w-full min-w-[70px] sm:min-w-[80px] text-xs cursor-pointer flex-shrink-0"
+                      className="h-9 sm:h-8 flex-1 w-full min-w-[90px] sm:min-w-[80px] text-xs cursor-pointer flex-shrink-0 font-medium"
                       aria-label={`Title tag for r/${name}`}
                     >
                       <SelectValue placeholder="Title tag" />
@@ -253,8 +255,8 @@ const SubredditRow = React.memo(({
                 ) : (
                   <div className="flex items-center gap-1 flex-shrink-0 flex-1">
                     <Input
-                      className="h-7 flex-1 w-full text-xs px-1.5"
-                      placeholder="e.g. (f), 25F, [OC]"
+                      className="h-9 sm:h-8 flex-1 w-full text-xs px-2.5"
+                      placeholder="e.g. (f), 25F"
                       value={titleSuffix || ''}
                       onChange={(e) => onTitleSuffixChange(name, e.target.value)}
                       title="Add a tag to your title for this community"
@@ -262,10 +264,10 @@ const SubredditRow = React.memo(({
                     />
                     <button
                       onClick={() => setShowCustomInput(false)}
-                      className="text-xs text-muted-foreground hover:text-foreground cursor-pointer p-1"
+                      className="text-xs text-muted-foreground hover:text-foreground cursor-pointer p-2"
                       aria-label="Switch to dropdown"
                     >
-                      ✕
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 )}

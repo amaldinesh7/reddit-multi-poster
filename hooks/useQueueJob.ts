@@ -52,9 +52,36 @@ export interface QueueJobSubmission {
   prefixes: { f?: boolean; c?: boolean };
 }
 
+/**
+ * Single item for retry operations.
+ * Used when retrying individual failed posts.
+ */
+export interface RetryItemInput {
+  subreddit: string;
+  flairId?: string;
+  titleSuffix?: string;
+  kind: 'self' | 'link' | 'image' | 'video' | 'gallery';
+  url?: string;
+  text?: string;
+  file?: File;
+  files?: File[];
+}
+
 export interface UseQueueJobReturn {
   state: QueueJobState;
   submit: (submission: QueueJobSubmission) => Promise<string | null>;
+  /** Submit a single item for retry. Returns job ID if successful. */
+  retryItem: (
+    item: RetryItemInput,
+    caption: string,
+    prefixes: { f?: boolean; c?: boolean }
+  ) => Promise<string | null>;
+  /** Submit multiple items for retry (batch retry). Returns job ID if successful. */
+  retryItems: (
+    items: RetryItemInput[],
+    caption: string,
+    prefixes: { f?: boolean; c?: boolean }
+  ) => Promise<string | null>;
   cancel: () => Promise<boolean>;
   reset: () => void;
   resumeJob: (jobId: string) => Promise<void>;
@@ -369,6 +396,52 @@ export function useQueueJob(): UseQueueJobReturn {
   }, [subscribeToJob, startPolling]);
 
   // ============================================================================
+  // Retry Single Item
+  // ============================================================================
+
+  /**
+   * Retry a single failed item.
+   * Returns the job ID if submission succeeds, null otherwise.
+   * Caller should monitor `state` for results (single item jobs complete quickly).
+   */
+  const retryItem = useCallback(async (
+    item: RetryItemInput,
+    caption: string,
+    prefixes: { f?: boolean; c?: boolean }
+  ): Promise<string | null> => {
+    return submit({
+      items: [item],
+      caption,
+      prefixes,
+    });
+  }, [submit]);
+
+  // ============================================================================
+  // Retry Multiple Items (Batch)
+  // ============================================================================
+
+  /**
+   * Retry multiple failed items as a batch.
+   * Returns the job ID if submission succeeds, null otherwise.
+   * Caller should monitor `state` for results.
+   */
+  const retryItems = useCallback(async (
+    items: RetryItemInput[],
+    caption: string,
+    prefixes: { f?: boolean; c?: boolean }
+  ): Promise<string | null> => {
+    if (items.length === 0) {
+      return null;
+    }
+
+    return submit({
+      items,
+      caption,
+      prefixes,
+    });
+  }, [submit]);
+
+  // ============================================================================
   // Cancel Job
   // ============================================================================
 
@@ -492,6 +565,8 @@ export function useQueueJob(): UseQueueJobReturn {
   return {
     state,
     submit,
+    retryItem,
+    retryItems,
     cancel,
     reset,
     resumeJob,

@@ -85,7 +85,7 @@ export const PwaOnboarding = () => {
             {/* Full Screen Prompt */}
             {showPrompt && (
                 <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-                    <Card className="w-full max-w-md shadow-2xl bg-card border-primary/20 animate-in slide-in-from-bottom duration-300">
+                    <Card className="w-full max-w-md shadow-2xl bg-card border-primary/20 animate-in slide-in-from-bottom duration-300 pb-[env(safe-area-inset-bottom,0px)] sm:pb-0">
                         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                             <CardTitle className="text-lg font-bold text-primary">Add to home screen</CardTitle>
                             <Button variant="ghost" size="icon" onClick={handlePromptDismiss} className="h-8 w-8 -mr-2">

@@ -208,6 +208,11 @@ const SubredditFlairPicker: React.FC<Props> = ({
       onSelectedChange(newSelected);
       reloadSelectedData(newSelected);
     }
+
+    // Reset search after adding
+    setQuery('');
+    setSearchResults(null);
+    setHasSearched(false);
   }, [temporarySubreddits, allSubreddits, selected, onSelectedChange, reloadSelectedData]);
 
   const handleOpenSaveDialog = useCallback((subredditName: string) => {
@@ -230,6 +235,11 @@ const SubredditFlairPicker: React.FC<Props> = ({
 
       setDialogOpen(false);
       setSubredditToSave(null);
+
+      // Reset search after saving
+      setQuery('');
+      setSearchResults(null);
+      setHasSearched(false);
     } catch (error) {
       console.error('Failed to save subreddit', error);
     }
@@ -265,59 +275,58 @@ const SubredditFlairPicker: React.FC<Props> = ({
   return (
     <div className="space-y-4">
       {/* Search Bar (hidden for paid: temporary selection disabled) */}
-      <div className="flex items-center gap-2">
-        {showSearchUi ? (
-          <div className="relative flex-1">
+      <div className="flex flex-col gap-3">
+        {showSearchUi && (
+          <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
             <Input
               placeholder="Find communities"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="pl-10 pr-8"
+              className="pl-10 pr-8 h-11 sm:h-10 md:h-9"
               aria-label="Find communities"
             />
             {query.length > 0 && (
               <button
                 onClick={handleClearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground md:transition-colors cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground md:transition-colors cursor-pointer p-1"
                 aria-label="Clear search"
               >
                 <X className="w-4 h-4" />
               </button>
             )}
           </div>
-        ) : (
-          <div className="flex-1" />
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between min-h-[1.5rem]">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground/80 tabular-nums">
+              {selected.length} {selected.length === 1 ? 'community' : 'communities'} selected
+            </span>
+            {selected.length > 0 && (
+              <Tooltip content="Sync flair & rules from Reddit" side="bottom">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleReload}
+                  disabled={isReloading}
+                  className="h-6 w-6 p-0 rounded-md cursor-pointer hover:bg-secondary"
+                  aria-label="Refresh flairs"
+                >
+                  <RefreshCw className={`h-3 w-3 ${isReloading ? 'animate-spin' : ''}`} />
+                </Button>
+              </Tooltip>
+            )}
+          </div>
+
           {selected.length > 0 && (
             <button
               onClick={() => onSelectedChange([])}
-              className="text-xs text-muted-foreground hover:text-red-500 transition-colors cursor-pointer mr-1"
+              className="text-xs font-medium text-red-500/80 hover:text-red-500 transition-colors cursor-pointer active:scale-95"
               aria-label="Clear all chosen communities"
             >
               Clear all
             </button>
-          )}
-
-          <span className="text-sm text-muted-foreground whitespace-nowrap tabular-nums">
-            {selected.length} selected
-          </span>
-
-          {selected.length > 0 && (
-            <Tooltip content="Sync flair & rules from Reddit" side="bottom">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleReload}
-                disabled={isReloading}
-                className="h-9 w-9 p-0 rounded-lg cursor-pointer"
-                aria-label="Refresh flairs for chosen communities"
-              >
-                <RefreshCw className={`h-4 w-4 ${isReloading ? 'animate-spin' : ''}`} />
-              </Button>
-            </Tooltip>
           )}
         </div>
       </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Send,
@@ -11,12 +11,17 @@ import {
   WifiOff,
   LogIn,
   Layers,
+  RotateCcw,
 } from 'lucide-react';
-import { useQueueJob } from '../hooks/useQueueJob';
-import { QueueProgressList } from './posting-queue';
+import { useQueueJob, RetryItemInput } from '../hooks/useQueueJob';
+import { QueueProgressList, FailedPostsPanel, EditFailedPostDialog, ValidationWarnings } from './posting-queue';
 import { QUEUE_LIMITS, formatFileSize, calculateItemsFileSize } from '@/lib/queueLimits';
 import { MobileStickyQueue } from './MobileStickyQueue';
 import { LogEntry } from './posting-queue/types';
+import { useFailedPosts, FailedPost } from '../hooks/useFailedPosts';
+import { useSubredditFlairData } from '../hooks/useSubredditFlairData';
+import { ErrorCategory } from '@/lib/errorClassification';
+import { usePreflightValidation } from '../hooks/usePreflightValidation';
 
 interface Item {
   subreddit: string;
@@ -32,6 +37,8 @@ interface Item {
 interface Props {
   items: Item[];
   caption: string;
+  /** Post body/description text */
+  body?: string;
   prefixes: { f?: boolean; c?: boolean };
   hasFlairErrors?: boolean;
   onPostAttempt?: () => void;
@@ -143,6 +150,7 @@ const BatchProgress: React.FC<BatchProgressProps> = ({
 const PostingQueue: React.FC<Props> = ({
   items,
   caption,
+  body,
   prefixes,
   hasFlairErrors,
   onPostAttempt,
@@ -154,9 +162,273 @@ const PostingQueue: React.FC<Props> = ({
   const {
     state,
     submit,
+    retryItem,
+    retryItems,
     cancel,
     reset,
   } = useQueueJob();
+
+  // Failed posts management
+  const failedPostsHook = useFailedPosts();
+
+  // Track which failed post is being edited
+  const [editingPost, setEditingPost] = useState<FailedPost | null>(null);
+
+  // Track if a retry is in progress
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  // Track if user dismissed validation warnings
+  const [validationDismissed, setValidationDismissed] = useState(false);
+
+  // Get flair data for the currently editing post's subreddit
+  const editingSubreddit = editingPost?.subreddit || '';
+  const flairDataResult = useSubredditFlairData();
+  const editFlairOptions = flairDataResult.flairOptions[editingSubreddit] || [];
+  const editFlairLoading = flairDataResult.cacheLoading[editingSubreddit] || false;
+  const editFlairRequired = flairDataResult.flairRequired[editingSubreddit] || false;
+
+  // ============================================================================
+  // Pre-flight Validation
+  // ============================================================================
+
+  // Build validation input from items
+  const validationInput = useMemo(() => {
+    const subreddits = items.map(i => i.subreddit);
+    const flairValue: Record<string, string | undefined> = {};
+    const titleSuffixes: Record<string, string | undefined> = {};
+
+    items.forEach(item => {
+      flairValue[item.subreddit] = item.flairId;
+      titleSuffixes[item.subreddit] = item.titleSuffix;
+    });
+
+    // Determine kind and url from the first item (all items in a post share the same type)
+    const firstItem = items[0];
+    const kind = firstItem?.kind || 'self';
+    const url = firstItem?.url;
+
+    return {
+      title: caption,
+      body,
+      kind,
+      url,
+      subreddits,
+      flairValue,
+      flairRequired: flairDataResult.flairRequired,
+      flairOptions: flairDataResult.flairOptions,
+      postRequirements: flairDataResult.postRequirements,
+      titleSuffixes,
+    };
+  }, [items, caption, body, flairDataResult.flairRequired, flairDataResult.flairOptions, flairDataResult.postRequirements]);
+
+  // Run pre-flight validation
+  const validation = usePreflightValidation(validationInput);
+
+  // Reset validation dismissed state when items change
+  useEffect(() => {
+    setValidationDismissed(false);
+  }, [items, caption, body]);
+
+  // Show validation warnings only when there are issues and not dismissed
+  const showValidationWarnings = !validationDismissed &&
+    items.length > 0 &&
+    (validation.errors.length > 0 || validation.warnings.length > 0) &&
+    !state.isProcessing &&
+    state.status !== 'processing';
+
+  // Add failed results from queue job to failed posts when job completes
+  // Track processed job IDs to prevent duplicate additions
+  const processedJobRef = React.useRef<string | null>(null);
+
+  useEffect(() => {
+    // Only process when job transitions to completed/failed
+    if (state.status === 'completed' || state.status === 'failed') {
+      // Generate a unique key for this job result set to prevent re-processing
+      const jobKey = `${state.status}-${state.results.length}-${state.items.length}`;
+      
+      // Skip if we already processed this exact job result
+      if (processedJobRef.current === jobKey) {
+        return;
+      }
+      
+      const failedResults = state.results.filter(r => r.status === 'error');
+      if (failedResults.length > 0 && state.items.length > 0) {
+        processedJobRef.current = jobKey;
+        failedPostsHook.addFromResults(
+          failedResults,
+          state.items,
+          caption,
+          prefixes
+        );
+      }
+    } else {
+      // Reset when a new job starts
+      processedJobRef.current = null;
+    }
+  }, [state.status, state.results, state.items, caption, prefixes, failedPostsHook.addFromResults]);
+
+  // Handle retry for a single failed post
+  const handleRetryFailedPost = useCallback(async (postId: string) => {
+    const post = failedPostsHook.state.posts.find(p => p.id === postId);
+    if (!post) return;
+
+    setIsRetrying(true);
+    try {
+      // Mark as retrying
+      failedPostsHook.retryOne(post.id);
+
+      const retryInput: RetryItemInput = {
+        subreddit: post.subreddit,
+        flairId: post.flairId,
+        titleSuffix: post.titleSuffix,
+        kind: post.originalItem.kind,
+        url: post.originalItem.url,
+        text: post.originalItem.text,
+        file: post.originalItem.file,
+        files: post.originalItem.files,
+      };
+
+      const jobId = await retryItem(retryInput, post.originalCaption, post.originalPrefixes);
+      if (!jobId) {
+        failedPostsHook.markFailed(post.id, 'Failed to submit retry');
+      }
+      // Job submitted - success/failure will be handled via queue state
+    } catch (error) {
+      failedPostsHook.markFailed(post.id, error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [failedPostsHook, retryItem]);
+
+  // Handle opening the edit dialog
+  const handleEditFailedPost = useCallback((post: FailedPost) => {
+    setEditingPost(post);
+  }, []);
+
+  // Handle submitting an edited failed post
+  const handleSubmitEditedPost = useCallback(async (updates: { flairId?: string; titleSuffix?: string }) => {
+    if (!editingPost) return;
+
+    setIsRetrying(true);
+    try {
+      // First update the failed post with new values
+      failedPostsHook.updatePost(editingPost.id, updates);
+
+      // Mark as retrying
+      failedPostsHook.retryOne(editingPost.id);
+
+      // Then retry with the updated values
+      const retryInput: RetryItemInput = {
+        subreddit: editingPost.subreddit,
+        flairId: updates.flairId ?? editingPost.flairId,
+        titleSuffix: updates.titleSuffix ?? editingPost.titleSuffix,
+        kind: editingPost.originalItem.kind,
+        url: editingPost.originalItem.url,
+        text: editingPost.originalItem.text,
+        file: editingPost.originalItem.file,
+        files: editingPost.originalItem.files,
+      };
+
+      const jobId = await retryItem(retryInput, editingPost.originalCaption, editingPost.originalPrefixes);
+      if (!jobId) {
+        failedPostsHook.markFailed(editingPost.id, 'Failed to submit retry');
+      }
+
+      setEditingPost(null);
+    } catch (error) {
+      failedPostsHook.markFailed(editingPost.id, error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [editingPost, failedPostsHook, retryItem]);
+
+  // Handle remove failed post
+  const handleRemoveFailedPost = useCallback((postId: string) => {
+    failedPostsHook.remove(postId);
+  }, [failedPostsHook]);
+
+  // Handle retry by category
+  const handleRetryByCategory = useCallback(async (category: ErrorCategory) => {
+    const postsToRetry = failedPostsHook.retryByCategory(category);
+    if (postsToRetry.length === 0) return;
+
+    setIsRetrying(true);
+    try {
+      const retryInputs: RetryItemInput[] = postsToRetry.map(post => ({
+        subreddit: post.subreddit,
+        flairId: post.flairId,
+        titleSuffix: post.titleSuffix,
+        kind: post.originalItem.kind,
+        url: post.originalItem.url,
+        text: post.originalItem.text,
+        file: post.originalItem.file,
+        files: post.originalItem.files,
+      }));
+
+      const firstPost = postsToRetry[0];
+      const jobId = await retryItems(retryInputs, firstPost.originalCaption, firstPost.originalPrefixes);
+
+      if (!jobId) {
+        postsToRetry.forEach(post => {
+          failedPostsHook.markFailed(post.id, 'Failed to submit retry');
+        });
+      }
+    } catch (error) {
+      postsToRetry.forEach(post => {
+        failedPostsHook.markFailed(post.id, error instanceof Error ? error.message : 'Unknown error');
+      });
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [failedPostsHook, retryItems]);
+
+  // Handle remove by category
+  const handleRemoveByCategory = useCallback((category: ErrorCategory) => {
+    failedPostsHook.removeByCategory(category);
+  }, [failedPostsHook]);
+
+  // Handle bulk retry all failed posts
+  const handleRetryAllFailed = useCallback(async () => {
+    const retryablePosts = failedPostsHook.retryAll();
+    if (retryablePosts.length === 0) return;
+
+    setIsRetrying(true);
+    try {
+      const retryInputs: RetryItemInput[] = retryablePosts.map(post => ({
+        subreddit: post.subreddit,
+        flairId: post.flairId,
+        titleSuffix: post.titleSuffix,
+        kind: post.originalItem.kind,
+        url: post.originalItem.url,
+        text: post.originalItem.text,
+        file: post.originalItem.file,
+        files: post.originalItem.files,
+      }));
+
+      // Use the first post's caption and prefixes (they should all be the same from a single job)
+      const firstPost = retryablePosts[0];
+      const jobId = await retryItems(retryInputs, firstPost.originalCaption, firstPost.originalPrefixes);
+
+      if (!jobId) {
+        // Mark all as failed
+        retryablePosts.forEach(post => {
+          failedPostsHook.markFailed(post.id, 'Failed to submit retry');
+        });
+      }
+    } catch (error) {
+      // Mark all as failed
+      failedPostsHook.state.posts.filter(p => p.status === 'retrying').forEach(post => {
+        failedPostsHook.markFailed(post.id, error instanceof Error ? error.message : 'Unknown error');
+      });
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [failedPostsHook, retryItems]);
+
+  // Handle clear all failed posts
+  const handleClearAllFailed = useCallback(() => {
+    failedPostsHook.clearAll();
+  }, [failedPostsHook]);
 
   // Convert queue job state to log entries for the progress list
   const logs: LogEntry[] = state.items.map((item, index) => {
@@ -355,8 +627,30 @@ const PostingQueue: React.FC<Props> = ({
         </div>
       )}
 
+      {/* Pre-flight Validation Warnings */}
+      {showValidationWarnings && (
+        <ValidationWarnings
+          result={validation.result}
+          onDismiss={validation.canSubmit ? () => setValidationDismissed(true) : undefined}
+        />
+      )}
+
       {/* Action Buttons (Hidden on mobile) */}
-      <div className="hidden lg:flex gap-3">
+      <div className="hidden lg:flex gap-2">
+        {/* Reset Button - Icon only, next to Post button */}
+        {!running && !completed && items.length > 0 && onClearAll && (
+          <Button
+            onClick={onClearAll}
+            variant="outline"
+            size="icon"
+            className="cursor-pointer text-muted-foreground hover:text-destructive hover:border-destructive/50 hover:bg-destructive/10 shrink-0"
+            aria-label="Reset all selections"
+            title="Reset all selections"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+        )}
+
         <Button
           onClick={handleButtonClick}
           disabled={
@@ -364,7 +658,8 @@ const PostingQueue: React.FC<Props> = ({
             items.length === 0 ||
             hasFlairErrors ||
             !batchInfo.canProceed ||
-            state.isSubmitting
+            state.isSubmitting ||
+            !validation.canSubmit
           }
           className="flex-1 cursor-pointer"
           aria-label={
@@ -375,7 +670,8 @@ const PostingQueue: React.FC<Props> = ({
                     running ? 'Posting in progress' :
                       state.isSubmitting ? 'Submitting...' :
                         !batchInfo.canProceed ? 'Fix issues above' :
-                          `Post to ${items.length} communities`
+                          !validation.canSubmit ? 'Fix validation issues above' :
+                            `Post to ${items.length} communities`
           }
         >
           {completed ? (
@@ -428,20 +724,6 @@ const PostingQueue: React.FC<Props> = ({
             Stop
           </Button>
         )}
-
-        {/* Clear Selection Button (Desktop) */}
-        {!running && !completed && items.length > 0 && onClearAll && (
-          <Button
-            onClick={onClearAll}
-            variant="ghost"
-            className="cursor-pointer text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-            aria-label="Clear list"
-            title="Clear list"
-          >
-            <span className="font-serif mr-2 text-lg">🗑️</span>
-            Clear
-          </Button>
-        )}
       </div>
 
       {/* Empty State */}
@@ -464,13 +746,41 @@ const PostingQueue: React.FC<Props> = ({
       )}
 
       {/* Success Message */}
-      {completed && (
+      {completed && failedPostsHook.state.posts.length === 0 && (
         <div className="rounder-md bg-green-600/20 border border-green-600/30 p-3 text-green-500 hidden lg:block">
           <div className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5" aria-hidden="true" />
             <span className="font-medium">All done!</span>
           </div>
         </div>
+      )}
+
+      {/* Failed Posts Panel - Shows when there are failed posts to manage */}
+      {failedPostsHook.state.posts.length > 0 && !running && (
+        <FailedPostsPanel
+          state={failedPostsHook.state}
+          onRetryOne={handleRetryFailedPost}
+          onRetryCategory={handleRetryByCategory}
+          onRetryAll={handleRetryAllFailed}
+          onEdit={handleEditFailedPost}
+          onRemove={handleRemoveFailedPost}
+          onRemoveCategory={handleRemoveByCategory}
+          onClearAll={handleClearAllFailed}
+          successCount={logs.filter(l => l.status === 'success').length}
+        />
+      )}
+
+      {/* Edit Failed Post Dialog */}
+      {editingPost && (
+        <EditFailedPostDialog
+          post={editingPost}
+          flairOptions={editFlairOptions}
+          flairLoading={editFlairLoading}
+          flairRequired={editFlairRequired}
+          onSubmit={handleSubmitEditedPost}
+          onCancel={() => setEditingPost(null)}
+          isRetrying={isRetrying}
+        />
       )}
 
       {/* Cancelled Message */}
@@ -484,7 +794,7 @@ const PostingQueue: React.FC<Props> = ({
       )}
 
       {/* Failed Message */}
-      {failed && !error && (
+      {failed && !error && failedPostsHook.state.posts.length === 0 && (
         <div className="rounded-md bg-red-600/20 border border-red-600/30 p-3 text-red-500 hidden lg:block">
           <div className="flex items-center gap-2">
             <XCircle className="h-5 w-5" aria-hidden="true" />
@@ -494,14 +804,14 @@ const PostingQueue: React.FC<Props> = ({
       )}
 
       {/* Spacer for Mobile Sticky Queue */}
-      <div className="h-24 lg:h-0" aria-hidden="true" />
+      <div className="min-h-[calc(6rem+env(safe-area-inset-bottom,0px))] lg:min-h-0 lg:h-0" aria-hidden="true" />
 
       {/* Mobile Sticky Queue Footer */}
       <MobileStickyQueue
         items={items}
         isPosting={running}
         isCompleted={completed}
-        hasErrors={hasFlairErrors || !batchInfo.canProceed}
+        hasErrors={hasFlairErrors || !batchInfo.canProceed || !validation.canSubmit}
         onPostClick={handleButtonClick}
         onResetClick={reset}
         onStopClick={handleCancel}

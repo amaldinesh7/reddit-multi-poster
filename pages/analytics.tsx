@@ -9,6 +9,7 @@ import {
   PostsChart,
   SubredditChart,
   RecentPostsTable,
+  AdminUsers,
 } from '@/components/analytics';
 
 // ============================================================================
@@ -167,14 +168,14 @@ export default function Analytics() {
 
       <div className="min-h-screen bg-background">
         {/* Header */}
-        <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
+        <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
           <div className="container mx-auto px-4 sm:px-6">
-            <div className="flex h-16 items-center gap-4">
+            <div className="flex h-14 items-center gap-4">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push('/')}
-                className="p-2 rounded-lg hover:bg-secondary cursor-pointer"
+                className="min-h-[44px] min-w-[44px] p-2 rounded-lg hover:bg-secondary cursor-pointer"
                 aria-label="Go back to home"
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -198,7 +199,7 @@ export default function Analytics() {
                   size="sm"
                   onClick={handleRefresh}
                   disabled={isRefreshing}
-                  className="p-2 cursor-pointer"
+                  className="min-h-[44px] min-w-[44px] p-2 cursor-pointer"
                   aria-label="Refresh analytics"
                 >
                   <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -209,7 +210,7 @@ export default function Analytics() {
         </header>
 
         {/* Main Content */}
-        <main className="container mx-auto px-4 sm:px-6 py-6 max-w-6xl">
+        <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-6xl">
           <div className="space-y-6">
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -248,6 +249,9 @@ export default function Analytics() {
 
             {/* Recent Posts Table */}
             <RecentPostsTable data={data.recentPosts} />
+
+            {/* Admin Section */}
+            <AdminUsers />
 
             {/* Privacy Notice */}
             <div className="text-center text-xs text-muted-foreground py-4">

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Avatar } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { ChevronDown, User, Settings, LogOut, BarChart3, Sun, Moon, Monitor } from 'lucide-react';
+import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { ChevronDown, User, Settings, LogOut, BarChart3, Sun, Moon, Monitor, Infinity } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { Theme } from '@/contexts/ThemeContext';
 
@@ -24,12 +24,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onUpgrade,
   upgradeLoading = false,
 }) => {
-  const { setTheme, resolvedTheme } = useTheme();
+  const { setTheme } = useTheme();
   const showUpgrade = entitlement !== 'paid' && onUpgrade;
 
   const handleThemeSelect = (next: Theme) => () => setTheme(next);
 
-  const ThemeIcon = resolvedTheme === 'dark' ? Moon : Sun;
   const handleViewProfile = () => {
     window.open(`https://reddit.com/user/${userName}`, '_blank');
   };
@@ -43,7 +42,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background">
+    <header className="sticky top-0 z-50 border-b border-border bg-background pt-[env(safe-area-inset-top)]">
       <div className="container mx-auto px-3 sm:px-4">
         <div className="flex h-14 min-h-[44px] items-center justify-between gap-2">
           {/* Logo */}
@@ -55,40 +54,17 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           </div>
 
           <div className="flex min-w-0 shrink items-center gap-1.5 sm:gap-2">
-            <DropdownMenu
-              trigger={
-                <button
-                  type="button"
-                  className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md hover:bg-secondary transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
-                  aria-label="Theme"
-                >
-                  <ThemeIcon className="h-4 w-4" aria-hidden="true" />
-                </button>
-              }
-            >
-              <DropdownMenuItem onClick={handleThemeSelect('light')}>
-                <Sun className="h-4 w-4 mr-2" aria-hidden="true" />
-                Light
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleThemeSelect('dark')}>
-                <Moon className="h-4 w-4 mr-2" aria-hidden="true" />
-                Dark
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleThemeSelect('system')}>
-                <Monitor className="h-4 w-4 mr-2" aria-hidden="true" />
-                System
-              </DropdownMenuItem>
-            </DropdownMenu>
             {showUpgrade && (
               <button
                 type="button"
                 onClick={onUpgrade}
                 disabled={upgradeLoading}
-                className="shrink-0 text-xs sm:text-sm text-violet-500 hover:text-violet-400 cursor-pointer disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded px-2 py-2 sm:py-1 font-medium border border-violet-500/30 hover:border-violet-400/50 transition-colors min-h-[44px] sm:min-h-0"
+                className="shrink-0 flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md px-3 py-1.5 sm:py-1 font-semibold transition-all bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-md shadow-violet-500/25 hover:shadow-violet-500/40 hover:from-violet-500 hover:to-purple-500 sm:bg-none sm:from-transparent sm:to-transparent sm:shadow-none sm:text-violet-500 sm:hover:text-violet-400 sm:border sm:border-violet-500/30 sm:hover:border-violet-400/50 sm:font-medium"
                 aria-label="Get lifetime access"
               >
+                <Infinity className="h-4 w-4 sm:hidden" aria-hidden="true" />
                 <span className="hidden sm:inline">{upgradeLoading ? 'Opening checkout…' : 'Get lifetime access'}</span>
-                <span className="sm:hidden">{upgradeLoading ? '…' : 'Upgrade'}</span>
+                <span className="sm:hidden">{upgradeLoading ? '…' : 'Go Unlimited'}</span>
               </button>
             )}
             <DropdownMenu
@@ -110,6 +86,21 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               </button>
             }
           >
+            {/* Theme options */}
+            <DropdownMenuItem onClick={handleThemeSelect('light')}>
+              <Sun className="h-4 w-4 mr-2" aria-hidden="true" />
+              Light
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleThemeSelect('dark')}>
+              <Moon className="h-4 w-4 mr-2" aria-hidden="true" />
+              Dark
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleThemeSelect('system')}>
+              <Monitor className="h-4 w-4 mr-2" aria-hidden="true" />
+              System
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {/* User actions */}
             <DropdownMenuItem onClick={handleViewProfile}>
               <User className="h-4 w-4 mr-2" aria-hidden="true" />
               View Profile
@@ -124,6 +115,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 Analytics
               </DropdownMenuItem>
             )}
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onLogout} className="text-red-400">
               <LogOut className="h-4 w-4 mr-2" aria-hidden="true" />
               Logout
