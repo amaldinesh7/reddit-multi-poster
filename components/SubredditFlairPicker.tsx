@@ -8,6 +8,8 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useSubredditFlairData } from '../hooks/useSubredditFlairData';
 import { SubredditCategoryList } from './subreddit-picker';
 import SubredditRow from './subreddit-picker/SubredditRow';
+import { FailedPost } from '@/hooks/useFailedPosts';
+import { ValidationIssue } from '@/lib/preflightValidation';
 
 interface SearchResult {
   name: string;
@@ -27,6 +29,16 @@ interface Props {
   showValidationErrors?: boolean;
   /** If false, hide search and temporary subreddits. Default true */
   temporarySelectionEnabled?: boolean;
+  /** Array of failed posts to display inline errors */
+  failedPosts?: FailedPost[];
+  /** Callback when retry is clicked on a failed post */
+  onRetryPost?: (id: string) => void;
+  /** Callback when edit is clicked on a failed post */
+  onEditPost?: (post: FailedPost) => void;
+  /** Callback when remove/dismiss is clicked on a failed post */
+  onRemovePost?: (id: string) => void;
+  /** Validation issues grouped by subreddit for inline pre-flight display */
+  validationIssuesBySubreddit?: Record<string, ValidationIssue[]>;
 }
 
 const SubredditFlairPicker: React.FC<Props> = ({
@@ -39,6 +51,11 @@ const SubredditFlairPicker: React.FC<Props> = ({
   onValidationChange,
   showValidationErrors,
   temporarySelectionEnabled = true,
+  failedPosts,
+  onRetryPost,
+  onEditPost,
+  onRemovePost,
+  validationIssuesBySubreddit,
 }) => {
   const {
     allSubreddits,
@@ -95,6 +112,15 @@ const SubredditFlairPicker: React.FC<Props> = ({
       ...categorizedSubreddits
     ];
   }, [categorizedSubreddits, temporarySubreddits, temporarySelectionEnabled]);
+
+  // Create a map of subreddit name to failed post for quick lookup
+  const failedPostsBySubreddit = useMemo(() => {
+    if (!failedPosts || failedPosts.length === 0) return {};
+    return failedPosts.reduce((acc, post) => {
+      acc[post.subreddit.toLowerCase()] = post;
+      return acc;
+    }, {} as Record<string, FailedPost>);
+  }, [failedPosts]);
 
   // Clear temporary selections when temporarySelectionEnabled is toggled off
   React.useEffect(() => {
@@ -353,6 +379,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
               <div className="rounded-md border border-border overflow-hidden">
                 {localFilteredSubreddits.map((name) => {
                   const hasError = !!(showValidationErrors && hasMissingFlair(name));
+                  const failedPost = failedPostsBySubreddit[name.toLowerCase()];
                   return (
                     <SubredditRow
                       key={name}
@@ -369,6 +396,11 @@ const SubredditFlairPicker: React.FC<Props> = ({
                       onToggle={handleToggle}
                       onFlairChange={handleFlairChange}
                       onTitleSuffixChange={handleTitleSuffixChange}
+                      failedPost={failedPost}
+                      onRetryPost={onRetryPost}
+                      onEditPost={onEditPost}
+                      onRemovePost={onRemovePost}
+                      validationIssues={validationIssuesBySubreddit?.[name]}
                     />
                   );
                 })}
@@ -453,6 +485,11 @@ const SubredditFlairPicker: React.FC<Props> = ({
           postRequirements={postRequirements}
           cacheLoading={cacheLoading}
           showValidationErrors={showValidationErrors}
+          failedPostsBySubreddit={failedPostsBySubreddit}
+          onRetryPost={onRetryPost}
+          onEditPost={onEditPost}
+          onRemovePost={onRemovePost}
+          validationIssuesBySubreddit={validationIssuesBySubreddit}
           onToggle={handleToggle}
           onToggleCategory={handleToggleCategory}
           onSelectAllInCategory={handleSelectAllInCategory}

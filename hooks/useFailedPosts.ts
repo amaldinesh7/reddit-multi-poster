@@ -21,6 +21,12 @@ import { QueueJobResult, QueueJobItem } from '@/lib/queueJob';
 // Types
 // ============================================================================
 
+/** Extended item type that includes file data (from frontend before queue submission) */
+export interface QueueJobItemWithFiles extends QueueJobItem {
+  file?: File;
+  files?: File[];
+}
+
 /** Original item data needed for retries */
 export interface OriginalItemData {
   kind: 'self' | 'link' | 'image' | 'video' | 'gallery';
@@ -80,7 +86,7 @@ export interface UseFailedPostsReturn {
   /** Add failed posts from queue results */
   addFromResults: (
     results: QueueJobResult[], 
-    items: QueueJobItem[],
+    items: QueueJobItemWithFiles[],
     caption: string,
     prefixes: { f?: boolean; c?: boolean }
   ) => void;
@@ -196,7 +202,7 @@ export function useFailedPosts(): UseFailedPostsReturn {
 
   const addFromResults = useCallback((
     results: QueueJobResult[], 
-    items: QueueJobItem[],
+    items: QueueJobItemWithFiles[],
     caption: string,
     prefixes: { f?: boolean; c?: boolean }
   ) => {

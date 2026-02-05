@@ -2,6 +2,8 @@ import React from 'react';
 import { ChevronDown, ChevronRight, AlertTriangle, Settings } from 'lucide-react';
 import SubredditRow, { SubredditRules } from './SubredditRow';
 import { PostRequirements } from '@/utils/reddit';
+import { FailedPost } from '@/hooks/useFailedPosts';
+import { ValidationIssue } from '@/lib/preflightValidation';
 
 interface CategoryData {
   categoryName: string;
@@ -20,6 +22,16 @@ interface SubredditCategoryListProps {
   postRequirements: Record<string, PostRequirements>;
   cacheLoading: Record<string, boolean>;
   showValidationErrors?: boolean;
+  /** Map of subreddit name to failed post data */
+  failedPostsBySubreddit?: Record<string, FailedPost>;
+  /** Callback when retry is clicked */
+  onRetryPost?: (id: string) => void;
+  /** Callback when edit is clicked */
+  onEditPost?: (post: FailedPost) => void;
+  /** Callback when remove is clicked */
+  onRemovePost?: (id: string) => void;
+  /** Validation issues grouped by subreddit */
+  validationIssuesBySubreddit?: Record<string, ValidationIssue[]>;
   onToggle: (name: string) => void;
   onToggleCategory: (categoryName: string) => void;
   onSelectAllInCategory: (subreddits: string[]) => void;
@@ -40,6 +52,11 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
   postRequirements,
   cacheLoading,
   showValidationErrors,
+  failedPostsBySubreddit,
+  onRetryPost,
+  onEditPost,
+  onRemovePost,
+  validationIssuesBySubreddit,
   onToggle,
   onToggleCategory,
   onSelectAllInCategory,
@@ -117,6 +134,7 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
               <div>
                 {subreddits.map((name) => {
                   const hasError = !!(showValidationErrors && hasMissingFlair(name));
+                  const failedPost = failedPostsBySubreddit?.[name.toLowerCase()];
                   return (
                     <SubredditRow
                       key={name}
@@ -133,6 +151,11 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
                       onToggle={onToggle}
                       onFlairChange={onFlairChange}
                       onTitleSuffixChange={onTitleSuffixChange}
+                      failedPost={failedPost}
+                      onRetryPost={onRetryPost}
+                      onEditPost={onEditPost}
+                      onRemovePost={onRemovePost}
+                      validationIssues={validationIssuesBySubreddit?.[name]}
                     />
                   );
                 })}

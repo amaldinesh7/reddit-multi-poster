@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -9,9 +10,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AlertTriangle, ChevronDown, FileText, Hash, X } from 'lucide-react';
+import {
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItemPrimitive,
+} from '@/components/ui/dropdown-menu';
+import { AlertTriangle, AlertCircle, Info, ChevronDown, FileText, Hash, RefreshCw, Pencil, X, Tag, Clock, Ban, Key, Image, Wifi, Lock, Link as LinkIcon, Type } from 'lucide-react';
 import { TitleTag } from '../../utils/subredditCache';
 import { PostRequirements } from '@/utils/reddit';
+import { FailedPost } from '@/hooks/useFailedPosts';
+import { ClassifiedError } from '@/lib/errorClassification';
+import { ValidationIssue } from '@/lib/preflightValidation';
 
 export interface SubredditRules {
   requiresGenderTag: boolean;
@@ -36,7 +46,71 @@ export interface SubredditRowProps {
   onToggle: (name: string) => void;
   onFlairChange: (name: string, id: string) => void;
   onTitleSuffixChange: (name: string, suffix: string) => void;
+  /** Failed post data for this subreddit (if any) */
+  failedPost?: FailedPost;
+  /** Callback when retry is clicked */
+  onRetryPost?: (id: string) => void;
+  /** Callback when edit is clicked */
+  onEditPost?: (post: FailedPost) => void;
+  /** Callback when remove is clicked */
+  onRemovePost?: (id: string) => void;
+  /** Validation issues for this subreddit (pre-flight validation) */
+  validationIssues?: ValidationIssue[];
 }
+
+// Helper to get icon for error type
+const getErrorIcon = (iconName: ClassifiedError['icon'], className: string = 'h-4 w-4') => {
+  switch (iconName) {
+    case 'tag': return <Tag className={className} />;
+    case 'clock': return <Clock className={className} />;
+    case 'ban': return <Ban className={className} />;
+    case 'key': return <Key className={className} />;
+    case 'text': return <FileText className={className} />;
+    case 'lock': return <Lock className={className} />;
+    case 'image': return <Image className={className} />;
+    case 'wifi': return <Wifi className={className} />;
+    default: return <AlertTriangle className={className} />;
+  }
+};
+
+// Helper to get icon for validation field type
+const getFieldIcon = (field: ValidationIssue['field'], className: string = 'h-4 w-4') => {
+  switch (field) {
+    case 'title': return <Type className={className} />;
+    case 'body': return <FileText className={className} />;
+    case 'flair': return <Tag className={className} />;
+    case 'url': return <LinkIcon className={className} />;
+    case 'media': return <Image className={className} />;
+    default: return <AlertTriangle className={className} />;
+  }
+};
+
+// Helper to get severity icon and styles
+const getSeverityStyles = (severity: ValidationIssue['severity']) => {
+  switch (severity) {
+    case 'error':
+      return {
+        icon: <AlertTriangle className="h-3.5 w-3.5" />,
+        bgClass: 'bg-red-500/15',
+        textClass: 'text-red-500',
+        hoverClass: 'hover:bg-red-500/25',
+      };
+    case 'warning':
+      return {
+        icon: <AlertTriangle className="h-3.5 w-3.5" />,
+        bgClass: 'bg-yellow-500/15',
+        textClass: 'text-yellow-500',
+        hoverClass: 'hover:bg-yellow-500/25',
+      };
+    case 'info':
+      return {
+        icon: <Info className="h-3.5 w-3.5" />,
+        bgClass: 'bg-blue-500/15',
+        textClass: 'text-blue-500',
+        hoverClass: 'hover:bg-blue-500/25',
+      };
+  }
+};
 
 const SubredditRow = React.memo(({
   name,
@@ -51,7 +125,12 @@ const SubredditRow = React.memo(({
   flairValue,
   onToggle,
   onFlairChange,
-  onTitleSuffixChange
+  onTitleSuffixChange,
+  failedPost,
+  onRetryPost,
+  onEditPost,
+  onRemovePost,
+  validationIssues,
 }: SubredditRowProps) => {
   const checkboxId = `checkbox-${name}`;
   const [isExpanded, setIsExpanded] = useState(false);
@@ -92,6 +171,33 @@ const SubredditRow = React.memo(({
 
   // Has required title strings (gender tags etc)
   const hasRequiredStrings = (postRequirements?.title_required_strings?.length ?? 0) > 0;
+
+  // Validation issues computations
+  const validationErrors = useMemo(() => 
+    validationIssues?.filter(i => i.severity === 'error') || [],
+    [validationIssues]
+  );
+  const validationWarnings = useMemo(() => 
+    validationIssues?.filter(i => i.severity === 'warning') || [],
+    [validationIssues]
+  );
+  const hasValidationIssues = (validationIssues?.length ?? 0) > 0;
+  const hasValidationErrors = validationErrors.length > 0;
+  const validationSummary = useMemo(() => {
+    if (!hasValidationIssues) return null;
+    if (hasValidationErrors) {
+      return {
+        severity: 'error' as const,
+        count: validationErrors.length,
+        label: validationErrors.length === 1 ? 'Fix required' : `${validationErrors.length} issues`,
+      };
+    }
+    return {
+      severity: 'warning' as const,
+      count: validationWarnings.length,
+      label: validationWarnings.length === 1 ? 'Warning' : `${validationWarnings.length} warnings`,
+    };
+  }, [hasValidationIssues, hasValidationErrors, validationErrors.length, validationWarnings.length]);
 
   const handleRowClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -137,12 +243,12 @@ const SubredditRow = React.memo(({
   const showTagControls = isSelected && hasRequiredStrings;
 
   return (
-    <div className="border-b border-border/50 last:border-b-0">
+    <div className="border-b border-border last:border-b-0">
       {/* Main Row */}
       <div
         className={`
-          flex flex-col sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3.5 sm:py-3 transition-colors cursor-pointer gap-3
-          ${hasError ? 'bg-red-500/10 border-l-4 border-red-500' : 'hover:bg-secondary/50 active:bg-secondary/80'}
+          flex items-center justify-between px-3 sm:px-4 py-3.5 sm:py-3 transition-colors cursor-pointer gap-2
+          ${(hasError || hasValidationErrors) ? 'bg-red-500/10' : 'hover:bg-secondary/50 active:bg-secondary/80'}
           active:scale-[0.99] transition-transform duration-75
         `}
         onClick={handleRowClick}
@@ -156,8 +262,9 @@ const SubredditRow = React.memo(({
           }
         }}
       >
-        <div className="flex items-center gap-3 flex-grow min-w-0">
-          <div className="flex items-center justify-center w-6 h-6" onClick={handleCheckboxContainerClick}>
+        {/* Left Side: Checkbox + Name + Badges */}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center justify-center w-6 h-6 flex-shrink-0" onClick={handleCheckboxContainerClick}>
             <Checkbox
               id={checkboxId}
               checked={isSelected}
@@ -166,7 +273,7 @@ const SubredditRow = React.memo(({
             />
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             {hasError && (
               <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" aria-hidden="true" />
             )}
@@ -178,7 +285,7 @@ const SubredditRow = React.memo(({
 
             {/* Loading indicator */}
             {isLoading && (
-              <div className="w-3.5 h-3.5 border-2 border-muted border-t-primary rounded-full animate-spin" aria-label="Loading" />
+              <div className="w-3.5 h-3.5 border-2 border-muted border-t-primary rounded-full animate-spin flex-shrink-0" aria-label="Loading" />
             )}
 
             {/* Info Trigger */}
@@ -202,10 +309,120 @@ const SubredditRow = React.memo(({
           </div>
         </div>
 
-        {/* Row 2: Controls (Flair/Tag Selection) - Only when selected */}
-        {isSelected && (showTagControls || flairOptions.length > 0) && (
-          <div className="flex items-center gap-2 flex-nowrap sm:justify-end w-full sm:w-auto sm:mt-0 flex-shrink-0" onClick={handleControlsClick}>
+        {/* Right Side: Error/Warning Indicators */}
+        {isSelected && (hasValidationIssues || failedPost) && (
+          <div className="flex items-center gap-1.5 flex-shrink-0" onClick={handleControlsClick}>
+            {/* Validation Issues Alert Icon with Dropdown - Pre-flight validation */}
+            {hasValidationIssues && validationSummary && !failedPost && (
+              <DropdownMenuRoot>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="p-1 cursor-pointer hover:opacity-80 transition-opacity"
+                    aria-label={`${validationSummary.count} validation ${validationSummary.severity === 'error' ? 'error' : 'warning'}${validationSummary.count > 1 ? 's' : ''}`}
+                    title={validationSummary.label}
+                  >
+                    <AlertTriangle className={`h-4 w-4 ${hasValidationErrors ? 'text-red-500' : 'text-yellow-500'}`} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80 p-0">
+                  {/* Compact header */}
+                  <div className="px-3 py-2 bg-muted/50 border-b border-border">
+                    <span className="font-medium text-sm">
+                      {hasValidationErrors 
+                        ? `${validationErrors.length} issue${validationErrors.length > 1 ? 's' : ''} to fix` 
+                        : `${validationWarnings.length} warning${validationWarnings.length > 1 ? 's' : ''}`
+                      }
+                    </span>
+                  </div>
+                  
+                  {/* Issues list */}
+                  <div className="py-1">
+                    {validationErrors.map((issue, idx) => (
+                      <div key={`error-${idx}`} className="px-3 py-2 flex items-start gap-2 text-xs">
+                        {getFieldIcon(issue.field, 'h-3.5 w-3.5 text-red-500 flex-shrink-0 mt-0.5')}
+                        <span className="text-foreground">{issue.message}</span>
+                      </div>
+                    ))}
+                    {validationWarnings.length > 0 && validationErrors.length > 0 && (
+                      <div className="border-t border-border my-1" />
+                    )}
+                    {validationWarnings.map((issue, idx) => (
+                      <div key={`warning-${idx}`} className="px-3 py-2 flex items-start gap-2 text-xs">
+                        {getFieldIcon(issue.field, 'h-3.5 w-3.5 text-yellow-500 flex-shrink-0 mt-0.5')}
+                        <span className="text-muted-foreground">{issue.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenuRoot>
+            )}
 
+            {/* Failed Post Alert Icon with Dropdown */}
+            {failedPost && (
+              <DropdownMenuRoot>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="p-1 cursor-pointer hover:opacity-80 transition-opacity"
+                    aria-label={`Error: ${failedPost.error.userMessage}`}
+                    title={failedPost.error.userMessage}
+                  >
+                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64 p-0">
+                  {/* Compact Error Header */}
+                  <div className="px-3 py-2 bg-muted/50 border-b border-border">
+                    <div className="flex items-center gap-2 text-red-500">
+                      {getErrorIcon(failedPost.error.icon, 'h-4 w-4 flex-shrink-0')}
+                      <span className="font-medium text-sm truncate">{failedPost.error.userMessage}</span>
+                    </div>
+                    {(failedPost.error.details || failedPost.error.originalMessage) && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {failedPost.error.details || failedPost.error.originalMessage}
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Compact Action Buttons */}
+                  <div className="p-1">
+                    {failedPost.error.category !== 'unfixable' && onRetryPost && (
+                      <DropdownMenuItemPrimitive
+                        onClick={() => onRetryPost(failedPost.id)}
+                        className="flex items-center gap-2 px-2 py-1.5 text-xs text-blue-500 hover:bg-blue-500/10 rounded cursor-pointer"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        <span>Retry</span>
+                      </DropdownMenuItemPrimitive>
+                    )}
+                    {['edit_flair', 'edit_title', 'edit_content', 'change_media'].includes(failedPost.error.action) && onEditPost && (
+                      <DropdownMenuItemPrimitive
+                        onClick={() => onEditPost(failedPost)}
+                        className="flex items-center gap-2 px-2 py-1.5 text-xs text-amber-500 hover:bg-amber-500/10 rounded cursor-pointer"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        <span>Edit &amp; Retry</span>
+                      </DropdownMenuItemPrimitive>
+                    )}
+                    {onRemovePost && (
+                      <DropdownMenuItemPrimitive
+                        onClick={() => onRemovePost(failedPost.id)}
+                        className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted/80 rounded cursor-pointer"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        <span>Dismiss</span>
+                      </DropdownMenuItemPrimitive>
+                    )}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenuRoot>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Row 2: Controls (Flair/Tag Selection) - Only when selected */}
+      {isSelected && (showTagControls || flairOptions.length > 0) && (
+        <div className={`flex items-center gap-2 px-3 sm:px-4 pb-3 pt-1 ${(hasError || hasValidationErrors) ? 'bg-red-500/10' : ''}`} onClick={handleControlsClick}>
             {/* Flair Dropdown - Only show when there are flair options */}
             {flairOptions.length > 0 && (
               <Select
@@ -215,7 +432,7 @@ const SubredditRow = React.memo(({
                 <SelectTrigger
                   className={`h-9 sm:h-8 flex-1 w-full min-w-[100px] sm:max-w-[140px] text-xs cursor-pointer flex-shrink-0 font-medium ${hasError
                     ? 'border-red-500 bg-red-500/10 text-red-400'
-                    : ''
+                    : 'bg-secondary/80 hover:bg-secondary'
                     }`}
                   aria-label={`Pick flair for r/${name}`}
                 >
@@ -239,7 +456,7 @@ const SubredditRow = React.memo(({
                     onValueChange={handleSuffixSelectChange}
                   >
                     <SelectTrigger
-                      className="h-9 sm:h-8 flex-1 w-full min-w-[90px] sm:min-w-[80px] text-xs cursor-pointer flex-shrink-0 font-medium"
+                      className="h-9 sm:h-8 flex-1 w-full min-w-[90px] sm:min-w-[80px] text-xs cursor-pointer flex-shrink-0 font-medium bg-secondary/80 hover:bg-secondary"
                       aria-label={`Title tag for r/${name}`}
                     >
                       <SelectValue placeholder="Title tag" />
@@ -275,7 +492,6 @@ const SubredditRow = React.memo(({
             )}
           </div>
         )}
-      </div>
 
       {/* Expanded Details Section */}
       {isExpanded && isSelected && (
