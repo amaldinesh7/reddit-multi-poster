@@ -4,6 +4,7 @@ import SubredditRow, { SubredditRules } from './SubredditRow';
 import { PostRequirements } from '@/utils/reddit';
 import { FailedPost } from '@/hooks/useFailedPosts';
 import { ValidationIssue } from '@/lib/preflightValidation';
+import { PerSubredditOverride } from './CustomizePostDialog';
 
 interface CategoryData {
   categoryName: string;
@@ -32,6 +33,12 @@ interface SubredditCategoryListProps {
   onRemovePost?: (id: string) => void;
   /** Validation issues grouped by subreddit */
   validationIssuesBySubreddit?: Record<string, ValidationIssue[]>;
+  /** Per-subreddit content overrides (PRO feature) */
+  contentOverrides?: Record<string, PerSubredditOverride>;
+  /** Callback when customize is clicked */
+  onCustomize?: (name: string) => void;
+  /** Whether customization is enabled (PRO feature) */
+  customizationEnabled?: boolean;
   onToggle: (name: string) => void;
   onToggleCategory: (categoryName: string) => void;
   onSelectAllInCategory: (subreddits: string[]) => void;
@@ -57,6 +64,9 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
   onEditPost,
   onRemovePost,
   validationIssuesBySubreddit,
+  contentOverrides,
+  onCustomize,
+  customizationEnabled,
   onToggle,
   onToggleCategory,
   onSelectAllInCategory,
@@ -156,6 +166,9 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
                       onEditPost={onEditPost}
                       onRemovePost={onRemovePost}
                       validationIssues={validationIssuesBySubreddit?.[name]}
+                      contentOverride={contentOverrides?.[name]}
+                      onCustomize={onCustomize}
+                      customizationEnabled={customizationEnabled}
                     />
                   );
                 })}

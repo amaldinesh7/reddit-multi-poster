@@ -44,7 +44,7 @@ const Document = (): JSX.Element => {
         
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var t=localStorage.getItem('reddit-multi-poster-theme');var r=t==='light'?'light':t==='dark'?'dark':window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.classList.toggle('dark',r==='dark');})();`,
+            __html: `(function(){var t=localStorage.getItem('reddit-multi-poster-theme');var r=t==='light'?'light':'dark';document.documentElement.classList.toggle('dark',r==='dark');})();`,
           }}
         />
         

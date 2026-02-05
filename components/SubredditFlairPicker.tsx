@@ -10,6 +10,7 @@ import { SubredditCategoryList } from './subreddit-picker';
 import SubredditRow from './subreddit-picker/SubredditRow';
 import { FailedPost } from '@/hooks/useFailedPosts';
 import { ValidationIssue } from '@/lib/preflightValidation';
+import { PerSubredditOverride } from './subreddit-picker';
 
 interface SearchResult {
   name: string;
@@ -39,6 +40,12 @@ interface Props {
   onRemovePost?: (id: string) => void;
   /** Validation issues grouped by subreddit for inline pre-flight display */
   validationIssuesBySubreddit?: Record<string, ValidationIssue[]>;
+  /** Per-subreddit content overrides (PRO feature) */
+  contentOverrides?: Record<string, PerSubredditOverride>;
+  /** Callback when customize is clicked */
+  onCustomize?: (name: string) => void;
+  /** Whether customization is enabled (PRO feature) */
+  customizationEnabled?: boolean;
 }
 
 const SubredditFlairPicker: React.FC<Props> = ({
@@ -56,6 +63,9 @@ const SubredditFlairPicker: React.FC<Props> = ({
   onEditPost,
   onRemovePost,
   validationIssuesBySubreddit,
+  contentOverrides,
+  onCustomize,
+  customizationEnabled,
 }) => {
   const {
     allSubreddits,
@@ -490,6 +500,9 @@ const SubredditFlairPicker: React.FC<Props> = ({
           onEditPost={onEditPost}
           onRemovePost={onRemovePost}
           validationIssuesBySubreddit={validationIssuesBySubreddit}
+          contentOverrides={contentOverrides}
+          onCustomize={onCustomize}
+          customizationEnabled={customizationEnabled}
           onToggle={handleToggle}
           onToggleCategory={handleToggleCategory}
           onSelectAllInCategory={handleSelectAllInCategory}

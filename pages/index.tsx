@@ -1,8 +1,10 @@
 import React from 'react';
+import type { GetServerSideProps } from 'next';
 import { Settings } from 'lucide-react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import axios from 'axios';
+import { checkAuthCookies, redirectToLogin } from '@/lib/serverAuth';
 import * as Sentry from '@sentry/nextjs';
 import MediaUpload from '../components/MediaUpload';
 import SubredditFlairPicker from '../components/SubredditFlairPicker';
@@ -10,6 +12,7 @@ import PostComposer from '../components/PostComposer';
 import PostingQueue from '../components/PostingQueue';
 import UpgradeModal from '../components/UpgradeModal';
 import EditFailedPostDialog from '../components/posting-queue/EditFailedPostDialog';
+import { CustomizePostDialog, PerSubredditOverride } from '../components/subreddit-picker';
 import { AppLoader } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -48,6 +51,9 @@ export default function Home() {
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
 
+  // Track if we're redirecting to prevent showing content during navigation
+  const isRedirectingRef = React.useRef(false);
+
   const {
     selectedSubs,
     setSelectedSubs,
@@ -67,6 +73,8 @@ export default function Home() {
     setFlairs,
     titleSuffixes,
     setTitleSuffixes,
+    contentOverrides,
+    setContentOverrides,
     postToProfile,
     setPostToProfile,
     hasFlairErrors,
@@ -83,7 +91,7 @@ export default function Home() {
   const failedPostsHook = useFailedPosts();
 
   // Flair data for edit dialog
-  const { flairOptions, flairRequired, cacheLoading: flairLoading } = useSubredditFlairData();
+  const { flairOptions, flairRequired, postRequirements, cacheLoading: flairLoading } = useSubredditFlairData();
 
   // Queue job hook for retrying failed posts
   const queueJobHook = useQueueJob();
@@ -94,6 +102,30 @@ export default function Home() {
 
   // Validation issues by subreddit for inline display
   const [validationIssuesBySubreddit, setValidationIssuesBySubreddit] = React.useState<Record<string, ValidationIssue[]>>({});
+
+  // Per-subreddit customization dialog state (PRO feature)
+  const [customizingSubreddit, setCustomizingSubreddit] = React.useState<string | null>(null);
+
+  // Handle customize button click
+  const handleCustomize = React.useCallback((subredditName: string) => {
+    setCustomizingSubreddit(subredditName);
+  }, []);
+
+  // Handle save override from customize dialog
+  const handleSaveOverride = React.useCallback((subreddit: string, override: PerSubredditOverride | undefined) => {
+    setContentOverrides(prev => {
+      if (!override || (!override.title && !override.body)) {
+        // Remove the override if it's undefined or empty
+        const { [subreddit]: _, ...rest } = prev;
+        return rest;
+      }
+      return {
+        ...prev,
+        [subreddit]: override,
+      };
+    });
+    setCustomizingSubreddit(null);
+  }, [setContentOverrides]);
 
   // Handle validation changes from PostingQueue
   const handleQueueValidationChange = React.useCallback((issuesBySubreddit: Record<string, ValidationIssue[]>) => {
@@ -236,8 +268,9 @@ export default function Home() {
         const { data } = await axios.get<MeResponse>('/api/me');
         setAuth(data);
 
-        // Redirect to login if not authenticated
+        // Redirect to login if not authenticated (token invalid/expired)
         if (!data.authenticated) {
+          isRedirectingRef.current = true;
           router.replace('/login');
           return;
         }
@@ -258,10 +291,14 @@ export default function Home() {
           // Ignore admin check failures
         }
       } catch {
+        isRedirectingRef.current = true;
         setAuth({ authenticated: false });
         router.replace('/login');
       } finally {
-        setLoading(false);
+        // Only hide loader if we're not redirecting (prevents flash)
+        if (!isRedirectingRef.current) {
+          setLoading(false);
+        }
       }
     };
     load();
@@ -482,6 +519,9 @@ export default function Home() {
                         onEditPost={handleEditPost}
                         onRemovePost={handleRemovePost}
                         validationIssuesBySubreddit={validationIssuesBySubreddit}
+                        contentOverrides={contentOverrides}
+                        onCustomize={handleCustomize}
+                        customizationEnabled={auth.entitlement === 'paid'}
                       />
 
                       {/* Post to Profile */}
@@ -534,6 +574,9 @@ export default function Home() {
                         onEditPost={handleEditPost}
                         onRemovePost={handleRemovePost}
                         validationIssuesBySubreddit={validationIssuesBySubreddit}
+                        contentOverrides={contentOverrides}
+                        onCustomize={handleCustomize}
+                        customizationEnabled={auth.entitlement === 'paid'}
                       />
 
                       {/* Post to Profile */}
@@ -619,6 +662,38 @@ export default function Home() {
           isRetrying={isRetryingEdit}
         />
       )}
+
+      {/* Per-subreddit content customization dialog (PRO feature) */}
+      {customizingSubreddit && (
+        <CustomizePostDialog
+          open={!!customizingSubreddit}
+          onOpenChange={(open) => !open && setCustomizingSubreddit(null)}
+          subredditName={customizingSubreddit}
+          globalTitle={caption}
+          globalBody={body}
+          override={contentOverrides[customizingSubreddit]}
+          postRequirements={postRequirements[customizingSubreddit]}
+          onSave={handleSaveOverride}
+        />
+      )}
     </>
   );
 }
+
+/**
+ * Server-side authentication check.
+ * Redirects to /login if no auth cookies exist (prevents flash of content).
+ * Token validation still happens client-side via /api/me.
+ */
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const authCheck = checkAuthCookies(context);
+  
+  // If no auth cookies exist, redirect to login immediately (no flash)
+  if (!authCheck.authenticated) {
+    return redirectToLogin();
+  }
+  
+  // User has auth cookies - render the page
+  // Client-side will validate the token and handle refresh
+  return { props: {} };
+};

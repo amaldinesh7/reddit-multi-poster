@@ -59,12 +59,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 type="button"
                 onClick={onUpgrade}
                 disabled={upgradeLoading}
-                className="shrink-0 flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md px-3 py-1.5 sm:py-1 font-semibold transition-all bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-md shadow-violet-500/25 hover:shadow-violet-500/40 hover:from-violet-500 hover:to-purple-500 sm:bg-none sm:from-transparent sm:to-transparent sm:shadow-none sm:text-violet-500 sm:hover:text-violet-400 sm:border sm:border-violet-500/30 sm:hover:border-violet-400/50 sm:font-medium"
-                aria-label="Get lifetime access"
+                className="shrink-0 flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md px-3 py-1.5 font-semibold transition-all bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-md shadow-violet-500/25 hover:shadow-violet-500/40 hover:from-violet-500 hover:to-purple-500"
+                aria-label="Go Unlimited"
               >
-                <Infinity className="h-4 w-4 sm:hidden" aria-hidden="true" />
-                <span className="hidden sm:inline">{upgradeLoading ? 'Opening checkout…' : 'Get lifetime access'}</span>
-                <span className="sm:hidden">{upgradeLoading ? '…' : 'Go Unlimited'}</span>
+                <Infinity className="h-4 w-4" aria-hidden="true" />
+                <span>{upgradeLoading ? 'Opening checkout…' : 'Go Unlimited'}</span>
               </button>
             )}
             <DropdownMenu
@@ -73,12 +72,28 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 className="flex min-h-[44px] min-w-[44px] sm:min-w-0 items-center justify-center gap-2 rounded-md px-3 py-1.5 hover:bg-secondary transition-colors cursor-pointer"
                 aria-label="User menu"
               >
-                <Avatar
-                  src={userAvatar}
-                  alt={userName || 'User'}
-                  fallback={userName || 'U'}
-                  size="sm"
-                />
+                {/* Avatar with mobile Pro indicator */}
+                <div className="relative">
+                  <Avatar
+                    src={userAvatar}
+                    alt={userName || 'User'}
+                    fallback={userName || 'U'}
+                    size="sm"
+                  />
+                  {/* Mobile-only Pro indicator dot */}
+                  {entitlement === 'paid' && (
+                    <span 
+                      className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 ring-2 ring-background sm:hidden"
+                      aria-label="Pro member"
+                    />
+                  )}
+                </div>
+                {/* Desktop Pro badge */}
+                {entitlement === 'paid' && (
+                  <span className="hidden sm:inline-flex text-[10px] font-semibold uppercase tracking-wide bg-gradient-to-r from-violet-500/15 to-purple-500/15 text-violet-400 px-1.5 py-0.5 rounded-md border border-violet-500/20">
+                    Pro
+                  </span>
+                )}
                 <span className="text-sm font-medium hidden sm:inline">
                   u/{userName}
                 </span>

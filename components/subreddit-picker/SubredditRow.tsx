@@ -16,12 +16,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItemPrimitive,
 } from '@/components/ui/dropdown-menu';
-import { AlertTriangle, AlertCircle, Info, ChevronDown, FileText, Hash, RefreshCw, Pencil, X, Tag, Clock, Ban, Key, Image, Wifi, Lock, Link as LinkIcon, Type } from 'lucide-react';
+import { AlertTriangle, AlertCircle, Info, ChevronDown, FileText, Hash, RefreshCw, Pencil, X, Tag, Clock, Ban, Key, Image, Wifi, Lock, Link as LinkIcon, Type, Sparkles } from 'lucide-react';
 import { TitleTag } from '../../utils/subredditCache';
 import { PostRequirements } from '@/utils/reddit';
 import { FailedPost } from '@/hooks/useFailedPosts';
 import { ClassifiedError } from '@/lib/errorClassification';
 import { ValidationIssue } from '@/lib/preflightValidation';
+import { PerSubredditOverride } from './CustomizePostDialog';
 
 export interface SubredditRules {
   requiresGenderTag: boolean;
@@ -56,6 +57,12 @@ export interface SubredditRowProps {
   onRemovePost?: (id: string) => void;
   /** Validation issues for this subreddit (pre-flight validation) */
   validationIssues?: ValidationIssue[];
+  /** Per-subreddit content override (PRO feature) */
+  contentOverride?: PerSubredditOverride;
+  /** Callback when customize button is clicked */
+  onCustomize?: (name: string) => void;
+  /** Whether customization is enabled (PRO feature) */
+  customizationEnabled?: boolean;
 }
 
 // Helper to get icon for error type
@@ -131,6 +138,9 @@ const SubredditRow = React.memo(({
   onEditPost,
   onRemovePost,
   validationIssues,
+  contentOverride,
+  onCustomize,
+  customizationEnabled,
 }: SubredditRowProps) => {
   const checkboxId = `checkbox-${name}`;
   const [isExpanded, setIsExpanded] = useState(false);
@@ -306,12 +316,34 @@ const SubredditRow = React.memo(({
                 Flair
               </Badge>
             )}
+
+            {/* Custom Content Indicator */}
+            {!isLoading && isSelected && contentOverride && (contentOverride.title || contentOverride.body) && (
+              <Badge variant="secondary" className="h-4.5 px-1.5 text-[9px] uppercase font-bold tracking-wider text-primary bg-primary/10 hover:bg-primary/20 flex-shrink-0" title="Custom content for this community">
+                Custom
+              </Badge>
+            )}
           </div>
         </div>
 
-        {/* Right Side: Error/Warning Indicators */}
-        {isSelected && (hasValidationIssues || failedPost) && (
+        {/* Right Side: Customize Button + Error/Warning Indicators */}
+        {isSelected && (customizationEnabled || hasValidationIssues || failedPost) && (
           <div className="flex items-center gap-1.5 flex-shrink-0" onClick={handleControlsClick}>
+            {/* Customize Button (PRO feature) */}
+            {customizationEnabled && onCustomize && (
+              <button
+                onClick={() => onCustomize(name)}
+                className={`p-1.5 rounded-md cursor-pointer transition-colors ${
+                  contentOverride && (contentOverride.title || contentOverride.body)
+                    ? 'bg-primary/10 text-primary hover:bg-primary/20'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+                aria-label="Customize content for this community"
+                title="Customize title/description"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+              </button>
+            )}
             {/* Validation Issues Alert Icon with Dropdown - Pre-flight validation */}
             {hasValidationIssues && validationSummary && !failedPost && (
               <DropdownMenuRoot>

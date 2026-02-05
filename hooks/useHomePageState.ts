@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { QueueItem } from '@/types';
 import { usePersistentState } from './usePersistentState';
+import type { PerSubredditOverride } from '@/components/subreddit-picker';
 
 interface MeData {
   name: string;
@@ -33,6 +34,8 @@ interface UseHomePageStateReturn {
   setTitleSuffixes: (value: Record<string, string | undefined> | ((val: Record<string, string | undefined>) => Record<string, string | undefined>)) => void;
   customTitles: Record<string, string>;
   setCustomTitles: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  contentOverrides: Record<string, PerSubredditOverride>;
+  setContentOverrides: (value: Record<string, PerSubredditOverride> | ((val: Record<string, PerSubredditOverride>) => Record<string, PerSubredditOverride>)) => void;
   postToProfile: boolean;
   setPostToProfile: React.Dispatch<React.SetStateAction<boolean>>;
   hasFlairErrors: boolean;
@@ -60,6 +63,7 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
   const [postToProfile, setPostToProfile] = useState(false);
   const [hasFlairErrors, setHasFlairErrors] = useState(false);
   const [customTitles, setCustomTitles] = useState<Record<string, string>>({});
+  const [contentOverrides, setContentOverrides] = usePersistentState<Record<string, PerSubredditOverride>>('rmp_content_overrides', {});
   const [showValidationErrors, setShowValidationErrors] = useState(false);
 
   const handleValidationChange = useCallback((hasErrors: boolean) => {
@@ -84,6 +88,7 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
     setBody('');
     setFlairs({});
     setTitleSuffixes({});
+    setContentOverrides({});
     setMediaUrl('');
     setMediaMode('file');
     setMediaFiles([]);
@@ -111,47 +116,62 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
           kind = mediaFiles[0].type.startsWith('video/') ? 'video' : 'image';
         }
         
+        // Use per-subreddit overrides if available
+        const override = contentOverrides[sr];
+        const effectiveTitle = override?.title || customTitles[sr];
+        const effectiveBody = override?.body ?? body;
+        
         allItems.push({
           subreddit: sr,
           flairId: flairs[sr],
           titleSuffix: titleSuffixes[sr],
-          customTitle: customTitles[sr],
+          customTitle: effectiveTitle,
           kind,
           files: mediaFiles,
           url: undefined,
-          text: body || undefined,
+          text: effectiveBody || undefined,
         });
       });
     } else if (mediaUrl) {
       destinations.forEach((sr) => {
+        // Use per-subreddit overrides if available
+        const override = contentOverrides[sr];
+        const effectiveTitle = override?.title || customTitles[sr];
+        const effectiveBody = override?.body ?? body;
+        
         allItems.push({
           subreddit: sr,
           flairId: flairs[sr],
           titleSuffix: titleSuffixes[sr],
-          customTitle: customTitles[sr],
+          customTitle: effectiveTitle,
           kind: 'link',
           url: mediaUrl,
           file: undefined,
-          text: body || undefined,
+          text: effectiveBody || undefined,
         });
       });
     } else {
       destinations.forEach((sr) => {
+        // Use per-subreddit overrides if available
+        const override = contentOverrides[sr];
+        const effectiveTitle = override?.title || customTitles[sr];
+        const effectiveBody = override?.body ?? body;
+        
         allItems.push({
           subreddit: sr,
           flairId: flairs[sr],
           titleSuffix: titleSuffixes[sr],
-          customTitle: customTitles[sr],
+          customTitle: effectiveTitle,
           kind: 'self',
           url: undefined,
           file: undefined,
-          text: body || caption,
+          text: effectiveBody || caption,
         });
       });
     }
     
     return allItems;
-  }, [selectedSubs, flairs, titleSuffixes, customTitles, mediaUrl, mediaFiles, caption, body, postToProfile, authMe?.name]);
+  }, [selectedSubs, flairs, titleSuffixes, customTitles, contentOverrides, mediaUrl, mediaFiles, caption, body, postToProfile, authMe?.name]);
 
   return {
     selectedSubs,
@@ -174,6 +194,8 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
     setTitleSuffixes,
     customTitles,
     setCustomTitles,
+    contentOverrides,
+    setContentOverrides,
     postToProfile,
     setPostToProfile,
     hasFlairErrors,

@@ -42,9 +42,8 @@ export const PwaOnboarding = () => {
             // Logic
             if (!promptSeen && isMobile) {
                 setShowPrompt(true);
-            } else if (!bannerClosed) {
-                // Show banner if prompt was seen/dismissed but banner isn't closed
-                // And it's not standalone
+            } else if (!bannerClosed && isMobile) {
+                // Show banner only on mobile if prompt was seen/dismissed but banner isn't closed
                 setShowBanner(true);
             }
         };
