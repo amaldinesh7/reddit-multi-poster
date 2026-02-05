@@ -506,7 +506,7 @@ export const PwaOnboarding: React.FC<PwaOnboardingProps> = ({ hasQueueItems = fa
       {/* Persistent Banner */}
       {showBanner && !showPrompt && (
         <div 
-          className="w-full bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-primary/20 mb-4 rounded-md overflow-hidden"
+          className="w-full bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-primary/20 rounded-md overflow-hidden"
           role="region"
           aria-label="Add to home screen"
         >

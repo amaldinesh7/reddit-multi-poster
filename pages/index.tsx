@@ -1,5 +1,6 @@
 import React from 'react';
 import type { GetServerSideProps } from 'next';
+import dynamic from 'next/dynamic';
 import { Settings } from 'lucide-react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -7,13 +8,8 @@ import axios from 'axios';
 import { checkAuthCookies, redirectToLogin } from '@/lib/serverAuth';
 import * as Sentry from '@sentry/nextjs';
 import MediaUpload from '../components/MediaUpload';
-import SubredditFlairPicker from '../components/SubredditFlairPicker';
 import PostComposer from '../components/PostComposer';
-import PostingQueue from '../components/PostingQueue';
-import UpgradeModal from '../components/UpgradeModal';
-import EditFailedPostDialog from '../components/posting-queue/EditFailedPostDialog';
-import { CustomizePostDialog, PerSubredditOverride } from '../components/subreddit-picker';
-import { AppLoader } from '@/components/ui/loader';
+import { AppLoader, Skeleton, SubredditRowSkeleton, CardSkeleton } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { AppHeader, MobileUserStatsBanner, AppFooter } from '@/components/layout';
@@ -21,40 +17,95 @@ import { useHomePageState } from '@/hooks/useHomePageState';
 import { useFailedPosts, FailedPost } from '@/hooks/useFailedPosts';
 import { useSubredditFlairData } from '@/hooks/useSubredditFlairData';
 import { useQueueJob } from '@/hooks/useQueueJob';
+import { useAuth } from '@/hooks/useAuth';
 import { captureClientError, addActionBreadcrumb } from '@/lib/clientErrorHandler';
 import type { ValidationIssue } from '@/lib/preflightValidation';
-import type { RedditUser } from '@/utils/reddit';
 import { cn } from '@/lib/utils';
+import type { PerSubredditOverride } from '../components/subreddit-picker';
 
-interface PlanLimits {
-  maxSubreddits: number;
-  maxPostItems: number;
-  temporarySelectionEnabled: boolean;
-}
+// Skeleton loader for SubredditFlairPicker
+const SubredditPickerSkeleton = () => (
+  <div className="space-y-3">
+    <Skeleton className="h-10 w-full rounded-lg" />
+    <div className="space-y-2">
+      {[1, 2, 3, 4].map((i) => (
+        <SubredditRowSkeleton key={i} />
+      ))}
+    </div>
+  </div>
+);
 
-interface MeResponse {
-  authenticated: boolean;
-  me?: RedditUser;
-  subs?: string[];
-  userId?: string;
-  entitlement?: 'free' | 'paid';
-  limits?: PlanLimits;
-}
+// Skeleton loader for PostingQueue
+const QueueSkeleton = () => (
+  <div className="space-y-4">
+    <div className="flex items-center justify-between">
+      <Skeleton className="h-6 w-32" />
+      <Skeleton className="h-9 w-24" />
+    </div>
+    <Skeleton className="h-20 w-full rounded-lg" />
+  </div>
+);
+
+// Dynamic imports for heavy components with loading states
+const SubredditFlairPicker = dynamic(
+  () => import('../components/SubredditFlairPicker'),
+  { 
+    loading: () => <SubredditPickerSkeleton />,
+    ssr: false // Client-side only for faster initial load
+  }
+);
+
+const PostingQueue = dynamic(
+  () => import('../components/PostingQueue'),
+  { 
+    loading: () => <QueueSkeleton />,
+    ssr: false
+  }
+);
+
+const UpgradeModal = dynamic(
+  () => import('../components/UpgradeModal'),
+  { ssr: false }
+);
+
+const EditFailedPostDialog = dynamic(
+  () => import('../components/posting-queue/EditFailedPostDialog'),
+  { ssr: false }
+);
+
+const CustomizePostDialog = dynamic(
+  () => import('../components/subreddit-picker').then(mod => ({ default: mod.CustomizePostDialog })),
+  { ssr: false }
+);
 
 import { PwaOnboarding } from '@/components/PwaOnboarding';
 
 
 export default function Home() {
   const router = useRouter();
-  const [auth, setAuth] = React.useState<MeResponse>({ authenticated: false });
-  const [loading, setLoading] = React.useState(true);
+  
+  // Use cached auth from context - no redundant API calls on navigation
+  const { isAuthenticated, isLoading: authLoading, user, me, entitlement, limits, logout } = useAuth();
+  
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [upgradeLoading, setUpgradeLoading] = React.useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
 
-  // Track if we're redirecting to prevent showing content during navigation
-  const isRedirectingRef = React.useRef(false);
+  // Smooth loader exit: keep AppLoader mounted briefly to fade out
+  const [showLoader, setShowLoader] = React.useState(true);
+  const [loaderExiting, setLoaderExiting] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!authLoading && showLoader) {
+      // Auth resolved — begin fade-out
+      setLoaderExiting(true);
+      const timer = setTimeout(() => {
+        setShowLoader(false);
+      }, 300); // matches the CSS transition duration
+      return () => clearTimeout(timer);
+    }
+  }, [authLoading, showLoader]);
 
   const {
     selectedSubs,
@@ -87,7 +138,7 @@ export default function Home() {
     handleUnselectSuccessItems,
     clearSelection,
     clearAllState,
-  } = useHomePageState({ authMe: auth.me });
+  } = useHomePageState({ authMe: me ?? undefined });
 
   // Failed posts tracking for inline error display
   const failedPostsHook = useFailedPosts();
@@ -264,53 +315,42 @@ export default function Home() {
     failedPostsHook.remove(id);
   }, [failedPostsHook]);
 
+  // Redirect to login if not authenticated (after auth check completes)
   React.useEffect(() => {
-    const load = async () => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  // Set Sentry user context when auth is available
+  React.useEffect(() => {
+    if (me && user) {
+      Sentry.setUser({
+        id: me.id || user.userId,
+        username: me.name,
+      });
+    }
+  }, [me, user]);
+
+  // Check admin status (separate from auth, non-blocking)
+  React.useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    const checkAdmin = async () => {
       try {
-        const { data } = await axios.get<MeResponse>('/api/me');
-        setAuth(data);
-
-        // Redirect to login if not authenticated (token invalid/expired)
-        if (!data.authenticated) {
-          isRedirectingRef.current = true;
-          router.replace('/login');
-          return;
-        }
-
-        // Set Sentry user context for better error tracking
-        if (data.me) {
-          Sentry.setUser({
-            id: data.me.id || data.userId,
-            username: data.me.name,
-          });
-        }
-
-        // Check admin status (non-blocking)
-        try {
-          const adminRes = await axios.get<{ isAdmin: boolean }>('/api/admin-check');
-          setIsAdmin(adminRes.data.isAdmin);
-        } catch {
-          // Ignore admin check failures
-        }
+        const adminRes = await axios.get<{ isAdmin: boolean }>('/api/admin-check');
+        setIsAdmin(adminRes.data.isAdmin);
       } catch {
-        isRedirectingRef.current = true;
-        setAuth({ authenticated: false });
-        router.replace('/login');
-      } finally {
-        // Only hide loader if we're not redirecting (prevents flash)
-        if (!isRedirectingRef.current) {
-          setLoading(false);
-        }
+        // Ignore admin check failures
       }
     };
-    load();
-  }, [router]);
+    checkAdmin();
+  }, [isAuthenticated]);
 
-  const handleLogout = async () => {
-    await axios.post('/api/auth/logout');
+  const handleLogout = React.useCallback(async () => {
     Sentry.setUser(null);
-    router.replace('/login');
-  };
+    await logout();
+  }, [logout]);
 
   const handleUpgrade = React.useCallback(() => {
     // Navigate to inline checkout page
@@ -319,9 +359,9 @@ export default function Home() {
 
   // Calculate user stats for header display
   const userStats = React.useMemo(() => {
-    if (!auth.me) return undefined;
+    if (!me) return undefined;
     
-    const createdUtc = auth.me.created_utc;
+    const createdUtc = me.created_utc;
     let accountAgeDays = 0;
     let accountAgeLabel = 'Unknown';
     
@@ -343,29 +383,31 @@ export default function Home() {
     }
     
     return {
-      totalKarma: auth.me.total_karma ?? 0,
-      followers: auth.me.followers ?? 0,
+      totalKarma: me.total_karma ?? 0,
+      followers: me.followers ?? 0,
       accountAgeDays,
       accountAgeLabel,
-      hasVerifiedEmail: auth.me.has_verified_email ?? false,
+      hasVerifiedEmail: me.has_verified_email ?? false,
     };
-  }, [auth.me]);
+  }, [me]);
 
   // Wrapper for post attempt that checks free user limit
-  const handlePostWithLimitCheck = React.useCallback(() => {
-    const maxPostItems = auth.limits?.maxPostItems ?? 5;
+  // Returns false to block posting, true to allow
+  const handlePostWithLimitCheck = React.useCallback((): boolean => {
+    const maxPostItems = limits.maxPostItems ?? 5;
     // Check if free user is trying to post to more subreddits than their limit
-    if (auth.entitlement === 'free' && selectedSubs.length > maxPostItems) {
+    if (entitlement === 'free' && selectedSubs.length > maxPostItems) {
       setUpgradeModalContext({
         title: `You picked ${selectedSubs.length} communities`,
         message: `Free: up to ${maxPostItems} per post. Go Pro for unlimited.`,
       });
       setShowUpgradeModal(true);
-      return;
+      return false; // Block posting, show upgrade modal instead
     }
     // Otherwise proceed with normal post attempt
     handlePostAttempt();
-  }, [auth.entitlement, auth.limits?.maxPostItems, selectedSubs.length, handlePostAttempt]);
+    return true; // Allow posting
+  }, [entitlement, limits.maxPostItems, selectedSubs.length, handlePostAttempt]);
 
   return (
     <>
@@ -397,17 +439,18 @@ export default function Home() {
         <meta name="twitter:creator" content="@redditposter" />
       </Head>
 
-      {loading ? (
-        <AppLoader />
-      ) : (
+      {/* Subtle loader overlay — fades out once auth resolves */}
+      {showLoader && <AppLoader exiting={loaderExiting} />}
+
+      {!authLoading && (
         <div className="min-h-screen bg-background flex flex-col noise-texture noise-subtle">
           {/* Header */}
           <AppHeader
-            userName={auth.me?.name}
-            userAvatar={auth.me?.icon_img}
+            userName={me?.name}
+            userAvatar={me?.icon_img}
             onLogout={handleLogout}
             isAdmin={isAdmin}
-            entitlement={auth.entitlement}
+            entitlement={entitlement}
             onUpgrade={() => {
               setUpgradeModalContext(undefined);
               setShowUpgradeModal(true);
@@ -421,16 +464,16 @@ export default function Home() {
 
           <PwaOnboarding hasQueueItems={items.length > 0} />
 
-            <main className="flex-1 container mx-auto px-4 sm:px-6 py-4 lg:py-8 max-w-2xl lg:max-w-7xl safe-bottom">
+            <main className="flex-1 container mx-auto px-4 sm:px-6 py-4 lg:py-8 max-w-2xl lg:max-w-7xl safe-bottom pb-20 md:pb-0">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-start">
 
               {/* Left Column: Create Post */}
-              <div className="space-y-6 lg:space-y-8">
+              <div className="lg:space-y-8">
                 {/* Section Header - Desktop only */}
-                <h2 className="text-xl font-semibold tracking-tight hidden lg:block">Your post</h2>
+                <h2 className="text-xl mb-4 font-semibold tracking-tight hidden lg:block">Your post</h2>
 
                 {/* Media Section - No card wrapper, flowing layout */}
-                <section className="space-y-4">
+                <section className="space-y-4 mb-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-base lg:text-lg font-semibold tracking-tight">Media</h3>
                     <div className="inline-flex items-center rounded-md bg-secondary/50 p-1 text-muted-foreground">
@@ -466,7 +509,7 @@ export default function Home() {
                 </section>
 
                 {/* Title Section - No card wrapper, flowing layout */}
-                <section className="space-y-4">
+                <section className="space-y-4 mb-4">
                   <h3 className="text-base lg:text-lg font-semibold tracking-tight">Title & Body</h3>
                   <PostComposer
                     value={caption}
@@ -480,7 +523,7 @@ export default function Home() {
               </div>
 
               {/* Right Column: Communities & Queue */}
-              <div className="space-y-6 lg:space-y-8">
+              <div className="space-y-4 lg:space-y-8">
                 {/* Section Header - Desktop only */}
                 <h2 className="text-xl font-semibold tracking-tight hidden lg:block">Where to post</h2>
 
@@ -514,7 +557,7 @@ export default function Home() {
                     onTitleSuffixChange={setTitleSuffixes}
                     onValidationChange={handleValidationChange}
                     showValidationErrors={showValidationErrors}
-                    temporarySelectionEnabled={auth.limits?.temporarySelectionEnabled ?? true}
+                    temporarySelectionEnabled={limits.temporarySelectionEnabled ?? true}
                     failedPosts={failedPostsHook.state.posts}
                     onRetryPost={handleRetryPost}
                     onEditPost={handleEditPost}
@@ -522,12 +565,12 @@ export default function Home() {
                     validationIssuesBySubreddit={validationIssuesBySubreddit}
                     contentOverrides={contentOverrides}
                     onCustomize={handleCustomize}
-                    customizationEnabled={auth.entitlement === 'paid'}
-                    userData={auth.me}
+                    customizationEnabled={entitlement === 'paid'}
+                    userData={me ?? undefined}
                   />
 
                   {/* Post to Profile - Soft divider */}
-                  {auth.authenticated && auth.me?.name && (
+                  {isAuthenticated && me?.name && (
                     <div className="flex items-center gap-3 pt-4 border-t border-border/50">
                       <Checkbox
                         id="post-to-profile"
@@ -541,7 +584,7 @@ export default function Home() {
                       >
                         Post to profile 
                         <span className="text-muted-foreground text-xs font-normal ml-1.5">
-                          (u/{auth.me.name})
+                          (u/{me.name})
                         </span>
                       </label>
                     </div>

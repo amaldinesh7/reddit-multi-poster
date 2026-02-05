@@ -1,135 +1,24 @@
-import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-import { captureClientError } from '../lib/clientErrorHandler';
+/**
+ * useAuth Hook
+ * 
+ * This hook now uses the AuthContext which is backed by SWR for caching.
+ * Auth data is cached globally and shared across all pages/components.
+ * No redundant API calls on page navigation.
+ */
 
-export interface AuthUser {
-  redditUsername: string;
-  redditId: string;
-  avatarUrl?: string;
-  userId: string; // Supabase user ID
-}
+// Re-export types from AuthContext for backward compatibility
+export type { AuthUser, PlanLimits } from '@/contexts/AuthContext';
 
-export interface PlanLimits {
-  maxSubreddits: number;
-  maxPostItems: number;
-  temporarySelectionEnabled: boolean;
-}
+// Re-export the hook from AuthContext
+import { useAuthContext } from '@/contexts/AuthContext';
 
-export interface AuthState {
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  user: AuthUser | null;
-  entitlement: 'free' | 'paid';
-  limits: PlanLimits;
-  error: string | null;
-}
-
-interface MeResponse {
-  authenticated: boolean;
-  me?: {
-    name: string;
-    id: string;
-    icon_img?: string;
-  };
-  userId?: string;
-  entitlement?: 'free' | 'paid';
-  limits?: PlanLimits;
-}
-
-const DEFAULT_LIMITS: PlanLimits = {
-  maxSubreddits: 30,
-  maxPostItems: 100,
-  temporarySelectionEnabled: true,
-};
-
+/**
+ * Hook to access authentication state.
+ * Uses SWR cache - no refetching on page navigation.
+ * 
+ * @example
+ * const { isAuthenticated, user, login, logout, refresh } = useAuth();
+ */
 export function useAuth() {
-  const [state, setState] = useState<AuthState>({
-    isAuthenticated: false,
-    isLoading: true,
-    user: null,
-    entitlement: 'free',
-    limits: DEFAULT_LIMITS,
-    error: null,
-  });
-
-  const checkAuth = useCallback(async () => {
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
-    
-    try {
-      const { data } = await axios.get<MeResponse>('/api/me');
-      
-      if (data.authenticated && data.me) {
-        setState({
-          isAuthenticated: true,
-          isLoading: false,
-          user: {
-            redditUsername: data.me.name,
-            redditId: data.me.id,
-            avatarUrl: data.me.icon_img,
-            userId: data.userId || '',
-          },
-          entitlement: data.entitlement === 'paid' ? 'paid' : 'free',
-          limits: data.limits ?? DEFAULT_LIMITS,
-          error: null,
-        });
-      } else {
-        setState({
-          isAuthenticated: false,
-          isLoading: false,
-          user: null,
-          entitlement: 'free',
-          limits: DEFAULT_LIMITS,
-          error: null,
-        });
-      }
-    } catch (error) {
-      const errorMessage = captureClientError(error, 'useAuth.checkAuth', {
-        showToast: false, // Don't show toast for auth check failures (expected when not logged in)
-        skipSentry: axios.isAxiosError(error) && error.response?.status === 401,
-      });
-      setState({
-        isAuthenticated: false,
-        isLoading: false,
-        user: null,
-        entitlement: 'free',
-        limits: DEFAULT_LIMITS,
-        error: errorMessage,
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
-
-  const login = useCallback(() => {
-    window.location.href = '/api/auth/login';
-  }, []);
-
-  const logout = useCallback(async () => {
-    try {
-      await axios.post('/api/auth/logout');
-      setState({
-        isAuthenticated: false,
-        isLoading: false,
-        user: null,
-        entitlement: 'free',
-        limits: DEFAULT_LIMITS,
-        error: null,
-      });
-      window.location.href = '/login';
-    } catch (error) {
-      captureClientError(error, 'useAuth.logout', {
-        toastTitle: 'Logout Failed',
-        userMessage: 'Could not log out. Please try again.',
-      });
-    }
-  }, []);
-
-  return {
-    ...state,
-    login,
-    logout,
-    refresh: checkAuth,
-  };
+  return useAuthContext();
 }

@@ -333,7 +333,7 @@ export default function Settings() {
           </header>
 
           {/* Main Content */}
-          <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-3xl">
+          <main className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-3xl pb-20 md:pb-0">
             <div className="space-y-6">
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-3">

@@ -67,6 +67,15 @@ const Document = (): JSX.Element => {
         
         {/* App Manifest */}
         <link rel="manifest" href="/site.webmanifest" />
+        
+        {/* Preload critical assets for faster initial load */}
+        <link rel="preload" href="/logo.png" as="image" type="image/png" />
+        
+        {/* DNS prefetch for external resources */}
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </Head>
       <body className="antialiased">
         <Main />

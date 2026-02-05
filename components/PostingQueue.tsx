@@ -41,7 +41,7 @@ interface Props {
   body?: string;
   prefixes: { f?: boolean; c?: boolean };
   hasFlairErrors?: boolean;
-  onPostAttempt?: () => void;
+  onPostAttempt?: () => boolean;
   onUnselectSuccessItems?: (subreddits: string[]) => void;
   onClearAll?: () => void;
   /** Max items allowed (e.g. 5 for paid). Falls back to QUEUE_LIMITS.MAX_TOTAL_ITEMS */
@@ -543,8 +543,9 @@ const PostingQueue: React.FC<Props> = ({
     if (completed || failed || error) {
       reset();
     } else if (!running) {
-      if (onPostAttempt) {
-        onPostAttempt();
+      // Check if onPostAttempt allows proceeding (returns false to block)
+      if (onPostAttempt && !onPostAttempt()) {
+        return;
       }
       await submit({
         items,
@@ -560,8 +561,9 @@ const PostingQueue: React.FC<Props> = ({
 
   const handleRetry = async () => {
     reset();
-    if (onPostAttempt) {
-      onPostAttempt();
+    // Check if onPostAttempt allows proceeding (returns false to block)
+    if (onPostAttempt && !onPostAttempt()) {
+      return;
     }
     await submit({
       items,

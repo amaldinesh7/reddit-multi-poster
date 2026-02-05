@@ -115,9 +115,20 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   upgradeLoading = false,
   userStats,
 }) => {
-  const { setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { isVisible, isAtTop } = useScrollDirection();
   const showUpgrade = entitlement !== 'paid' && onUpgrade;
+
+  // Theme cycle for mobile tap-to-switch button
+  const THEME_CYCLE: Theme[] = ['light', 'dark', 'system'];
+  const THEME_ICONS: Record<Theme, typeof Sun> = { light: Sun, dark: Moon, system: Monitor };
+  const ThemeIcon = THEME_ICONS[theme];
+
+  const handleCycleTheme = () => {
+    const idx = THEME_CYCLE.indexOf(theme);
+    const next = THEME_CYCLE[(idx + 1) % THEME_CYCLE.length];
+    setTheme(next);
+  };
   
   // Calculate eligibility status for the status orb
   const eligibilityStatus = userStats ? getEligibilityStatus(userStats) : 'good';
@@ -163,9 +174,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({
       )}
     >
       <div className="container mx-auto px-3 sm:px-4">
-        <div className="flex h-14 min-h-[44px] items-center justify-between gap-2">
+        <div className="grid h-14 min-h-[44px] grid-cols-[1fr_auto_1fr] items-center gap-2">
           {/* Logo */}
-          <div className="flex min-w-0 shrink-0 items-center gap-2.5">
+          <div className="flex min-w-0 shrink-0 items-center gap-2.5 justify-self-start">
             <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg flex items-center justify-center">
               <img 
                 src="/logo.png" 
@@ -199,7 +210,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               }
               side="bottom"
             >
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/50 border border-border/50 cursor-help transition-colors hover:bg-secondary">
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/50 border border-border/50 cursor-help transition-colors hover:bg-secondary justify-self-center">
                 {/* Status orb */}
                 <div className={cn(
                   "w-2 h-2 rounded-full shrink-0",
@@ -229,7 +240,22 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             </Tooltip>
           )}
 
-          <div className="flex min-w-0 shrink items-center gap-2 sm:gap-3">
+          <div className="flex min-w-0 shrink items-center gap-2 sm:gap-3 justify-self-end">
+            {/* Mobile-only: Theme cycle button */}
+            <button
+              type="button"
+              onClick={handleCycleTheme}
+              className={cn(
+                "md:hidden min-h-[44px] min-w-[44px]",
+                "flex items-center justify-center",
+                "rounded-md hover:bg-secondary transition-colors",
+                "cursor-pointer active:scale-95"
+              )}
+              aria-label={`Theme: ${theme}. Tap to switch.`}
+            >
+              <ThemeIcon className="w-[18px] h-[18px] text-muted-foreground" aria-hidden="true" />
+            </button>
+
             {showUpgrade && (
               <button
                 type="button"
@@ -248,9 +274,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               >
                 <Infinity className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden sm:inline">{upgradeLoading ? 'Opening checkout…' : 'Go Unlimited'}</span>
-                <span className="sm:hidden">{upgradeLoading ? '…' : 'Pro'}</span>
+                <span className="sm:hidden">{upgradeLoading ? '…' : 'Go Unlimited'}</span>
               </button>
             )}
+            {/* Desktop-only: User dropdown (profile/settings/theme/logout moved to bottom nav on mobile) */}
+            <div className="hidden md:flex">
             <DropdownMenu
               trigger={
                 <button
@@ -272,7 +300,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                   <span className="text-sm font-medium hidden sm:inline truncate max-w-[120px]">
                     u/{userName}
                   </span>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" aria-hidden="true" />
+                  <ChevronDown className="hidden sm:block h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" aria-hidden="true" />
                 </button>
               }
             >
@@ -311,6 +339,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 Logout
               </DropdownMenuItem>
             </DropdownMenu>
+            </div>
           </div>
         </div>
       </div>

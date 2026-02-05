@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import dynamic from 'next/dynamic';
 import {
   ArrowLeft,
   Shield,
@@ -16,7 +17,32 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
-import { AnalyticsTab, UserSupportTab, UserManagementTab } from '@/components/admin';
+
+// Dynamic imports for tab components - load only when needed
+const AnalyticsTab = dynamic(() => import('@/components/admin/AnalyticsTab').then(mod => ({ default: mod.AnalyticsTab })), {
+  loading: () => <TabLoadingState icon={<BarChart3 className="w-6 h-6" />} text="Loading analytics..." />,
+  ssr: false,
+});
+
+const UserSupportTab = dynamic(() => import('@/components/admin/UserSupportTab').then(mod => ({ default: mod.UserSupportTab })), {
+  loading: () => <TabLoadingState icon={<HeadphonesIcon className="w-6 h-6" />} text="Loading support..." />,
+  ssr: false,
+});
+
+const UserManagementTab = dynamic(() => import('@/components/admin/UserManagementTab').then(mod => ({ default: mod.UserManagementTab })), {
+  loading: () => <TabLoadingState icon={<Users className="w-6 h-6" />} text="Loading users..." />,
+  ssr: false,
+});
+
+// Lightweight loading state for tabs
+const TabLoadingState = ({ icon, text }: { icon: React.ReactNode; text: string }) => (
+  <div className="flex flex-col items-center justify-center py-16 gap-3">
+    <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center text-muted-foreground animate-pulse">
+      {icon}
+    </div>
+    <p className="text-sm text-muted-foreground">{text}</p>
+  </div>
+);
 
 // ============================================================================
 // Types
@@ -140,24 +166,11 @@ export default function AdminPanel() {
     fetchAnalytics(true);
   };
 
-  // Loading state
+  // Loading state - simple centered spinner
   if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-teal-500/20 flex items-center justify-center animate-pulse">
-              <Shield className="w-8 h-8 text-cyan-400" />
-            </div>
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
-              <Loader2 className="w-3 h-3 animate-spin text-white" />
-            </div>
-          </div>
-          <div className="text-center">
-            <p className="text-foreground font-display font-semibold">Admin Panel</p>
-            <p className="text-muted-foreground text-sm">Loading command center...</p>
-          </div>
-        </div>
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
       </div>
     );
   }
@@ -165,22 +178,11 @@ export default function AdminPanel() {
   // Error state (including access denied)
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4 max-w-md text-center px-4">
-          <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center">
-            <XCircle className="w-8 h-8 text-red-400" />
-          </div>
-          <h1 className="text-xl font-semibold font-display">{error}</h1>
-          <p className="text-muted-foreground text-sm">
-            {error.includes('admins')
-              ? 'This page is only accessible to administrators.'
-              : 'Please try again later.'}
-          </p>
-          <Button
-            onClick={() => router.push('/')}
-            variant="outline"
-            className="cursor-pointer"
-          >
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <XCircle className="w-10 h-10 text-red-400" />
+          <p className="text-foreground font-medium">{error}</p>
+          <Button onClick={() => router.push('/')} variant="outline" size="sm" className="cursor-pointer">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Home
           </Button>
@@ -193,12 +195,7 @@ export default function AdminPanel() {
   if (!data) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-secondary/50 flex items-center justify-center">
-            <BarChart3 className="w-8 h-8 text-muted-foreground" />
-          </div>
-          <p className="text-muted-foreground">No data yet</p>
-        </div>
+        <p className="text-muted-foreground">No data available</p>
       </div>
     );
   }
