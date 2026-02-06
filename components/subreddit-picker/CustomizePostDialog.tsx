@@ -8,7 +8,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { PostRequirements } from '@/utils/reddit';
@@ -109,27 +108,42 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Customize for r/{subredditName}
-            <Badge variant="secondary" className="text-[10px] font-semibold">
+            <Badge className="text-[10px] font-semibold bg-gradient-to-r from-amber-400/20 to-orange-500/20 text-amber-300 border border-amber-400/30">
               PRO
             </Badge>
           </DialogTitle>
+          <p className="text-xs text-muted-foreground">
+            Override title and description for this community only.
+          </p>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           {/* Custom Title Section */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Checkbox
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={useCustomTitle}
                   id="use-custom-title"
-                  checked={useCustomTitle}
-                  onCheckedChange={(checked) => {
-                    setUseCustomTitle(checked === true);
-                    if (checked && !customTitle) {
+                  onClick={() => {
+                    const next = !useCustomTitle;
+                    setUseCustomTitle(next);
+                    if (next && !customTitle) {
                       setCustomTitle(globalTitle);
                     }
                   }}
-                />
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    useCustomTitle ? 'bg-orange-500' : 'bg-muted-foreground/30'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      useCustomTitle ? 'translate-x-4' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
                 <Label htmlFor="use-custom-title" className="text-sm font-medium cursor-pointer">
                   Custom title
                 </Label>
@@ -142,7 +156,7 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
             </div>
             
             {useCustomTitle ? (
-              <div>
+              <div className="mt-2">
                 <Textarea
                   ref={titleRef}
                   value={customTitle}
@@ -158,26 +172,39 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="px-3 py-2 bg-muted/50 rounded-md text-sm text-muted-foreground">
+              <div className="mt-2 px-3 py-2 bg-muted/50 rounded-md text-sm text-muted-foreground">
                 Using global: &quot;{globalTitle.slice(0, 60)}{globalTitle.length > 60 ? '...' : ''}&quot;
               </div>
             )}
           </div>
+          <div className="border-t border-border/50" aria-hidden="true" />
 
           {/* Custom Body Section */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Checkbox
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={useCustomBody}
                   id="use-custom-body"
-                  checked={useCustomBody}
-                  onCheckedChange={(checked) => {
-                    setUseCustomBody(checked === true);
-                    if (checked && !customBody) {
+                  onClick={() => {
+                    const next = !useCustomBody;
+                    setUseCustomBody(next);
+                    if (next && !customBody) {
                       setCustomBody(globalBody);
                     }
                   }}
-                />
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    useCustomBody ? 'bg-orange-500' : 'bg-muted-foreground/30'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      useCustomBody ? 'translate-x-4' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
                 <Label htmlFor="use-custom-body" className="text-sm font-medium cursor-pointer">
                   Custom description
                   {bodyRequired && (
@@ -193,7 +220,7 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
             </div>
             
             {useCustomBody ? (
-              <div>
+              <div className="mt-2">
                 <Textarea
                   ref={bodyRef}
                   value={customBody}
@@ -209,7 +236,7 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="px-3 py-2 bg-muted/50 rounded-md text-sm text-muted-foreground">
+              <div className="mt-2 px-3 py-2 bg-muted/50 rounded-md text-sm text-muted-foreground">
                 {globalBody ? (
                   <>Using global: &quot;{globalBody.slice(0, 80)}{globalBody.length > 80 ? '...' : ''}&quot;</>
                 ) : (
@@ -221,7 +248,7 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
 
           {/* Requirements hint */}
           {(postRequirements?.title_blacklisted_strings?.length ?? 0) + (postRequirements?.body_blacklisted_strings?.length ?? 0) > 0 && (
-            <div className="text-xs text-muted-foreground bg-yellow-500/10 px-3 py-2 rounded-md">
+            <div className="text-xs text-muted-foreground bg-yellow-500/10 px-3 py-2 rounded-md border border-yellow-500/20">
               This community has content restrictions. Check the community rules for blacklisted words.
             </div>
           )}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import axios from 'axios';
 import AddToCategoryDialog from './AddToCategoryDialog';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,8 @@ import { FailedPost } from '@/hooks/useFailedPosts';
 import { ValidationIssue } from '@/lib/preflightValidation';
 import { PerSubredditOverride } from './subreddit-picker';
 import { RedditUser } from '@/utils/reddit';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { usePersistentState } from '@/hooks/usePersistentState';
 
 interface SearchResult {
   name: string;
@@ -31,6 +33,10 @@ interface Props {
   showValidationErrors?: boolean;
   /** If false, hide search and temporary subreddits. Default true */
   temporarySelectionEnabled?: boolean;
+  /** Reset signal for UI state */
+  resetSignal?: number;
+  /** Communities view mode */
+  viewMode?: 'grouped' | 'all';
   /** Array of failed posts to display inline errors */
   failedPosts?: FailedPost[];
   /** Callback when retry is clicked on a failed post */
@@ -49,6 +55,8 @@ interface Props {
   customizationEnabled?: boolean;
   /** User data for eligibility checks */
   userData?: RedditUser;
+  /** Trigger upgrade flow for gated actions */
+  onRequestUpgrade?: (context?: { title?: string; message: string }) => void;
 }
 
 const SubredditFlairPicker: React.FC<Props> = ({
@@ -61,6 +69,8 @@ const SubredditFlairPicker: React.FC<Props> = ({
   onValidationChange,
   showValidationErrors,
   temporarySelectionEnabled = true,
+  resetSignal,
+  viewMode = 'grouped',
   failedPosts,
   onRetryPost,
   onEditPost,
@@ -70,7 +80,9 @@ const SubredditFlairPicker: React.FC<Props> = ({
   onCustomize,
   customizationEnabled,
   userData,
+  onRequestUpgrade,
 }) => {
+  const { entitlement } = useAuthContext();
   const {
     allSubreddits,
     categorizedSubreddits,
@@ -87,10 +99,10 @@ const SubredditFlairPicker: React.FC<Props> = ({
   } = useSubredditFlairData();
 
   const [query, setQuery] = React.useState('');
-  const [expandedCategories, setExpandedCategories] = React.useState<string[]>([]);
+  const [expandedCategories, setExpandedCategories] = usePersistentState<string[]>('rmp_expanded_categories', []);
 
   // Search & Temporary State
-  const [temporarySubreddits, setTemporarySubreddits] = React.useState<string[]>([]);
+  const [temporarySubreddits, setTemporarySubreddits] = usePersistentState<string[]>('rmp_temporary_subreddits', []);
   const [isSearching, setIsSearching] = React.useState(false);
   const [searchResults, setSearchResults] = React.useState<SearchResult[] | null>(null);
   const [hasSearched, setHasSearched] = React.useState(false);
@@ -128,6 +140,10 @@ const SubredditFlairPicker: React.FC<Props> = ({
     ];
   }, [categorizedSubreddits, temporarySubreddits, temporarySelectionEnabled]);
 
+  const flatSubreddits = useMemo(() => {
+    return [...mergedSubreddits].sort((a, b) => a.localeCompare(b));
+  }, [mergedSubreddits]);
+
   // Create a map of subreddit name to failed post for quick lookup
   const failedPostsBySubreddit = useMemo(() => {
     if (!failedPosts || failedPosts.length === 0) return {};
@@ -150,6 +166,18 @@ const SubredditFlairPicker: React.FC<Props> = ({
     }
   }, [temporarySelectionEnabled, temporarySubreddits, selected, onSelectedChange]);
 
+  const hasMountedRef = useRef(false);
+  React.useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    if (resetSignal !== undefined) {
+      setExpandedCategories([]);
+      setTemporarySubreddits([]);
+    }
+  }, [resetSignal, setExpandedCategories, setTemporarySubreddits]);
+
   const handleToggle = useCallback((name: string) => {
     const exists = selected.includes(name);
     if (exists) {
@@ -167,7 +195,11 @@ const SubredditFlairPicker: React.FC<Props> = ({
     );
   }, []);
 
-  const handleSelectAllInCategory = useCallback((subreddits: string[]) => {
+  const handleSelectAllInCategory = useCallback((subreddits: string[], isAllSelected: boolean) => {
+    if (isAllSelected) {
+      onSelectedChange(selected.filter(s => !subreddits.includes(s)));
+      return;
+    }
     const combined = [...new Set([...selected, ...subreddits])];
     onSelectedChange(combined);
   }, [selected, onSelectedChange]);
@@ -265,6 +297,16 @@ const SubredditFlairPicker: React.FC<Props> = ({
     if (!subredditToSave) return;
 
     try {
+      if (entitlement === 'free' && onRequestUpgrade) {
+        onRequestUpgrade({
+          title: 'Save communities',
+          message: 'Saving communities from search is a Pro feature. Upgrade to save unlimited lists.',
+        });
+        setDialogOpen(false);
+        setSubredditToSave(null);
+        return;
+      }
+
       await addSubreddit(categoryId, subredditToSave);
 
       // Remove from temporary if it was there
@@ -284,7 +326,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
     } catch (error) {
       console.error('Failed to save subreddit', error);
     }
-  }, [subredditToSave, addSubreddit, selected, onSelectedChange]);
+  }, [subredditToSave, addSubreddit, selected, onSelectedChange, entitlement, onRequestUpgrade]);
 
   const handleClearSearch = useCallback(() => {
     setQuery('');
@@ -457,6 +499,41 @@ const SubredditFlairPicker: React.FC<Props> = ({
               Nothing found for &quot;{query}&quot;
             </div>
           )}
+        </div>
+      ) : viewMode === 'all' ? (
+        <div className="space-y-2">
+          {flatSubreddits.map((name) => {
+            const hasError = !!(showValidationErrors && hasMissingFlair(name));
+            const failedPost = failedPostsBySubreddit[name.toLowerCase()];
+            return (
+              <SubredditRow
+                key={name}
+                name={name}
+                hasError={hasError}
+                isSelected={selected.includes(name)}
+                isLoading={cacheLoading[name.toLowerCase()]}
+                flairRequired={flairRequired[name]}
+                flairOptions={flairOptions[name] || []}
+                subredditRules={subredditRules[name]}
+                postRequirements={postRequirements[name]}
+                titleSuffix={titleSuffixValue[name]}
+                flairValue={flairValue[name]}
+                onToggle={handleToggle}
+                onFlairChange={handleFlairChange}
+                onTitleSuffixChange={handleTitleSuffixChange}
+                failedPost={failedPost}
+                onRetryPost={onRetryPost}
+                onEditPost={onEditPost}
+                onRemovePost={onRemovePost}
+                validationIssues={validationIssuesBySubreddit?.[name]}
+                contentOverride={contentOverrides?.[name]}
+                onCustomize={onCustomize}
+                customizationEnabled={customizationEnabled}
+                eligibility={eligibilityData[name]}
+                userData={userData}
+              />
+            );
+          })}
         </div>
       ) : (
         <SubredditCategoryList
