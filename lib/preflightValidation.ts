@@ -67,6 +67,10 @@ export interface PreflightInput {
   postRequirements: Record<string, PostRequirements>;
   /** Title suffixes by subreddit */
   titleSuffixes?: Record<string, string | undefined>;
+  /** Per-subreddit title overrides (custom title) */
+  titleBySubreddit?: Record<string, string | undefined>;
+  /** Per-subreddit body overrides (custom description) */
+  bodyBySubreddit?: Record<string, string | undefined>;
   /** User data for eligibility checks */
   userData?: RedditUser;
   /** Eligibility data by subreddit */
@@ -99,6 +103,19 @@ export interface EligibilityResult {
 // ============================================================================
 // Validation Functions
 // ============================================================================
+
+function getTitleForSubreddit(input: PreflightInput, subreddit: string): string {
+  const override = input.titleBySubreddit?.[subreddit];
+  return override !== undefined ? override : input.title;
+}
+
+function getBodyForSubreddit(input: PreflightInput, subreddit: string): string {
+  const override = input.bodyBySubreddit?.[subreddit];
+  if (override !== undefined) {
+    return override || '';
+  }
+  return input.body || '';
+}
 
 /**
  * Validates that required flairs are selected
@@ -144,34 +161,36 @@ function validateFlairs(input: PreflightInput): ValidationIssue[] {
  */
 function validateTitle(input: PreflightInput): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
-  const baseTitle = input.title;
-
-  if (!baseTitle || baseTitle.trim().length === 0) {
-    issues.push({
-      code: 'TITLE_EMPTY',
-      severity: 'error',
-      message: 'Title is required',
-      suggestion: 'Enter a title for your post',
-      field: 'title',
-      expectedCategory: 'fixable_now',
-    });
-    return issues;
-  }
-
-  // Check Reddit's global title limits
-  if (baseTitle.length > 300) {
-    issues.push({
-      code: 'TITLE_TOO_LONG_GLOBAL',
-      severity: 'error',
-      message: `Title is ${baseTitle.length} characters (max 300)`,
-      suggestion: 'Shorten your title',
-      field: 'title',
-      expectedCategory: 'fixable_now',
-    });
-  }
 
   // Check per-subreddit title requirements
   for (const subreddit of input.subreddits) {
+    const baseTitle = getTitleForSubreddit(input, subreddit);
+    if (!baseTitle || baseTitle.trim().length === 0) {
+      issues.push({
+        code: 'TITLE_EMPTY',
+        severity: 'error',
+        subreddit,
+        message: `r/${subreddit}: Title is required`,
+        suggestion: 'Enter a title for your post',
+        field: 'title',
+        expectedCategory: 'fixable_now',
+      });
+      continue;
+    }
+
+    // Check Reddit's global title limits
+    if (baseTitle.length > 300) {
+      issues.push({
+        code: 'TITLE_TOO_LONG_GLOBAL',
+        severity: 'error',
+        subreddit,
+        message: `r/${subreddit}: Title is ${baseTitle.length} characters (max 300)`,
+        suggestion: 'Shorten your title',
+        field: 'title',
+        expectedCategory: 'fixable_now',
+      });
+    }
+
     const reqs = input.postRequirements[subreddit];
     if (!reqs) continue;
 
@@ -237,9 +256,9 @@ function validateTitle(input: PreflightInput): ValidationIssue[] {
  */
 function validateBody(input: PreflightInput): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
-  const body = input.body || '';
 
   for (const subreddit of input.subreddits) {
+    const body = getBodyForSubreddit(input, subreddit);
     const reqs = input.postRequirements[subreddit];
     if (!reqs) continue;
 
@@ -330,10 +349,10 @@ function findBlacklistedWords(text: string, blacklist: string[]): string[] {
  */
 function validateBlacklistedStrings(input: PreflightInput): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
-  const baseTitle = input.title || '';
-  const body = input.body || '';
 
   for (const subreddit of input.subreddits) {
+    const baseTitle = getTitleForSubreddit(input, subreddit) || '';
+    const body = getBodyForSubreddit(input, subreddit);
     const reqs = input.postRequirements[subreddit];
     if (!reqs) continue;
 
@@ -381,10 +400,10 @@ function validateBlacklistedStrings(input: PreflightInput): ValidationIssue[] {
  */
 function validateRequiredStrings(input: PreflightInput): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
-  const baseTitle = input.title || '';
-  const body = input.body || '';
 
   for (const subreddit of input.subreddits) {
+    const baseTitle = getTitleForSubreddit(input, subreddit) || '';
+    const body = getBodyForSubreddit(input, subreddit);
     const reqs = input.postRequirements[subreddit];
     if (!reqs) continue;
 
@@ -624,10 +643,20 @@ export function getEligibilityForSubreddit(
   const isLinkPost = postKind === 'link';
   const isSelfPost = postKind === 'self';
   const isMediaPost = ['image', 'video', 'gallery'].includes(postKind);
+  const isVideoPost = postKind === 'video';
+  const isImagePost = postKind === 'image' || postKind === 'gallery';
 
   if (eligibility.submissionType === 'link' && (isSelfPost)) {
     checks.submissionTypeAllowed = false;
   } else if (eligibility.submissionType === 'self' && (isLinkPost || isMediaPost)) {
+    checks.submissionTypeAllowed = false;
+  }
+
+  // Check specific media type allowances
+  if (isVideoPost && eligibility.allowVideos === false) {
+    checks.submissionTypeAllowed = false;
+  }
+  if (isImagePost && eligibility.allowImages === false) {
     checks.submissionTypeAllowed = false;
   }
 
@@ -644,11 +673,23 @@ export function getEligibilityForSubreddit(
 
   // BLOCKED: Subreddit doesn't allow this post type
   if (!checks.submissionTypeAllowed) {
-    const typeLabel = eligibility.submissionType === 'link' ? 'link posts' : 'text posts';
+    let reason: string;
+    
+    // Check for specific media type restrictions
+    if (postKind === 'video' && eligibility.allowVideos === false) {
+      reason = `r/${subreddit} doesn't allow video posts`;
+    } else if ((postKind === 'image' || postKind === 'gallery') && eligibility.allowImages === false) {
+      reason = `r/${subreddit} doesn't allow image posts`;
+    } else {
+      // Generic submission type restriction
+      const typeLabel = eligibility.submissionType === 'link' ? 'link posts' : 'text posts';
+      reason = `r/${subreddit} only allows ${typeLabel}`;
+    }
+    
     return {
       status: 'blocked',
       checks,
-      reasons: [`r/${subreddit} only allows ${typeLabel}`],
+      reasons: [reason],
     };
   }
 

@@ -162,8 +162,9 @@ export default async function handler(
         }
 
         // Build title
+        const baseTitle = item.customTitle ?? currentJob.caption;
         let title = addSmartPrefixesToTitle(
-          currentJob.caption, 
+          baseTitle,
           item.subreddit, 
           currentJob.prefixes, 
           subredditRules
@@ -187,6 +188,17 @@ export default async function handler(
         let postKind = item.kind;
         if (files.length > 1) {
           postKind = 'gallery';
+        }
+
+        // Log video processing info
+        if (postKind === 'video') {
+          console.log(`[Queue] Processing video post to r/${item.subreddit}`, {
+            jobId,
+            itemIndex,
+            fileCount: files.length,
+            fileSize: files[0] ? `${Math.round(files[0].size / 1024)}KB` : 'N/A',
+            fileType: files[0]?.type || 'N/A',
+          });
         }
 
         // Submit to Reddit

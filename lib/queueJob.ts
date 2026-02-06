@@ -26,6 +26,7 @@ export interface QueueJobItem {
   subreddit: string;
   flairId?: string;
   titleSuffix?: string;
+  customTitle?: string;
   kind: 'self' | 'link' | 'image' | 'video' | 'gallery';
   url?: string;
   text?: string;
@@ -128,6 +129,7 @@ export interface QueueJobItemWithFiles {
   subreddit: string;
   flairId?: string;
   titleSuffix?: string;
+  customTitle?: string;
   kind: 'self' | 'link' | 'image' | 'video' | 'gallery';
   url?: string;
   text?: string;
