@@ -32,6 +32,7 @@ export interface OriginalItemData {
   kind: 'self' | 'link' | 'image' | 'video' | 'gallery';
   url?: string;
   text?: string;
+  customTitle?: string;
   file?: File;
   files?: File[];
 }
@@ -67,6 +68,10 @@ export interface FailedPost {
   originalCaption: string;
   /** Original prefixes used for this post */
   originalPrefixes: { f?: boolean; c?: boolean };
+  /** Custom title override for retry */
+  customTitle?: string;
+  /** Custom body override for retry */
+  customBody?: string;
 }
 
 export interface FailedPostsState {
@@ -97,7 +102,7 @@ export interface UseFailedPostsReturn {
   /** Retry posts by category (changes status to 'retrying') */
   retryByCategory: (category: ErrorCategory) => FailedPost[];
   /** Update a failed post (for edit and retry) */
-  updatePost: (id: string, updates: Partial<Pick<FailedPost, 'flairId' | 'titleSuffix'>>) => void;
+  updatePost: (id: string, updates: Partial<Pick<FailedPost, 'flairId' | 'titleSuffix' | 'customTitle' | 'customBody'>>) => void;
   /** Remove a single post */
   remove: (id: string) => void;
   /** Remove all posts by category */
@@ -229,6 +234,8 @@ export function useFailedPosts(): UseFailedPostsReturn {
           kind: item.kind,
           url: item.url,
           text: item.text,
+          customTitle: item.customTitle,
+          customBody: item.text,
           error: classifiedError,
           failedAt: result.postedAt || new Date().toISOString(),
           retryCount: 0,
@@ -237,6 +244,7 @@ export function useFailedPosts(): UseFailedPostsReturn {
             kind: item.kind,
             url: item.url,
             text: item.text,
+            customTitle: item.customTitle,
             file: item.file,
             files: item.files,
           },
@@ -299,11 +307,24 @@ export function useFailedPosts(): UseFailedPostsReturn {
 
   const updatePost = useCallback((
     id: string, 
-    updates: Partial<Pick<FailedPost, 'flairId' | 'titleSuffix'>>
+    updates: Partial<Pick<FailedPost, 'flairId' | 'titleSuffix' | 'customTitle' | 'customBody'>>
   ) => {
-    setPosts(prev => prev.map(p => 
-      p.id === id ? { ...p, ...updates } : p
-    ));
+    setPosts(prev => prev.map(p => {
+      if (p.id !== id) return p;
+      const nextOriginalItem = { ...p.originalItem };
+      if (updates.customBody !== undefined) {
+        nextOriginalItem.text = updates.customBody;
+      }
+      if (updates.customTitle !== undefined) {
+        nextOriginalItem.customTitle = updates.customTitle;
+      }
+      return {
+        ...p,
+        ...updates,
+        ...(updates.customBody !== undefined ? { text: updates.customBody } : {}),
+        originalItem: nextOriginalItem,
+      };
+    }));
   }, []);
 
   // ============================================================================

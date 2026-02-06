@@ -2,6 +2,7 @@ export interface QueueItemData {
   subreddit: string;
   flairId?: string;
   titleSuffix?: string;
+  customTitle?: string;
   kind: 'self' | 'link' | 'image' | 'video' | 'gallery';
   url?: string;
   text?: string;

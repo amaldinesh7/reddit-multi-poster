@@ -22,11 +22,13 @@ import { useFailedPosts, FailedPost } from '../hooks/useFailedPosts';
 import { useSubredditFlairData } from '../hooks/useSubredditFlairData';
 import { ErrorCategory } from '@/lib/errorClassification';
 import { usePreflightValidation, ValidationIssue } from '../hooks/usePreflightValidation';
+import type { PerSubredditOverride } from './subreddit-picker';
 
 interface Item {
   subreddit: string;
   flairId?: string;
   titleSuffix?: string;
+  customTitle?: string;
   kind: 'self' | 'link' | 'image' | 'video' | 'gallery';
   url?: string;
   text?: string;
@@ -39,6 +41,10 @@ interface Props {
   caption: string;
   /** Post body/description text */
   body?: string;
+  /** Per-subreddit content overrides (custom title/body) */
+  contentOverrides?: Record<string, PerSubredditOverride>;
+  /** Legacy per-subreddit custom titles */
+  customTitles?: Record<string, string>;
   prefixes: { f?: boolean; c?: boolean };
   hasFlairErrors?: boolean;
   /** Returns true to allow posting, false to block. Errors also block posting. */
@@ -157,6 +163,8 @@ const PostingQueue: React.FC<Props> = ({
   items,
   caption,
   body,
+  contentOverrides,
+  customTitles,
   prefixes,
   hasFlairErrors,
   onPostAttempt,
@@ -205,10 +213,20 @@ const PostingQueue: React.FC<Props> = ({
     const subreddits = items.map(i => i.subreddit);
     const flairValue: Record<string, string | undefined> = {};
     const titleSuffixes: Record<string, string | undefined> = {};
+    const titleBySubreddit: Record<string, string | undefined> = {};
+    const bodyBySubreddit: Record<string, string | undefined> = {};
 
     items.forEach(item => {
       flairValue[item.subreddit] = item.flairId;
       titleSuffixes[item.subreddit] = item.titleSuffix;
+      const override = contentOverrides?.[item.subreddit];
+      const overrideTitle = override?.title ?? customTitles?.[item.subreddit];
+      if (overrideTitle !== undefined) {
+        titleBySubreddit[item.subreddit] = overrideTitle;
+      }
+      if (override?.body !== undefined) {
+        bodyBySubreddit[item.subreddit] = override.body;
+      }
     });
 
     // Determine kind and url from the first item (all items in a post share the same type)
@@ -227,8 +245,10 @@ const PostingQueue: React.FC<Props> = ({
       flairOptions: flairDataResult.flairOptions,
       postRequirements: flairDataResult.postRequirements,
       titleSuffixes,
+      titleBySubreddit,
+      bodyBySubreddit,
     };
-  }, [items, caption, body, flairDataResult.flairRequired, flairDataResult.flairOptions, flairDataResult.postRequirements]);
+  }, [items, caption, body, contentOverrides, customTitles, flairDataResult.flairRequired, flairDataResult.flairOptions, flairDataResult.postRequirements]);
 
   // Run pre-flight validation
   const validation = usePreflightValidation(validationInput);
@@ -243,7 +263,7 @@ const PostingQueue: React.FC<Props> = ({
   // Reset validation dismissed state when items change
   useEffect(() => {
     setValidationDismissed(false);
-  }, [items, caption, body]);
+  }, [items, caption, body, contentOverrides, customTitles]);
 
   // Show validation warnings only when there are issues and not dismissed
   // When onValidationChange is provided, we use inline display instead of the panel
@@ -295,18 +315,22 @@ const PostingQueue: React.FC<Props> = ({
       // Mark as retrying
       failedPostsHook.retryOne(post.id);
 
+      const effectiveTitle = post.customTitle ?? post.originalCaption;
+      const effectiveBody = post.customBody ?? post.originalItem.text;
+
       const retryInput: RetryItemInput = {
         subreddit: post.subreddit,
         flairId: post.flairId,
         titleSuffix: post.titleSuffix,
+        customTitle: post.customTitle ?? post.originalItem.customTitle,
         kind: post.originalItem.kind,
         url: post.originalItem.url,
-        text: post.originalItem.text,
+        text: effectiveBody,
         file: post.originalItem.file,
         files: post.originalItem.files,
       };
 
-      const jobId = await retryItem(retryInput, post.originalCaption, post.originalPrefixes);
+      const jobId = await retryItem(retryInput, effectiveTitle, post.originalPrefixes);
       if (!jobId) {
         failedPostsHook.markFailed(post.id, 'Failed to submit retry');
       }
@@ -324,13 +348,16 @@ const PostingQueue: React.FC<Props> = ({
   }, []);
 
   // Handle submitting an edited failed post
-  const handleSubmitEditedPost = useCallback(async (updates: { flairId?: string; titleSuffix?: string }) => {
+  const handleSubmitEditedPost = useCallback(async (updates: { flairId?: string; titleSuffix?: string; customTitle?: string; customBody?: string }) => {
     if (!editingPost) return;
 
     setIsRetrying(true);
     try {
       // First update the failed post with new values
       failedPostsHook.updatePost(editingPost.id, updates);
+
+      const effectiveTitle = updates.customTitle ?? editingPost.customTitle ?? editingPost.originalCaption;
+      const effectiveBody = updates.customBody ?? editingPost.customBody ?? editingPost.originalItem.text;
 
       // Mark as retrying
       failedPostsHook.retryOne(editingPost.id);
@@ -340,14 +367,15 @@ const PostingQueue: React.FC<Props> = ({
         subreddit: editingPost.subreddit,
         flairId: updates.flairId ?? editingPost.flairId,
         titleSuffix: updates.titleSuffix ?? editingPost.titleSuffix,
+        customTitle: updates.customTitle ?? editingPost.customTitle ?? editingPost.originalItem.customTitle,
         kind: editingPost.originalItem.kind,
         url: editingPost.originalItem.url,
-        text: editingPost.originalItem.text,
+        text: effectiveBody,
         file: editingPost.originalItem.file,
         files: editingPost.originalItem.files,
       };
 
-      const jobId = await retryItem(retryInput, editingPost.originalCaption, editingPost.originalPrefixes);
+      const jobId = await retryItem(retryInput, effectiveTitle, editingPost.originalPrefixes);
       if (!jobId) {
         failedPostsHook.markFailed(editingPost.id, 'Failed to submit retry');
       }
@@ -376,15 +404,36 @@ const PostingQueue: React.FC<Props> = ({
         subreddit: post.subreddit,
         flairId: post.flairId,
         titleSuffix: post.titleSuffix,
+        customTitle: post.customTitle ?? post.originalItem.customTitle,
         kind: post.originalItem.kind,
         url: post.originalItem.url,
-        text: post.originalItem.text,
+        text: post.customBody ?? post.originalItem.text,
         file: post.originalItem.file,
         files: post.originalItem.files,
       }));
 
-      const firstPost = postsToRetry[0];
-      const jobId = await retryItems(retryInputs, firstPost.originalCaption, firstPost.originalPrefixes);
+      const titles = postsToRetry.map(post => post.customTitle ?? post.originalCaption);
+      const uniqueTitles = new Set(titles);
+
+      let jobId: string | null = null;
+      if (uniqueTitles.size === 1) {
+        const firstPost = postsToRetry[0];
+        jobId = await retryItems(retryInputs, titles[0], firstPost.originalPrefixes);
+      } else {
+        for (const post of postsToRetry) {
+          const input = retryInputs.find(i => i.subreddit === post.subreddit);
+          if (!input) continue;
+          const singleJobId = await retryItem(
+            input,
+            post.customTitle ?? post.originalCaption,
+            post.originalPrefixes
+          );
+          if (!singleJobId) {
+            failedPostsHook.markFailed(post.id, 'Failed to submit retry');
+          }
+        }
+        return;
+      }
 
       if (!jobId) {
         postsToRetry.forEach(post => {
@@ -416,16 +465,37 @@ const PostingQueue: React.FC<Props> = ({
         subreddit: post.subreddit,
         flairId: post.flairId,
         titleSuffix: post.titleSuffix,
+        customTitle: post.customTitle ?? post.originalItem.customTitle,
         kind: post.originalItem.kind,
         url: post.originalItem.url,
-        text: post.originalItem.text,
+        text: post.customBody ?? post.originalItem.text,
         file: post.originalItem.file,
         files: post.originalItem.files,
       }));
 
-      // Use the first post's caption and prefixes (they should all be the same from a single job)
-      const firstPost = retryablePosts[0];
-      const jobId = await retryItems(retryInputs, firstPost.originalCaption, firstPost.originalPrefixes);
+      const titles = retryablePosts.map(post => post.customTitle ?? post.originalCaption);
+      const uniqueTitles = new Set(titles);
+
+      let jobId: string | null = null;
+      if (uniqueTitles.size === 1) {
+        // Use the first post's caption and prefixes (they should all be the same from a single job)
+        const firstPost = retryablePosts[0];
+        jobId = await retryItems(retryInputs, titles[0], firstPost.originalPrefixes);
+      } else {
+        for (const post of retryablePosts) {
+          const input = retryInputs.find(i => i.subreddit === post.subreddit);
+          if (!input) continue;
+          const singleJobId = await retryItem(
+            input,
+            post.customTitle ?? post.originalCaption,
+            post.originalPrefixes
+          );
+          if (!singleJobId) {
+            failedPostsHook.markFailed(post.id, 'Failed to submit retry');
+          }
+        }
+        return;
+      }
 
       if (!jobId) {
         // Mark all as failed

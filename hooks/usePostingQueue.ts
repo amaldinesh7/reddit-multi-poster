@@ -188,6 +188,7 @@ export const usePostingQueue = ({
           subreddit: item.subreddit,
           flairId: item.flairId,
           titleSuffix: item.titleSuffix,
+          customTitle: item.customTitle,
           kind: item.kind,
           url: item.url,
           text: item.text,
