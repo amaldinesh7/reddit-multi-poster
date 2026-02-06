@@ -226,6 +226,14 @@ const SubredditRow = React.memo(({
     return getEligibilityForSubreddit(name, eligibility, userData, postKind);
   }, [name, eligibility, userData, postKind, isSelected]);
 
+  const needsVerification = useMemo(() => {
+    if (!eligibilityResult) return false;
+    const { checks } = eligibilityResult;
+    const isRestricted = checks.subredditType === 'restricted' || checks.restrictedPosting;
+    if (!isRestricted) return false;
+    return !checks.approved && !checks.moderator;
+  }, [eligibilityResult]);
+
   const handleRowClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     if (target.closest('select') || target.closest('input') || target.closest('button') || target.closest('.expand-trigger') || target.closest('[data-radix-select-viewport]') || target.closest('[role="listbox"]')) {
@@ -347,13 +355,9 @@ const SubredditRow = React.memo(({
             )}
 
             {/* Eligibility Badge */}
-            {!isLoading && isSelected && eligibilityResult && (
-              eligibilityResult.status === 'moderator' || 
-              eligibilityResult.status === 'approved' || 
-              eligibilityResult.status === 'blocked'
-            ) && (
+            {!isLoading && isSelected && eligibilityResult && needsVerification && (
               <EligibilityBadge
-                status={eligibilityResult.status}
+                status="verification"
                 reason={eligibilityResult.reasons[0]}
                 compact={true}
               />

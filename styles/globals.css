@@ -134,10 +134,10 @@
     user-select: none;
   }
 
-  /* Standalone PWA: extra top padding for status bar safe area */
+  /* Standalone PWA: avoid double safe-area padding (headers already handle it) */
   @media all and (display-mode: standalone) {
     body {
-      padding-top: env(safe-area-inset-top);
+      padding-top: 0;
     }
   }
 }
@@ -175,6 +175,10 @@ html.theme-transitioning *::after {
 
   .safe-bottom {
     padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
   }
 
   @media (min-width: 768px) {

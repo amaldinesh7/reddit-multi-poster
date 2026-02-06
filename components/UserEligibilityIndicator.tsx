@@ -16,6 +16,7 @@ import {
   Star,
   Mail,
   TrendingUp,
+  Key,
 } from 'lucide-react';
 
 // ============================================================================
@@ -220,7 +221,7 @@ export const UserEligibilityIndicator = ({
 // ============================================================================
 
 interface EligibilityBadgeProps {
-  status: 'ready' | 'warning' | 'blocked' | 'approved' | 'moderator';
+  status: 'ready' | 'warning' | 'blocked' | 'approved' | 'moderator' | 'verification';
   reason?: string;
   compact?: boolean;
 }
@@ -251,6 +252,11 @@ export const EligibilityBadge = ({ status, reason, compact = false }: Eligibilit
       icon: <Shield className="w-3 h-3" />,
       label: 'Moderator',
       className: 'text-violet-500 bg-violet-500/10 border-violet-500/20',
+    },
+    verification: {
+      icon: <Key className="w-3 h-3" />,
+      label: 'Need verification',
+      className: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
     },
   };
 

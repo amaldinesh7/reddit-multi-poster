@@ -33,20 +33,28 @@ const useScrollDirection = () => {
   const [isVisible, setIsVisible] = useState(true);
   const [isAtTop, setIsAtTop] = useState(true);
   const lastScrollY = useRef(0);
+  const lastVisible = useRef(true);
+  const lastAtTop = useRef(true);
   const ticking = useRef(false);
 
   useEffect(() => {
     const threshold = 10;
-    const hideThreshold = 60; // Only hide after scrolling down this much
+    const hideThreshold = 80; // Only hide after scrolling down this much
 
     const updateScrollDirection = () => {
       const scrollY = window.scrollY;
-      
-      setIsAtTop(scrollY < 10);
+      const atTop = scrollY < 10;
+      if (atTop !== lastAtTop.current) {
+        lastAtTop.current = atTop;
+        setIsAtTop(atTop);
+      }
 
       // Only apply scroll hiding behavior on smaller screens
       if (window.innerWidth >= 768) {
-        setIsVisible(true);
+        if (!lastVisible.current) {
+          lastVisible.current = true;
+          setIsVisible(true);
+        }
         lastScrollY.current = scrollY;
         ticking.current = false;
         return;
@@ -56,9 +64,11 @@ const useScrollDirection = () => {
       const diff = Math.abs(scrollY - lastScrollY.current);
 
       if (diff > threshold) {
-        if (direction === 'down' && scrollY > hideThreshold) {
+        if (direction === 'down' && scrollY > hideThreshold && lastVisible.current) {
+          lastVisible.current = false;
           setIsVisible(false);
-        } else if (direction === 'up') {
+        } else if (direction === 'up' && !lastVisible.current) {
+          lastVisible.current = true;
           setIsVisible(true);
         }
         lastScrollY.current = scrollY;
@@ -94,6 +104,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   const { theme, setTheme } = useTheme();
   const { isVisible, isAtTop } = useScrollDirection();
   const showUpgrade = entitlement !== 'paid' && onUpgrade;
+  const trimmedUserName = userName?.trim() || '';
 
   // Theme cycle for mobile tap-to-switch button
   const THEME_CYCLE: Theme[] = ['light', 'dark', 'system'];
@@ -109,7 +120,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   const handleThemeSelect = (next: Theme) => () => setTheme(next);
 
   const handleViewProfile = () => {
-    window.open(`https://reddit.com/user/${userName}`, '_blank');
+    if (!trimmedUserName) return;
+    window.open(`https://reddit.com/user/${trimmedUserName}`, '_blank');
   };
 
   const handleSettings = () => {
@@ -132,7 +144,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         // Subtle shadow when scrolled
         !isAtTop && "shadow-sm",
         // Mobile: Slide up/down transition
-        "transition-transform duration-smooth md:translate-y-0",
+        "transition-transform duration-smooth md:translate-y-0 will-change-transform transform-gpu",
         !isVisible && "-translate-y-full"
       )}
     >
@@ -177,7 +189,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                   "bg-violet-800/90",
                   "transition-all duration-200",
                   "hover:bg-violet-800",
-                  "animate-subtle-glow",
+                  "shadow-[0_0_0_1px_rgba(124,58,237,0.4)]",
+                  "hover:shadow-[0_0_0_3px_rgba(124,58,237,0.28)]",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 )}
                 aria-label="Go Unlimited"
@@ -216,12 +229,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 >
                   <Avatar
                     src={userAvatar}
-                    alt={userName || 'User'}
-                    fallback={userName || 'U'}
+                    alt={trimmedUserName || 'User'}
+                    fallback={trimmedUserName || 'U'}
                     size="sm"
                   />
                   <span className="text-sm font-medium hidden sm:inline truncate max-w-[120px]">
-                    u/{userName}
+                    u/{trimmedUserName || 'user'}
                   </span>
                   <ChevronDown className="hidden sm:block h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" aria-hidden="true" />
                 </button>
