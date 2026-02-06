@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { ChevronDown, User, Settings, LogOut, Shield, Sun, Moon, Monitor, Infinity } from 'lucide-react';
+import { ChevronDown, User, Settings, LogOut, Shield, Sun, Moon, Monitor, Infinity, ArrowLeft } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { Theme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface UserStats {
   totalKarma?: number;
@@ -23,6 +24,11 @@ interface AppHeaderProps {
   onUpgrade?: () => void;
   upgradeLoading?: boolean;
   userStats?: UserStats;
+  pageTitle?: string;
+  pageSubtitle?: string;
+  headerActions?: React.ReactNode;
+  showBackButton?: boolean;
+  onBack?: () => void;
 }
 
 /**
@@ -100,11 +106,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onUpgrade,
   upgradeLoading = false,
   userStats: _userStats,
+  pageTitle,
+  headerActions,
+  showBackButton = false,
+  onBack,
 }) => {
   const { theme, setTheme } = useTheme();
   const { isVisible, isAtTop } = useScrollDirection();
   const showUpgrade = entitlement !== 'paid' && onUpgrade;
   const trimmedUserName = userName?.trim() || '';
+  const showAdminIcon = isAdmin && pageTitle === 'Admin Panel';
 
   // Theme cycle for mobile tap-to-switch button
   const THEME_CYCLE: Theme[] = ['light', 'dark', 'system'];
@@ -132,6 +143,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     window.location.href = '/admin';
   };
 
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+    window.history.back();
+  };
+
   return (
     <header 
       className={cn(
@@ -139,8 +158,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         "sticky top-0 z-50 pt-[env(safe-area-inset-top)]",
         // Background with subtle blur
         "bg-background/95 backdrop-blur-sm",
-        // Simple border
-        "border-b border-border/50",
         // Subtle shadow when scrolled
         !isAtTop && "shadow-sm",
         // Mobile: Slide up/down transition
@@ -150,7 +167,17 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     >
       <div className="app-container">
         <div className="flex h-14 min-h-[44px] items-center gap-2">
-          {/* Logo */}
+          {showBackButton && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="hidden md:inline-flex min-h-[44px] min-w-[44px] p-2 cursor-pointer"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+            </Button>
+          )}
           <div className="flex min-w-0 shrink-0 items-center gap-2.5">
             <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg flex items-center justify-center">
               <img 
@@ -159,15 +186,33 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 className="h-full w-full object-contain" 
               />
             </div>
-            <span className="truncate font-semibold tracking-tight">Multi Poster</span>
-            {entitlement === 'paid' && (
-              <span 
-                className="relative inline-flex items-center text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-gradient-to-r from-violet-500/15 via-purple-500/20 to-violet-500/15 text-violet-400 border border-violet-400/25 shadow-sm shadow-violet-500/20 overflow-hidden"
-                aria-label="Pro plan active"
-              >
-                <span className="relative z-10">Pro</span>
-                <span className="absolute inset-0 animate-pro-shimmer" aria-hidden="true" />
-              </span>
+            {pageTitle ? (
+              <div className="flex items-center gap-2 min-w-0">
+                {showAdminIcon && <Shield className="w-4 h-4 text-cyan-400" aria-hidden="true" />}
+                <span className="truncate text-base font-semibold tracking-tight">
+                  {pageTitle}
+                </span>
+              </div>
+            ) : (
+              <>
+                <span 
+                  className={cn(
+                    "truncate font-semibold tracking-tight",
+                    entitlement === 'paid' && "font-display font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-violet-400 bg-clip-text text-transparent"
+                  )}
+                >
+                  Multi Poster
+                </span>
+                {entitlement === 'paid' && (
+                  <span 
+                    className="relative inline-flex items-center text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-gradient-to-r from-violet-500/20 via-purple-500/25 to-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/40 dark:border-violet-400/25 shadow-sm shadow-violet-500/25 overflow-hidden"
+                    aria-label="Pro plan active"
+                  >
+                    <span className="relative z-10">Pro</span>
+                    <span className="absolute inset-0 animate-pro-shimmer" aria-hidden="true" />
+                  </span>
+                )}
+              </>
             )}
           </div>
 
@@ -200,6 +245,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <span className="sm:hidden">{upgradeLoading ? '…' : 'Go Unlimited'}</span>
               </button>
             )}
+            {headerActions}
             {/* Mobile-only: Theme cycle button */}
             <button
               type="button"

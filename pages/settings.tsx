@@ -4,13 +4,14 @@ import { useRouter } from 'next/router';
 import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { ArrowLeft, Loader2, Search, FolderPlus, RefreshCw, GripVertical, FlaskConical, Crown } from 'lucide-react';
+import { Loader2, Search, FolderPlus, RefreshCw, GripVertical, FlaskConical, Crown } from 'lucide-react';
 import { useSubreddits } from '../hooks/useSubreddits';
 import { useSubredditCache } from '../hooks/useSubredditCache';
 import { useAuth } from '../hooks/useAuth';
 import { useSettingsDnd } from '../hooks/useSettingsDnd';
 import { searchSubreddits as searchSubredditsAPI } from '../lib/api/reddit';
 import UpgradeModal from '../components/UpgradeModal';
+import { AppHeader } from '@/components/layout';
 
 import {
   DndContext,
@@ -36,7 +37,7 @@ import {
 
 export default function Settings() {
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading, entitlement, limits } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, entitlement, limits, me, logout } = useAuth();
   const {
     data,
     isLoaded,
@@ -107,7 +108,7 @@ export default function Settings() {
     if (entitlement === 'free' && currentSubredditCount >= maxSubreddits) {
       setUpgradeModalContext({
         title: 'Free limit reached',
-        message: `Free: save up to ${maxSubreddits} communities. Go Pro to save unlimited.`,
+        message: `You've reached the free limit of ${maxSubreddits} communities. Upgrade to save unlimited.`,
       });
       setShowUpgradeModal(true);
       return null;
@@ -298,55 +299,24 @@ export default function Settings() {
         </Head>
 
         <div className="min-h-viewport bg-background">
-          {/* Header */}
-          <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
-            <div className="app-container">
-              <div className="flex h-14 items-center gap-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push('/')}
-                  className="min-h-[44px] min-w-[44px] p-2 rounded-lg hover:bg-secondary cursor-pointer"
-                  aria-label="Go back to home"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </Button>
-                <div>
-                  <h1 className="text-lg font-semibold">Settings</h1>
-                  <p className="text-xs text-muted-foreground hidden sm:block">Your communities and lists</p>
-                </div>
-
-                {/* Refresh button */}
-                <div className="ml-auto flex items-center gap-3">
-                  {/* Only show limit counter for FREE users - paid users have no limit */}
-                  {entitlement === 'free' && (
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                      {currentSubredditCount} of {maxSubreddits} communities
-                    </span>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => refresh()}
-                    disabled={isLoading}
-                    className="min-h-[44px] min-w-[44px] p-2 cursor-pointer"
-                    aria-label="Refresh lists"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </header>
+          {isAuthenticated && (
+            <AppHeader
+              userName={me?.name}
+              userAvatar={me?.icon_img}
+              onLogout={logout}
+              entitlement={entitlement}
+              pageTitle="Settings"
+            />
+          )}
 
           {/* Main Content */}
           <main className="app-container py-4 sm:py-6 max-w-3xl safe-bottom">
             <div className="space-y-6">
               {/* Actions */}
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-row flex-nowrap items-center gap-3 overflow-x-auto">
                 <Button
                   onClick={handleAddCategory}
-                  className="flex-1 sm:flex-none rounded-xl h-10 cursor-pointer"
+                  className="flex-1 sm:flex-none rounded-xl h-10 cursor-pointer shrink-0"
                   aria-label="Add new list"
                 >
                   <FolderPlus className="w-4 h-4 mr-2" />
@@ -358,7 +328,7 @@ export default function Settings() {
                     onClick={handleLoadDevSubreddits}
                     disabled={isLoadingDev}
                     variant="outline"
-                    className="flex-1 sm:flex-none rounded-xl h-10 cursor-pointer border-amber-600/50 text-amber-500 hover:bg-amber-600/10"
+                    className="flex-1 sm:flex-none rounded-xl h-10 cursor-pointer border-amber-600/50 text-amber-500 hover:bg-amber-600/10 shrink-0"
                     aria-label="Load 20 NSFW subreddits for testing"
                   >
                     {isLoadingDev ? (
@@ -369,6 +339,16 @@ export default function Settings() {
                     {isLoadingDev ? 'Loading...' : 'Load 20 NSFW (Dev)'}
                   </Button>
                 )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => refresh()}
+                  disabled={isLoading}
+                  className="min-h-[44px] min-w-[44px] p-2 cursor-pointer ml-auto shrink-0"
+                  aria-label="Refresh lists"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </Button>
               </div>
 
               {/* Search */}

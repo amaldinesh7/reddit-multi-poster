@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/hooks/useAuth';
-import { HelpCircle, MessageSquare, Bug } from 'lucide-react';
+import { MessageSquare, Bug } from 'lucide-react';
+import { AppHeader } from '@/components/layout';
 
 /**
  * Help & Feedback page — placeholder for now.
@@ -10,7 +11,7 @@ import { HelpCircle, MessageSquare, Bug } from 'lucide-react';
  */
 const HelpPage: React.FC = () => {
   const router = useRouter();
-  const { isAuthenticated, isLoading, me } = useAuth();
+  const { isAuthenticated, isLoading, me, logout, entitlement } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCheckDone, setAdminCheckDone] = useState(false);
 
@@ -66,12 +67,18 @@ const HelpPage: React.FC = () => {
       <Head>
         <title>Help & Feedback | Poststation</title>
       </Head>
-      <div className="min-h-viewport bg-background safe-bottom">
-        <div className="max-w-2xl mx-auto px-4 pt-8 pb-4">
-          <h1 className="text-xl font-bold flex items-center gap-2 mb-6">
-            <HelpCircle className="w-5 h-5 text-primary" />
-            Help & Feedback
-          </h1>
+      <div className="min-h-viewport bg-background safe-bottom flex flex-col">
+        {isAuthenticated && (
+          <AppHeader
+            userName={me?.name}
+            userAvatar={me?.icon_img}
+            onLogout={logout}
+            entitlement={entitlement}
+            isAdmin={isAdmin}
+            pageTitle="Help & Feedback"
+          />
+        )}
+        <div className="app-container max-w-2xl py-8">
 
           <div className="space-y-4">
             {/* Placeholder cards */}

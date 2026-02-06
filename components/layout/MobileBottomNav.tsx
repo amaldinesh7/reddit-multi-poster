@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import { PenSquare, Settings, HelpCircle, User, LogOut, ExternalLink, X } from 'lucide-react';
+import { LogOut, ExternalLink } from 'lucide-react';
+import { House, GearSix, Question, UserCircle } from 'phosphor-react';
 import { Avatar } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -15,7 +16,7 @@ const shouldHideNav = (pathname: string): boolean =>
 interface NavTab {
   id: string;
   label: string;
-  icon: React.ReactNode;
+  icon: (active: boolean) => React.ReactNode;
   href?: string;
   action?: () => void;
   /** Match these pathnames to mark tab as active */
@@ -89,21 +90,39 @@ const MobileBottomNav: React.FC = () => {
     {
       id: 'post',
       label: 'Post',
-      icon: <PenSquare className="w-5 h-5" />,
+      icon: (active) => (
+        <House
+          size={20}
+          weight={active ? "fill" : "regular"}
+          className={cn(active ? "text-foreground" : "text-muted-foreground")}
+        />
+      ),
       href: '/',
       matchPaths: ['/'],
     },
     {
       id: 'settings',
       label: 'Settings',
-      icon: <Settings className="w-5 h-5" />,
+      icon: (active) => (
+        <GearSix
+          size={20}
+          weight={active ? "fill" : "regular"}
+          className={cn(active ? "text-foreground" : "text-muted-foreground")}
+        />
+      ),
       href: '/settings',
       matchPaths: ['/settings'],
     },
     {
       id: 'help',
       label: 'Help',
-      icon: <HelpCircle className="w-5 h-5" />,
+      icon: (active) => (
+        <Question
+          size={20}
+          weight={active ? "fill" : "regular"}
+          className={cn(active ? "text-foreground" : "text-muted-foreground")}
+        />
+      ),
       href: '/help',
       matchPaths: ['/help'],
       adminOnly: true,
@@ -111,11 +130,24 @@ const MobileBottomNav: React.FC = () => {
     {
       id: 'profile',
       label: 'Profile',
-      icon: me?.icon_img ? (
-        <Avatar src={me.icon_img} alt={me.name} fallback={me.name || 'U'} size="sm" className="w-5 h-5" />
-      ) : (
-        <User className="w-5 h-5" />
-      ),
+      icon: (active) =>
+        me?.icon_img ? (
+          <Avatar
+            src={me.icon_img}
+            alt={me.name}
+            fallback={me.name || 'U'}
+            className={cn(
+              "w-5 h-5 transition-colors duration-200",
+              active ? "ring-2 ring-foreground/60" : "ring-0"
+            )}
+          />
+        ) : (
+          <UserCircle
+            size={20}
+            weight={active ? "fill" : "regular"}
+            className={cn(active ? "text-foreground" : "text-muted-foreground")}
+          />
+        ),
       action: () => setProfileOpen((prev) => !prev),
       matchPaths: [],
     },
@@ -126,22 +158,42 @@ const MobileBottomNav: React.FC = () => {
   const isActive = (tab: NavTab): boolean =>
     tab.matchPaths.includes(router.pathname);
 
+  const railClassName =
+    "bg-background shadow-[0_-8px_30px_-24px_rgba(0,0,0,0.45)]";
+  const rowClassName = "flex items-stretch justify-around h-14";
+  const getButtonClassName = (active: boolean) =>
+    cn(
+      "flex-1 flex flex-col items-center justify-center gap-0.5 relative",
+      "cursor-pointer select-none transition-all duration-200",
+      "active:scale-95 active:opacity-80",
+      active ? "text-foreground" : "text-muted-foreground"
+    );
+  const getIconWrapClassName = (active: boolean) =>
+    cn(
+      "rounded-lg p-1.5 transition-colors duration-200"
+    );
+  const getLabelClassName = (active: boolean) =>
+    cn(
+      "text-[10px] font-medium leading-none",
+      active ? "text-foreground" : "text-muted-foreground"
+    );
+
+
   return (
     <>
       {/* Bottom navigation bar */}
       <nav
         className={cn(
           "fixed bottom-0 left-0 right-0 z-50 md:hidden mobile-bottom-nav",
-          "bg-background",
-          "border-t border-border/50",
           "pb-[env(safe-area-inset-bottom)]"
         )}
         role="navigation"
         aria-label="Main navigation"
       >
-        <div className="flex items-stretch justify-around h-14">
+        <div className={cn(railClassName, "px-1")}>
+          <div className={rowClassName}>
           {visibleTabs.map((tab) => {
-            const active = isActive(tab);
+            const active = isActive(tab) || (tab.id === 'profile' && profileOpen);
             return (
               <button
                 key={tab.id}
@@ -153,24 +205,16 @@ const MobileBottomNav: React.FC = () => {
                     handleNavigate(tab.href);
                   }
                 }}
-                className={cn(
-                  "flex-1 flex flex-col items-center justify-center gap-0.5",
-                  "cursor-pointer select-none",
-                  "transition-colors duration-150",
-                  "active:scale-95 active:opacity-70",
-                  active
-                    ? "text-primary"
-                    : "text-muted-foreground",
-                  tab.id === 'profile' && profileOpen && "text-primary"
-                )}
+                className={getButtonClassName(active)}
                 aria-label={tab.label}
                 aria-current={active ? 'page' : undefined}
               >
-                {tab.icon}
-                <span className="text-[10px] font-medium leading-none">{tab.label}</span>
+                <span className={getIconWrapClassName(active)}>{tab.icon(active)}</span>
+                <span className={getLabelClassName(active)}>{tab.label}</span>
               </button>
             );
           })}
+          </div>
         </div>
       </nav>
 

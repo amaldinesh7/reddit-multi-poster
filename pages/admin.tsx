@@ -4,19 +4,17 @@ import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 import {
   ArrowLeft,
-  Shield,
   BarChart3,
   Users,
   HeadphonesIcon,
   RefreshCw,
   Loader2,
   XCircle,
-  Activity,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
+import { AppHeader } from '@/components/layout';
 
 // Dynamic imports for tab components - load only when needed
 const AnalyticsTab = dynamic(() => import('@/components/admin/AnalyticsTab').then(mod => ({ default: mod.AnalyticsTab })), {
@@ -94,13 +92,14 @@ interface AnalyticsData {
 
 export default function AdminPanel() {
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, me, logout, entitlement } = useAuth();
 
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('analytics');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Get initial tab from URL hash
   useEffect(() => {
@@ -143,6 +142,7 @@ export default function AdminPanel() {
       }
 
       const analyticsData = await res.json();
+      setIsAdmin(true);
       setData(analyticsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -166,37 +166,71 @@ export default function AdminPanel() {
     fetchAnalytics(true);
   };
 
+  const header = isAuthenticated ? (
+    <AppHeader
+      userName={me?.name}
+      userAvatar={me?.icon_img}
+      onLogout={logout}
+      entitlement={entitlement}
+      isAdmin={isAdmin}
+      pageTitle="Admin Panel"
+      showBackButton
+      onBack={() => router.back()}
+      headerActions={
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="min-h-[44px] min-w-[44px] p-2 cursor-pointer hover:bg-cyan-500/10 hover:text-cyan-400"
+          aria-label="Refresh data"
+        >
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </Button>
+      }
+    />
+  ) : null;
+
   // Loading state - simple centered spinner
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-viewport bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
-      </div>
+      <>
+        {header}
+        <div className="min-h-viewport bg-background flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+        </div>
+      </>
     );
   }
 
   // Error state (including access denied)
   if (error) {
     return (
-      <div className="min-h-viewport bg-background flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <XCircle className="w-10 h-10 text-red-400" />
-          <p className="text-foreground font-medium">{error}</p>
-          <Button onClick={() => router.push('/')} variant="outline" size="sm" className="cursor-pointer">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
-          </Button>
+      <>
+        {header}
+        <div className="min-h-viewport bg-background flex items-center justify-center p-4">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <XCircle className="w-10 h-10 text-red-400" />
+            <p className="text-foreground font-medium">{error}</p>
+            <Button onClick={() => router.push('/')} variant="outline" size="sm" className="cursor-pointer">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Home
+            </Button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   // No data state
   if (!data) {
     return (
-      <div className="min-h-viewport bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">No data available</p>
-      </div>
+      <>
+        {header}
+        <div className="min-h-viewport bg-background flex items-center justify-center">
+          <p className="text-muted-foreground">No data available</p>
+        </div>
+      </>
     );
   }
 
@@ -209,65 +243,7 @@ export default function AdminPanel() {
       </Head>
 
       <div className="min-h-viewport bg-background">
-        {/* Command Center Header */}
-        <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
-          <div className="app-container">
-            <div className="flex h-16 items-center gap-4">
-              {/* Back Button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push('/')}
-                className="min-h-[44px] min-w-[44px] p-2 rounded-lg hover:bg-secondary cursor-pointer"
-                aria-label="Go back to home"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-
-              {/* Logo & Title */}
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-teal-500/20 border border-cyan-500/30 flex items-center justify-center glow-cyan">
-                    <Shield className="w-5 h-5 text-cyan-400" />
-                  </div>
-                  {/* Status indicator */}
-                  <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-background animate-pulse" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-semibold font-display flex items-center gap-2">
-                    Admin Panel
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px] px-1.5 py-0 h-5 bg-cyan-500/10 text-cyan-400 border-cyan-500/30"
-                    >
-                      <Activity className="w-2.5 h-2.5 mr-1" />
-                      Live
-                    </Badge>
-                  </h1>
-                  <p className="text-xs text-muted-foreground hidden sm:block">
-                    Command Center • System Overview
-                  </p>
-                </div>
-              </div>
-
-              {/* Refresh button */}
-              <div className="ml-auto">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className="min-h-[44px] min-w-[44px] p-2 cursor-pointer hover:bg-cyan-500/10 hover:text-cyan-400"
-                  aria-label="Refresh data"
-                >
-                  <RefreshCw
-                    className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`}
-                  />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </header>
+        {header}
 
         {/* Main Content */}
         <main className="app-container py-6 max-w-6xl">

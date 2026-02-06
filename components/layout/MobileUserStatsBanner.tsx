@@ -141,7 +141,6 @@ export const MobileUserStatsBanner: React.FC<MobileUserStatsBannerProps> = ({
         "sticky top-14 z-40",
         // Visual styling
         "bg-background/90 backdrop-blur-md",
-        "border-b border-border/50",
         // Padding
         "py-1 md:py-1.5",
         // Transition for smooth hide/show
