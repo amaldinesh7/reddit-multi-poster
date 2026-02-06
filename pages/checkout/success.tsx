@@ -1,9 +1,16 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { mutate } from 'swr';
 import { CheckCircle } from 'lucide-react';
+import { SWR_KEYS } from '@/lib/swr';
 
 export default function CheckoutSuccess() {
+  // Refresh auth data on mount to pick up the new entitlement from webhook
+  useEffect(() => {
+    mutate(SWR_KEYS.AUTH);
+  }, []);
+
   return (
     <>
       <Head>
@@ -18,9 +25,6 @@ export default function CheckoutSuccess() {
           <p className="text-zinc-400">
             You&apos;re all set. You can now save unlimited communities and post to as many as you
             want at once.
-          </p>
-          <p className="text-sm text-zinc-500">
-            If nothing changed yet, refresh the page or wait a few seconds.
           </p>
           <Link
             href="/"

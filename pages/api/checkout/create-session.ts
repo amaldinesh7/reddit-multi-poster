@@ -46,6 +46,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       metadata: { user_id: userId },
     };
 
+    console.log('[Dodo Debug] Creating checkout session:', {
+      url: `${DODO_BASE_URL}/checkouts`,
+      productId,
+      environment: process.env.DODO_PAYMENTS_ENVIRONMENT,
+      hasApiKey: !!apiKey,
+    });
+
     const response = await fetch(`${DODO_BASE_URL}/checkouts`, {
       method: 'POST',
       headers: {
@@ -57,11 +64,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!response.ok) {
       const errText = await response.text();
+      console.error('[Dodo Debug] Checkout creation failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errText,
+      });
       Sentry.captureException(new Error(`Dodo checkout create failed: ${response.status}`), {
         tags: { component: 'checkout.create-session' },
         extra: { hasUserId: true, status: response.status, responseBody: errText },
       });
-      return res.status(502).json({ error: 'Could not create checkout session' });
+      return res.status(502).json({ error: 'Could not create checkout session', details: errText });
     }
 
     const data = (await response.json()) as { checkout_url?: string; session_id?: string };
