@@ -26,8 +26,8 @@ interface UseHomePageStateReturn {
   setMediaUrl: (value: string | ((val: string) => string)) => void;
   mediaFiles: File[];
   setMediaFiles: React.Dispatch<React.SetStateAction<File[]>>;
-  mediaMode: 'file' | 'url';
-  setMediaMode: (value: 'file' | 'url' | ((val: 'file' | 'url') => 'file' | 'url')) => void;
+  mediaType: 'image' | 'video' | 'url';
+  setMediaType: (value: 'image' | 'video' | 'url' | ((val: 'image' | 'video' | 'url') => 'image' | 'video' | 'url')) => void;
   flairs: Record<string, string | undefined>;
   setFlairs: (value: Record<string, string | undefined> | ((val: Record<string, string | undefined>) => Record<string, string | undefined>)) => void;
   titleSuffixes: Record<string, string | undefined>;
@@ -54,15 +54,15 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
   const [selectedSubs, setSelectedSubs] = usePersistentState<string[]>('rmp_selected_subs', []);
   const [caption, setCaption] = usePersistentState<string>('rmp_caption', '');
   const [body, setBody] = usePersistentState<string>('rmp_body', '');
-  const [prefixes, setPrefixes] = useState({ f: false, c: false });
+  const [prefixes, setPrefixes] = usePersistentState<{ f: boolean; c: boolean }>('rmp_prefixes', { f: false, c: false });
   const [mediaUrl, setMediaUrl] = usePersistentState<string>('rmp_media_url', '');
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
-  const [mediaMode, setMediaMode] = usePersistentState<'file' | 'url'>('rmp_media_mode', 'file');
+  const [mediaType, setMediaType] = usePersistentState<'image' | 'video' | 'url'>('rmp_media_type', 'image');
   const [flairs, setFlairs] = usePersistentState<Record<string, string | undefined>>('rmp_flairs', {});
   const [titleSuffixes, setTitleSuffixes] = usePersistentState<Record<string, string | undefined>>('rmp_title_suffixes', {});
-  const [postToProfile, setPostToProfile] = useState(false);
+  const [postToProfile, setPostToProfile] = usePersistentState<boolean>('rmp_post_to_profile', false);
   const [hasFlairErrors, setHasFlairErrors] = useState(false);
-  const [customTitles, setCustomTitles] = useState<Record<string, string>>({});
+  const [customTitles, setCustomTitles] = usePersistentState<Record<string, string>>('rmp_custom_titles', {});
   const [contentOverrides, setContentOverrides] = usePersistentState<Record<string, PerSubredditOverride>>('rmp_content_overrides', {});
   const [showValidationErrors, setShowValidationErrors] = useState(false);
 
@@ -90,7 +90,7 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
     setTitleSuffixes({});
     setContentOverrides({});
     setMediaUrl('');
-    setMediaMode('file');
+    setMediaType('image');
     setMediaFiles([]);
     setPrefixes({ f: false, c: false });
     setPostToProfile(false);
@@ -186,8 +186,8 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
     setMediaUrl,
     mediaFiles,
     setMediaFiles,
-    mediaMode,
-    setMediaMode,
+    mediaType,
+    setMediaType,
     flairs,
     setFlairs,
     titleSuffixes,
