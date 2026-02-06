@@ -35,6 +35,7 @@ export type ErrorCode =
   | 'nsfw_error'
   | 'network_error'
   | 'post_type_not_allowed'
+  | 'videos_not_allowed'
   | 'content_too_long'
   | 'account_too_new'
   | 'unknown_error';
@@ -53,7 +54,7 @@ export interface ClassifiedError {
   /** Additional details/instructions */
   details?: string;
   /** Icon name for UI */
-  icon: 'tag' | 'clock' | 'ban' | 'key' | 'text' | 'lock' | 'image' | 'wifi' | 'alert';
+  icon: 'tag' | 'clock' | 'ban' | 'key' | 'text' | 'lock' | 'image' | 'video' | 'wifi' | 'alert';
 }
 
 // ============================================================================

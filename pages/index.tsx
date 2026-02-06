@@ -9,6 +9,7 @@ import { checkAuthCookies, redirectToLogin } from '@/lib/serverAuth';
 import * as Sentry from '@sentry/nextjs';
 import MediaUpload from '../components/MediaUpload';
 import PostComposer from '../components/PostComposer';
+import ReviewPanel from '../components/ReviewPanel';
 import { AppLoader, Skeleton, SubredditRowSkeleton, CardSkeleton } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -21,9 +22,10 @@ import { useQueueJob } from '@/hooks/useQueueJob';
 import { useAuth } from '@/hooks/useAuth';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { captureClientError, addActionBreadcrumb } from '@/lib/clientErrorHandler';
-import type { ValidationIssue } from '@/lib/preflightValidation';
+import type { ValidationIssue, PreflightResult } from '@/lib/preflightValidation';
 import { cn } from '@/lib/utils';
 import type { PerSubredditOverride } from '../components/subreddit-picker';
+import type { PostingQueueHandle } from '../components/PostingQueue';
 
 // Skeleton loader for SubredditFlairPicker
 const SubredditPickerSkeleton = () => (
@@ -63,7 +65,7 @@ const PostingQueue = dynamic(
     loading: () => <QueueSkeleton />,
     ssr: false
   }
-);
+) as React.ComponentType<React.ComponentProps<typeof import('../components/PostingQueue').default> & React.RefAttributes<PostingQueueHandle>>;
 
 const UpgradeModal = dynamic(
   () => import('../components/UpgradeModal'),
@@ -96,6 +98,15 @@ export default function Home() {
   const [mediaResetCounter, setMediaResetCounter] = React.useState(0);
   const [benchResetCounter, setBenchResetCounter] = React.useState(0);
   const [communitiesView, setCommunitiesView] = usePersistentState<'grouped' | 'all'>('rmp_communities_view', 'grouped');
+  const postingQueueRef = React.useRef<PostingQueueHandle>(null);
+  const [isReviewOpen, setIsReviewOpen] = React.useState(false);
+  const [validationState, setValidationState] = React.useState<{
+    canSubmit: boolean;
+    errors: ValidationIssue[];
+    warnings: ValidationIssue[];
+    result: PreflightResult;
+    issuesBySubreddit: Record<string, ValidationIssue[]>;
+  } | null>(null);
 
   // Smooth loader exit: keep AppLoader mounted briefly to fade out
   const [showLoader, setShowLoader] = React.useState(true);
@@ -165,6 +176,11 @@ export default function Home() {
     setBenchResetCounter((prev) => prev + 1);
   }, [clearAllState]);
 
+  const hasTitle = caption.trim().length > 0;
+  const hasDestinations = selectedSubs.length > 0 || postToProfile;
+  const canReview = hasTitle && hasDestinations;
+  const canPost = canReview && (validationState?.canSubmit ?? true);
+
   // Failed posts tracking for inline error display
   const failedPostsHook = useFailedPosts();
 
@@ -209,6 +225,34 @@ export default function Home() {
   const handleQueueValidationChange = React.useCallback((issuesBySubreddit: Record<string, ValidationIssue[]>) => {
     setValidationIssuesBySubreddit(issuesBySubreddit);
   }, []);
+
+  const handleValidationStateChange = React.useCallback((state: {
+    canSubmit: boolean;
+    errors: ValidationIssue[];
+    warnings: ValidationIssue[];
+    result: PreflightResult;
+    issuesBySubreddit: Record<string, ValidationIssue[]>;
+  }) => {
+    setValidationState(state);
+  }, []);
+
+  const handleOpenReview = React.useCallback(() => {
+    setIsReviewOpen(true);
+  }, []);
+
+  const handleCloseReview = React.useCallback(() => {
+    setIsReviewOpen(false);
+  }, []);
+
+  const handlePostNow = React.useCallback(() => {
+    postingQueueRef.current?.triggerPost();
+    setIsReviewOpen(false);
+  }, []);
+
+  const handleResetSelection = React.useCallback(() => {
+    clearSelection();
+    setPostToProfile(false);
+  }, [clearSelection, setPostToProfile]);
 
   // Handle posting results and track failed posts
   const handleResultsAvailable = React.useCallback((
@@ -527,7 +571,7 @@ export default function Home() {
                           setMediaType('image');
                         }}
                         className={cn(
-                          "inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1.5 text-sm font-medium transition-colors",
+                          "inline-flex items-center justify-center whitespace-nowrap rounded px-2.5 py-1 text-xs font-medium transition-colors",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                           mediaType === 'image'
                             ? 'bg-background text-foreground shadow-sm'
@@ -543,7 +587,7 @@ export default function Home() {
                           setMediaType('url');
                         }}
                         className={cn(
-                          "inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1.5 text-sm font-medium transition-colors",
+                          "inline-flex items-center justify-center whitespace-nowrap rounded px-2.5 py-1 text-xs font-medium transition-colors",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                           mediaType === 'url'
                             ? 'bg-background text-foreground shadow-sm'
@@ -698,7 +742,18 @@ export default function Home() {
                     "pt-2 lg:pt-0"
                   )}
                 >
+                  <div className="mb-3 flex items-center gap-2">
+                    <Button
+                      onClick={handleOpenReview}
+                      disabled={!canReview}
+                      className="flex-1 cursor-pointer"
+                      aria-label="Review and post"
+                    >
+                      Review &amp; post
+                    </Button>
+                  </div>
                   <PostingQueue
+                    ref={postingQueueRef}
                     items={items}
                     caption={caption}
                     body={body}
@@ -712,11 +767,35 @@ export default function Home() {
                     onResetMedia={resetMedia}
                     onResultsAvailable={handleResultsAvailable}
                     onValidationChange={handleQueueValidationChange}
+                    onValidationStateChange={handleValidationStateChange}
+                    mode="review-entry"
                   />
                 </section>
               </div>
             </div>
           </main>
+
+          <ReviewPanel
+            open={isReviewOpen}
+            onOpenChange={setIsReviewOpen}
+            title={caption}
+            body={body}
+            mediaType={mediaType}
+            mediaUrl={mediaUrl}
+            mediaFiles={mediaFiles}
+            selectedSubs={selectedSubs}
+            postToProfile={postToProfile}
+            userName={me?.name}
+            flairRequired={flairRequired}
+            flairValue={flairs}
+            flairOptions={flairOptions}
+            titleSuffixes={titleSuffixes}
+            validationResult={validationState?.result}
+            canPost={canPost}
+            onPostNow={handlePostNow}
+            onBack={handleCloseReview}
+            onResetSelection={handleResetSelection}
+          />
 
           {/* Footer */}
           <AppFooter />

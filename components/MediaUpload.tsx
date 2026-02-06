@@ -44,7 +44,7 @@ export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props)
     setTimeout(() => setRejectionError(null), 5000);
   }, [mode]);
 
-  const acceptConfig = React.useMemo(() => {
+  const acceptConfig = React.useMemo((): Record<string, string[]> => {
     if (mode === 'video') {
       return { 'video/*': ['.mp4', '.mov', '.avi', '.webm'] };
     }
