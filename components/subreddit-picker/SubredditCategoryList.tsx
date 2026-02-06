@@ -45,7 +45,7 @@ interface SubredditCategoryListProps {
   customizationEnabled?: boolean;
   onToggle: (name: string) => void;
   onToggleCategory: (categoryName: string) => void;
-  onSelectAllInCategory: (subreddits: string[]) => void;
+  onSelectAllInCategory: (subreddits: string[], isAllSelected: boolean) => void;
   onFlairChange: (name: string, id: string) => void;
   onTitleSuffixChange: (name: string, suffix: string) => void;
   hasMissingFlair: (subreddit: string) => boolean;
@@ -105,6 +105,7 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
         const hasErrors = categoryHasErrors(subreddits);
         const isExpanded = expandedCategories.includes(categoryName);
         const selectedCount = subreddits.filter(s => selected.includes(s)).length;
+        const allSelected = subreddits.length > 0 && selectedCount === subreddits.length;
 
         return (
           <div key={categoryName} className="space-y-3">
@@ -129,18 +130,16 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
                 </span>
               </div>
 
-              {isExpanded && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectAllInCategory(subreddits);
-                  }}
-                  className="text-xs text-primary hover:text-primary/80 font-medium px-2 py-1 rounded-md hover:bg-primary/10 transition-colors cursor-pointer"
-                  aria-label={`Select all subreddits in ${categoryName}`}
-                >
-                  Select All
-                </button>
-              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectAllInCategory(subreddits, allSelected);
+                }}
+                className="text-xs text-primary hover:text-primary/80 font-medium px-2 py-1 rounded-md hover:bg-primary/10 transition-colors cursor-pointer"
+                aria-label={`${allSelected ? 'Unselect' : 'Select'} all subreddits in ${categoryName}`}
+              >
+                {allSelected ? 'Unselect All' : 'Select All'}
+              </button>
             </button>
 
             {isExpanded && (

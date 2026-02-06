@@ -24,8 +24,9 @@ import {
   Loader2,
 } from 'lucide-react';
 import { FailedPost } from '@/hooks/useFailedPosts';
-import { getEditField } from '@/lib/errorClassification';
+import { getEditField, getErrorGuidance } from '@/lib/errorClassification';
 import { FlairOption } from '@/utils/subredditCache';
+import { Textarea } from '@/components/ui/textarea';
 
 // ============================================================================
 // Types
@@ -41,7 +42,7 @@ interface EditFailedPostDialogProps {
   /** Whether flair is required for this subreddit */
   flairRequired?: boolean;
   /** Called when user submits the edit */
-  onSubmit: (post: FailedPost, updates: { flairId?: string; titleSuffix?: string }) => void;
+  onSubmit: (post: FailedPost, updates: { flairId?: string; titleSuffix?: string; customTitle?: string; customBody?: string }) => void;
   /** Called when user cancels */
   onCancel: () => void;
   /** Whether retry is in progress */
@@ -63,6 +64,8 @@ const EditFailedPostDialog: React.FC<EditFailedPostDialogProps> = ({
 }) => {
   const [flairId, setFlairId] = useState<string>(post.flairId || '');
   const [titleSuffix, setTitleSuffix] = useState<string>(post.titleSuffix || '');
+  const [customTitle, setCustomTitle] = useState<string>(post.customTitle ?? post.originalCaption ?? '');
+  const [customBody, setCustomBody] = useState<string>(post.customBody ?? post.originalItem.text ?? '');
 
   // Determine which fields to show based on error
   const editField = getEditField(post.error);
@@ -73,14 +76,22 @@ const EditFailedPostDialog: React.FC<EditFailedPostDialogProps> = ({
   useEffect(() => {
     setFlairId(post.flairId || '');
     setTitleSuffix(post.titleSuffix || '');
+    setCustomTitle(post.customTitle ?? post.originalCaption ?? '');
+    setCustomBody(post.customBody ?? post.originalItem.text ?? '');
   }, [post]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(post, { flairId: flairId || undefined, titleSuffix: titleSuffix || undefined });
+    onSubmit(post, {
+      flairId: flairId || undefined,
+      titleSuffix: titleSuffix || undefined,
+      customTitle: customTitle || undefined,
+      customBody: customBody || undefined,
+    });
   };
 
   const canSubmit = !isRetrying && (!flairRequired || flairId);
+  const guidance = getErrorGuidance(post.error);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -129,6 +140,46 @@ const EditFailedPostDialog: React.FC<EditFailedPostDialogProps> = ({
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Guidance */}
+          <div className="rounded-md bg-secondary/30 border border-border p-3 space-y-2">
+            <div>
+              <p className="text-xs text-muted-foreground">Why this failed</p>
+              <p className="text-sm">{guidance.reason}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">What to do next</p>
+              <ul className="text-sm list-disc list-inside space-y-1">
+                {guidance.steps.map((step, i) => (
+                  <li key={i}>{step}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Title Field */}
+          <div className="space-y-2">
+            <Label htmlFor="custom-title">Title</Label>
+            <Input
+              id="custom-title"
+              value={customTitle}
+              onChange={(e) => setCustomTitle(e.target.value)}
+              placeholder="Edit your title"
+              className="cursor-text"
+            />
+          </div>
+
+          {/* Body/Description Field */}
+          <div className="space-y-2">
+            <Label htmlFor="custom-body">Description</Label>
+            <Textarea
+              id="custom-body"
+              value={customBody}
+              onChange={(e) => setCustomBody(e.target.value)}
+              placeholder="Edit your description"
+              className="min-h-[110px] resize-y"
+            />
           </div>
 
           {/* Flair Field */}

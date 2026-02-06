@@ -34,6 +34,10 @@ export interface SubredditEligibility {
   userIsModerator: boolean;
   restrictPosting: boolean;
   submissionType: 'any' | 'link' | 'self';
+  // Media type allowances
+  allowImages: boolean;
+  allowVideos: boolean;
+  allowGifs: boolean;
 }
 
 export interface FlairOption {
@@ -190,6 +194,10 @@ export async function getSubredditEligibility(
       userIsModerator: subData.user_is_moderator || false,
       restrictPosting: subData.restrict_posting || false,
       submissionType: subData.submission_type || 'any',
+      // Media type allowances - default to true if not specified
+      allowImages: subData.allow_images !== false,
+      allowVideos: subData.allow_videos !== false,
+      allowGifs: subData.allow_videogifs !== false,
     };
   } catch (error) {
     // Return safe defaults if we can't fetch eligibility
@@ -203,6 +211,9 @@ export async function getSubredditEligibility(
       userIsModerator: false,
       restrictPosting: false,
       submissionType: 'any',
+      allowImages: true,
+      allowVideos: true,
+      allowGifs: true,
     };
   }
 }
@@ -238,6 +249,57 @@ export async function listMySubreddits(client: AxiosInstance, maxPages: number =
   return subs.sort((a, b) => a.localeCompare(b));
 }
 
+/**
+ * Wait for Reddit to process an uploaded video file.
+ * Reddit needs time to transcode videos for v.redd.it before the post can be submitted.
+ * This function polls to verify the upload is accessible before proceeding.
+ * 
+ * @param assetId - The Reddit media asset ID returned from the upload lease
+ * @param maxWaitMs - Maximum time to wait for processing (default: 60 seconds)
+ * @param pollIntervalMs - Time between polling attempts (default: 2 seconds)
+ */
+async function waitForVideoProcessing(
+  assetId: string,
+  maxWaitMs: number = 60000,
+  pollIntervalMs: number = 2000
+): Promise<void> {
+  const startTime = Date.now();
+  const mediaUrl = `https://reddit-uploaded-media.s3-accelerate.amazonaws.com/${assetId}`;
+  
+  console.log(`Starting video processing wait for asset: ${assetId}`);
+  
+  while (Date.now() - startTime < maxWaitMs) {
+    try {
+      // Try to verify the video is accessible via HEAD request
+      const response = await fetch(mediaUrl, { method: 'HEAD' });
+      
+      if (response.ok) {
+        const elapsedSec = Math.round((Date.now() - startTime) / 1000);
+        console.log(`Video upload verified accessible after ${elapsedSec}s`);
+        
+        // Additional wait to ensure Reddit's internal processing completes
+        // This accounts for transcoding time that happens after S3 upload
+        console.log('Waiting additional 5s for Reddit transcoding...');
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        console.log('Video processing complete, ready for submission');
+        return;
+      }
+    } catch (e) {
+      // Video not ready yet or network error, continue polling
+      console.log(`Video not ready yet, retrying... (error: ${e instanceof Error ? e.message : 'unknown'})`);
+    }
+    
+    const elapsedSec = Math.round((Date.now() - startTime) / 1000);
+    console.log(`Waiting for video processing... (${elapsedSec}s elapsed)`);
+    await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+  }
+  
+  // Don't throw - video might still work, let the submit attempt proceed
+  // Some videos may take longer but Reddit might still accept them
+  console.warn(`Video processing wait timed out after ${maxWaitMs / 1000}s, attempting submit anyway`);
+}
+
 export async function getFlairs(client: AxiosInstance, subreddit: string): Promise<{ flairs: FlairOption[]; required: boolean }> {
   try {
     // Get subreddit info to check flair requirements
@@ -265,6 +327,10 @@ export async function getFlairs(client: AxiosInstance, subreddit: string): Promi
 }
 
 export async function uploadMedia(client: AxiosInstance, file: File, subreddit: string): Promise<string> {
+  const isVideo = file.type.startsWith('video/');
+  
+  console.log(`Starting ${isVideo ? 'video' : 'image'} upload: ${file.name} (${file.type}, ${Math.round(file.size / 1024)}KB)`);
+  
   // Step 1: Request upload lease
   const leaseForm = new URLSearchParams();
   leaseForm.set('filepath', file.name);
@@ -284,7 +350,6 @@ export async function uploadMedia(client: AxiosInstance, file: File, subreddit: 
   
   // Step 2: Upload file to Reddit's S3
   const uploadForm = new FormData();
-  const fields = leaseData.args.fields;
   
   // Add all the required fields from Reddit in the correct order
   // S3 requires fields to be in a specific order, with 'key' before 'file'
@@ -317,7 +382,17 @@ export async function uploadMedia(client: AxiosInstance, file: File, subreddit: 
     throw new Error(`Failed to upload media to Reddit: ${uploadResponse.status} ${uploadResponse.statusText}`);
   }
   
-  return leaseData.asset.asset_id;
+  const assetId = leaseData.asset.asset_id;
+  console.log(`File uploaded to S3 successfully, asset ID: ${assetId}`);
+  
+  // Step 3: For videos, wait for Reddit to process/transcode the upload
+  // This is critical - Reddit needs time to process videos before submission
+  if (isVideo) {
+    console.log('Video uploaded to S3, waiting for Reddit processing/transcoding...');
+    await waitForVideoProcessing(assetId);
+  }
+  
+  return assetId;
 }
 
 export async function uploadMultipleMedia(client: AxiosInstance, files: File[], subreddit: string): Promise<string[]> {
@@ -416,6 +491,7 @@ export interface SubmitParams {
   flair_id?: string;
   nsfw?: boolean;
   spoiler?: boolean;
+  video_poster_url?: string;
   // For file uploads
   file?: File;
   files?: File[]; // For gallery posts (multiple images)
@@ -475,8 +551,20 @@ export async function submitPost(client: AxiosInstance, params: SubmitParams): P
     if (!mediaAssetId) {
       throw new Error('Media upload failed - no media asset ID available. Please try uploading the file again.');
     }
-    form.set('kind', 'image');
-    form.set('url', `https://reddit-uploaded-media.s3-accelerate.amazonaws.com/${mediaAssetId}`);
+    const sourceFile = params.file ?? params.files?.[0];
+    const mediaKind = params.kind === 'video' && sourceFile?.type === 'image/gif'
+      ? 'videogif'
+      : params.kind;
+    form.set('kind', mediaKind);
+    const mediaUrl = `https://reddit-uploaded-media.s3-accelerate.amazonaws.com/${mediaAssetId}`;
+    form.set('url', mediaUrl);
+    if (mediaKind === 'video' || mediaKind === 'videogif') {
+      form.set('video_poster_url', params.video_poster_url || mediaUrl);
+      // Disable validation on submit for video posts to avoid timing issues
+      // Reddit's video processing may not be fully complete even after our wait
+      form.set('validate_on_submit', 'false');
+      console.log(`Submitting ${mediaKind} post with asset: ${mediaAssetId}`);
+    }
   } else {
     // Fallback
     form.set('kind', 'self');

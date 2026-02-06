@@ -45,6 +45,7 @@ const getEligibilityStatus = (stats: UserStats): 'good' | 'warning' | 'error' =>
 const useMobileStatsVisibility = () => {
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
+  const lastVisible = useRef(true);
   const ticking = useRef(false);
 
   useEffect(() => {
@@ -55,16 +56,21 @@ const useMobileStatsVisibility = () => {
       
       // Only apply scroll-hide on mobile
       if (window.innerWidth >= 768) {
-        setIsVisible(true); // Always visible on desktop/tablet
+        if (!lastVisible.current) {
+          lastVisible.current = true;
+          setIsVisible(true);
+        }
         ticking.current = false;
         return;
       }
 
       // Show when at top or near top
-      if (scrollY < hideThreshold) {
+      if (scrollY < hideThreshold && !lastVisible.current) {
+        lastVisible.current = true;
         setIsVisible(true);
-      } else {
+      } else if (scrollY >= hideThreshold && lastVisible.current) {
         // Hide when scrolled down
+        lastVisible.current = false;
         setIsVisible(false);
       }
       
@@ -82,8 +88,12 @@ const useMobileStatsVisibility = () => {
     // Also handle resize
     const handleResize = () => {
       if (window.innerWidth >= 768) {
-        setIsVisible(true);
-      } else if (window.scrollY < 50) {
+        if (!lastVisible.current) {
+          lastVisible.current = true;
+          setIsVisible(true);
+        }
+      } else if (window.scrollY < 50 && !lastVisible.current) {
+        lastVisible.current = true;
         setIsVisible(true);
       }
     };
@@ -135,10 +145,10 @@ export const MobileUserStatsBanner: React.FC<MobileUserStatsBannerProps> = ({
         // Padding
         "py-1 md:py-1.5",
         // Transition for smooth hide/show
-        "transition-all duration-300 ease-out",
+        "transition-[transform,opacity] duration-300 ease-out will-change-transform transform-gpu",
         "bg-neutral-100 dark:bg-neutral-900",
         // Hide state
-        !isVisible && "opacity-0 -translate-y-full pointer-events-none h-0 py-0 border-0 overflow-hidden",
+        !isVisible && "opacity-0 -translate-y-full pointer-events-none border-transparent",
         isVisible && "opacity-100 translate-y-0",
         className
       )}

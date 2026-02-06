@@ -146,6 +146,17 @@ const ERROR_PATTERNS: Array<{
     icon: 'image',
   },
   
+  // Video not allowed in subreddit
+  {
+    pattern: /NO_VIDEOS|doesn't allow videos|videos are not allowed|community doesn't allow videos/i,
+    code: 'videos_not_allowed',
+    category: 'unfixable',
+    action: 'remove',
+    userMessage: 'Videos not allowed',
+    details: 'This subreddit doesn\'t allow video posts. Try posting as a GIF or image instead.',
+    icon: 'video',
+  },
+
   // Post type not allowed - maybe fixable
   {
     pattern: /only allows.*(image|video|text|link)|post type|not allowed|submissions restricted/i,
@@ -373,5 +384,51 @@ export function getActionLabel(action: ErrorAction): string {
       return 'Retry';
     case 'change_media':
       return 'Fix Media';
+  }
+}
+
+export function getErrorGuidance(error: ClassifiedError): { reason: string; steps: string[] } {
+  switch (error.action) {
+    case 'edit_flair':
+      return {
+        reason: 'This community requires a flair.',
+        steps: ['Pick a flair that matches your post.', 'Retry your post.'],
+      };
+    case 'edit_title':
+      return {
+        reason: 'The title does not meet this community\'s rules.',
+        steps: ['Adjust the title to fit their requirements.', 'Retry your post.'],
+      };
+    case 'edit_content':
+      return {
+        reason: 'The post body is too long or has restricted content.',
+        steps: ['Shorten or edit the body to comply.', 'Retry your post.'],
+      };
+    case 'change_media':
+      return {
+        reason: 'This community does not allow this media type.',
+        steps: ['Try a different post type (link, self, or image).', 'Retry your post.'],
+      };
+    case 'wait_retry':
+      return {
+        reason: 'Reddit is rate-limiting your account.',
+        steps: ['Wait a few minutes.', 'Retry your post.'],
+      };
+    case 'reauth':
+      return {
+        reason: 'Your login session expired.',
+        steps: ['Sign in again, then retry.'],
+      };
+    case 'remove':
+      return {
+        reason: 'This community won’t accept this post from your account.',
+        steps: ['Remove it or try a different community.'],
+      };
+    case 'manual_retry':
+    default:
+      return {
+        reason: 'This looks like a temporary failure.',
+        steps: ['Retry your post.'],
+      };
   }
 }

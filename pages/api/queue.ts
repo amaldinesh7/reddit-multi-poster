@@ -79,6 +79,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     subreddit: string;
     flairId?: string;
     titleSuffix?: string;
+    customTitle?: string;
     kind: string;
     url?: string;
     text?: string;
@@ -232,8 +233,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         subredditRules = undefined;
       }
       
-      // Build title: [prefixes] caption [titleSuffix]
-      let title = addSmartPrefixesToTitle(caption, item.subreddit, prefixes || {}, subredditRules);
+      // Build title: [prefixes] caption/customTitle [titleSuffix]
+      const baseTitle = item.customTitle || caption;
+      let title = addSmartPrefixesToTitle(baseTitle, item.subreddit, prefixes || {}, subredditRules);
       // Append per-subreddit title suffix if provided (e.g., "(f)", "25F", "[OC]")
       if (item.titleSuffix) {
         title = `${title} ${item.titleSuffix}`.trim();

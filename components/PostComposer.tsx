@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { usePersistentState } from '@/hooks/usePersistentState';
 
 interface Props {
   value: string;
@@ -9,10 +10,11 @@ interface Props {
   onBodyChange?: (value: string) => void;
   prefixes: { f: boolean; c: boolean };
   onPrefixesChange: (prefixes: { f: boolean; c: boolean }) => void;
+  resetSignal?: number;
 }
 
-export default function PostComposer({ value, onChange, body, onBodyChange, prefixes, onPrefixesChange }: Props) {
-  const [showBody, setShowBody] = React.useState(false);
+export default function PostComposer({ value, onChange, body, onBodyChange, prefixes, onPrefixesChange, resetSignal }: Props) {
+  const [showBody, setShowBody] = usePersistentState<boolean>('rmp_show_body', false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const count = value.length;
@@ -36,6 +38,12 @@ export default function PostComposer({ value, onChange, body, onBodyChange, pref
       el.style.height = `${Math.max(120, el.scrollHeight)}px`;
     }
   }, [body]);
+
+  useEffect(() => {
+    if (resetSignal !== undefined) {
+      setShowBody(false);
+    }
+  }, [resetSignal, setShowBody]);
 
   const handleChange = (newValue: string) => {
     if (newValue.length <= limit) {

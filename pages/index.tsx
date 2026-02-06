@@ -1,7 +1,7 @@
 import React from 'react';
 import type { GetServerSideProps } from 'next';
 import dynamic from 'next/dynamic';
-import { Settings } from 'lucide-react';
+import { Info, Settings } from 'lucide-react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import axios from 'axios';
@@ -12,12 +12,14 @@ import PostComposer from '../components/PostComposer';
 import { AppLoader, Skeleton, SubredditRowSkeleton, CardSkeleton } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { AppHeader, MobileUserStatsBanner, AppFooter } from '@/components/layout';
 import { useHomePageState } from '@/hooks/useHomePageState';
 import { useFailedPosts, FailedPost } from '@/hooks/useFailedPosts';
 import { useSubredditFlairData } from '@/hooks/useSubredditFlairData';
 import { useQueueJob } from '@/hooks/useQueueJob';
 import { useAuth } from '@/hooks/useAuth';
+import { usePersistentState } from '@/hooks/usePersistentState';
 import { captureClientError, addActionBreadcrumb } from '@/lib/clientErrorHandler';
 import type { ValidationIssue } from '@/lib/preflightValidation';
 import { cn } from '@/lib/utils';
@@ -92,6 +94,8 @@ export default function Home() {
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
   const [mediaResetCounter, setMediaResetCounter] = React.useState(0);
+  const [benchResetCounter, setBenchResetCounter] = React.useState(0);
+  const [communitiesView, setCommunitiesView] = usePersistentState<'grouped' | 'all'>('rmp_communities_view', 'grouped');
 
   // Smooth loader exit: keep AppLoader mounted briefly to fade out
   const [showLoader, setShowLoader] = React.useState(true);
@@ -121,12 +125,13 @@ export default function Home() {
     setMediaUrl,
     mediaFiles,
     setMediaFiles,
-    mediaMode,
-    setMediaMode,
+    mediaType,
+    setMediaType,
     flairs,
     setFlairs,
     titleSuffixes,
     setTitleSuffixes,
+    customTitles,
     contentOverrides,
     setContentOverrides,
     postToProfile,
@@ -144,13 +149,20 @@ export default function Home() {
   const resetMedia = React.useCallback(() => {
     setMediaUrl('');
     setMediaFiles([]);
-    setMediaMode('file');
     setMediaResetCounter((prev) => prev + 1);
-  }, [setMediaUrl, setMediaFiles, setMediaMode]);
+  }, [setMediaUrl, setMediaFiles]);
+
+  // MVP: hide video upload tab and force image mode
+  React.useEffect(() => {
+    if (mediaType !== 'video') return;
+    resetMedia();
+    setMediaType('image');
+  }, [mediaType, resetMedia, setMediaType]);
 
   const handleClearAll = React.useCallback(() => {
     clearAllState();
     setMediaResetCounter((prev) => prev + 1);
+    setBenchResetCounter((prev) => prev + 1);
   }, [clearAllState]);
 
   // Failed posts tracking for inline error display
@@ -276,7 +288,7 @@ export default function Home() {
 
   const handleEditDialogSubmit = React.useCallback(async (
     post: FailedPost, 
-    updates: { flairId?: string; titleSuffix?: string }
+    updates: { flairId?: string; titleSuffix?: string; customTitle?: string; customBody?: string }
   ) => {
     setIsRetryingEdit(true);
     addActionBreadcrumb('Submit edit and retry', { subreddit: post.subreddit, updates });
@@ -285,19 +297,23 @@ export default function Home() {
       // Update the post with new values
       failedPostsHook.updatePost(post.id, updates);
 
+      const effectiveTitle = updates.customTitle ?? post.customTitle ?? post.originalCaption;
+      const effectiveBody = updates.customBody ?? post.customBody ?? post.originalItem.text;
+
       // Submit retry with updated values
       const jobId = await queueJobHook.retryItem(
         {
           subreddit: post.subreddit,
           flairId: updates.flairId || post.flairId,
           titleSuffix: updates.titleSuffix || post.titleSuffix,
+          customTitle: updates.customTitle ?? post.customTitle ?? post.originalItem.customTitle,
           kind: post.kind,
           url: post.url,
-          text: post.text,
+          text: effectiveBody,
           file: post.originalItem.file,
           files: post.originalItem.files,
         },
-        post.originalCaption,
+        effectiveTitle,
         post.originalPrefixes
       );
 
@@ -495,31 +511,45 @@ export default function Home() {
                 {/* Media Section - No card wrapper, flowing layout */}
                 <section className="space-y-4 mb-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-base lg:text-lg font-semibold tracking-tight">Media</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base lg:text-lg font-semibold tracking-tight">Media</h3>
+                      <Tooltip content="Upload videos to Imgur, Redgif, or GIPHY and paste the link in the URL tab.">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-secondary/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground cursor-pointer">
+                          <Info className="h-3 w-3" aria-hidden="true" />
+                          Pro tip
+                        </span>
+                      </Tooltip>
+                    </div>
                     <div className="inline-flex items-center rounded-md bg-secondary/50 p-1 text-muted-foreground">
                       <button
-                        onClick={() => setMediaMode('file')}
+                        onClick={() => {
+                          resetMedia();
+                          setMediaType('image');
+                        }}
                         className={cn(
                           "inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1.5 text-sm font-medium transition-colors",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                          mediaMode === 'file'
+                          mediaType === 'image'
                             ? 'bg-background text-foreground shadow-sm'
                             : 'hover:bg-background/50 hover:text-foreground'
                         )}
-                        aria-pressed={mediaMode === 'file'}
+                        aria-pressed={mediaType === 'image'}
                       >
-                        Upload
+                        Image
                       </button>
                       <button
-                        onClick={() => setMediaMode('url')}
+                        onClick={() => {
+                          resetMedia();
+                          setMediaType('url');
+                        }}
                         className={cn(
                           "inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1.5 text-sm font-medium transition-colors",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                          mediaMode === 'url'
+                          mediaType === 'url'
                             ? 'bg-background text-foreground shadow-sm'
                             : 'hover:bg-background/50 hover:text-foreground'
                         )}
-                        aria-pressed={mediaMode === 'url'}
+                        aria-pressed={mediaType === 'url'}
                       >
                         URL
                       </button>
@@ -528,7 +558,7 @@ export default function Home() {
                   <MediaUpload
                     onUrl={setMediaUrl}
                     onFile={setMediaFiles}
-                    mode={mediaMode}
+                    mode={mediaType}
                     resetSignal={mediaResetCounter}
                   />
                 </section>
@@ -545,6 +575,7 @@ export default function Home() {
                     onBodyChange={setBody}
                     prefixes={prefixes}
                     onPrefixesChange={setPrefixes}
+                    resetSignal={benchResetCounter}
                   />
                 </section>
               </div>
@@ -554,7 +585,7 @@ export default function Home() {
               {/* Right Column: Communities & Queue */}
               <div className="lg:pl-6">
                 {/* Section Header - Desktop only */}
-                <h2 className="text-xl font-semibold tracking-tight hidden lg:block mb-4 lg:mb-6">Where to post</h2>
+                <h2 className="text-xl font-semibold tracking-tight hidden lg:block mb-4 lg:mb-4">Where to post</h2>
 
                 {/* Communities Section */}
                 <section 
@@ -564,16 +595,46 @@ export default function Home() {
                 >
                   <div className="flex items-center justify-between">
                     <h3 className="text-base lg:text-lg font-semibold tracking-tight">Communities</h3>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => router.push('/settings')}
-                      className="h-9 px-3 text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground rounded-md transition-colors hover:bg-secondary"
-                      aria-label="Manage communities and flairs"
-                    >
-                      <Settings className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" />
-                      Manage
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <div className="inline-flex items-center rounded-md bg-secondary/50 p-1 text-muted-foreground">
+                        <button
+                          onClick={() => setCommunitiesView('grouped')}
+                          className={cn(
+                            "inline-flex items-center justify-center whitespace-nowrap rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                            communitiesView === 'grouped'
+                              ? 'bg-background text-foreground shadow-sm'
+                              : 'hover:bg-background/50 hover:text-foreground'
+                          )}
+                          aria-pressed={communitiesView === 'grouped'}
+                        >
+                          Grouped
+                        </button>
+                        <button
+                          onClick={() => setCommunitiesView('all')}
+                          className={cn(
+                            "inline-flex items-center justify-center whitespace-nowrap rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                            communitiesView === 'all'
+                              ? 'bg-background text-foreground shadow-sm'
+                              : 'hover:bg-background/50 hover:text-foreground'
+                          )}
+                          aria-pressed={communitiesView === 'all'}
+                        >
+                          All
+                        </button>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push('/settings')}
+                        className="h-9 px-3 text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground rounded-md transition-colors hover:bg-secondary"
+                        aria-label="Manage communities and flairs"
+                      >
+                        <Settings className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" />
+                        Manage
+                      </Button>
+                    </div>
                   </div>
                   
                   <SubredditFlairPicker
@@ -586,6 +647,8 @@ export default function Home() {
                     onValidationChange={handleValidationChange}
                     showValidationErrors={showValidationErrors}
                     temporarySelectionEnabled={limits.temporarySelectionEnabled ?? true}
+                    resetSignal={benchResetCounter}
+                    viewMode={communitiesView}
                     failedPosts={failedPostsHook.state.posts}
                     onRetryPost={handleRetryPost}
                     onEditPost={handleEditPost}
@@ -595,6 +658,13 @@ export default function Home() {
                     onCustomize={handleCustomize}
                     customizationEnabled={entitlement === 'paid'}
                     userData={me ?? undefined}
+                    onRequestUpgrade={(context) => {
+                      setUpgradeModalContext(context ?? {
+                        title: 'Upgrade to Pro',
+                        message: 'Unlock saving communities and other Pro features.',
+                      });
+                      setShowUpgradeModal(true);
+                    }}
                   />
 
                   {/* Post to Profile - Soft divider */}
@@ -632,6 +702,8 @@ export default function Home() {
                     items={items}
                     caption={caption}
                     body={body}
+                    contentOverrides={contentOverrides}
+                    customTitles={customTitles}
                     prefixes={prefixes}
                     hasFlairErrors={hasFlairErrors}
                     onPostAttempt={handlePostWithLimitCheck}

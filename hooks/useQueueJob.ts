@@ -44,6 +44,7 @@ export interface QueueJobSubmission {
     subreddit: string;
     flairId?: string;
     titleSuffix?: string;
+    customTitle?: string;
     kind: 'self' | 'link' | 'image' | 'video' | 'gallery';
     url?: string;
     text?: string;
@@ -62,6 +63,7 @@ export interface RetryItemInput {
   subreddit: string;
   flairId?: string;
   titleSuffix?: string;
+  customTitle?: string;
   kind: 'self' | 'link' | 'image' | 'video' | 'gallery';
   url?: string;
   text?: string;
@@ -342,6 +344,7 @@ export function useQueueJob(): UseQueueJobReturn {
         subreddit: item.subreddit,
         flairId: item.flairId,
         titleSuffix: item.titleSuffix,
+        customTitle: item.customTitle,
         kind: item.kind,
         url: item.url,
         text: item.text,

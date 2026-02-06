@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 interface Props {
   onUrl: (url: string) => void;
   onFile: (files: File[]) => void;
-  mode: 'file' | 'url';
+  mode: 'image' | 'video' | 'url';
   resetSignal?: number;
 }
 
@@ -27,9 +27,9 @@ export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props)
         if (error.code === 'file-too-large') {
           errors.push('Too large. Max 25MB per file.');
         } else if (error.code === 'too-many-files') {
-          errors.push('Limit is 10 files. Remove some to add more.');
+          errors.push(mode === 'video' ? 'Only 1 video allowed.' : 'Limit is 10 files. Remove some to add more.');
         } else if (error.code === 'file-invalid-type') {
-          errors.push('File type not supported. Use images or videos.');
+          errors.push(mode === 'video' ? 'Only video files allowed.' : 'Only image files allowed.');
         } else {
           errors.push(error.message);
         }
@@ -42,23 +42,32 @@ export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props)
     
     // Auto-clear error after 5 seconds
     setTimeout(() => setRejectionError(null), 5000);
-  }, []);
+  }, [mode]);
+
+  const acceptConfig = React.useMemo(() => {
+    if (mode === 'video') {
+      return { 'video/*': ['.mp4', '.mov', '.avi', '.webm'] };
+    }
+    return { 'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'] };
+  }, [mode]);
+
+  const maxFiles = mode === 'video' ? 1 : 10;
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
-      'video/*': ['.mp4', '.mov', '.avi', '.webm']
-    },
-    multiple: true,
-    maxFiles: 10,
+    accept: acceptConfig,
+    multiple: mode !== 'video',
+    maxFiles,
     maxSize: 25 * 1024 * 1024, // 25MB
-    onDrop: (acceptedFiles) => {
+    onDrop: (acceptedFiles, fileRejections) => {
       setRejectionError(null);
+      if (fileRejections.length > 0) {
+        handleDropRejected(fileRejections);
+        return;
+      }
       if (acceptedFiles.length > 0) {
         handleFilesSelect(acceptedFiles);
       }
     },
-    onDropRejected: handleDropRejected,
   });
 
   const handleFilesSelect = (files: File[]) => {
@@ -120,7 +129,7 @@ export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props)
 
   return (
     <div>
-      {mode === 'file' ? (
+      {mode !== 'url' ? (
         <div>
           {/* Drop Zone */}
           <div
@@ -177,19 +186,27 @@ export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props)
               <div>
                 <Upload className={`w-10 h-10 mx-auto mb-3 ${isDragActive ? 'text-primary' : 'text-muted-foreground'}`} />
                 <p className="font-medium mb-1">
-                  {isDragActive ? 'Drop here' : 'Drop images or videos here'}
+                  {isDragActive ? 'Drop here' : mode === 'video' ? 'Drop a video here' : 'Drop images here'}
                 </p>
                 <p className="text-sm text-muted-foreground mb-3">
                   or click to choose
                 </p>
                 <div className="flex justify-center gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Image className="w-3 h-3" /> Images
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Video className="w-3 h-3" /> Videos
-                  </span>
-                  <span>Up to 10 files, 25MB each</span>
+                  {mode === 'video' ? (
+                    <>
+                      <span className="flex items-center gap-1">
+                        <Video className="w-3 h-3" /> Video only
+                      </span>
+                      <span>1 file, 25MB max</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="flex items-center gap-1">
+                        <Image className="w-3 h-3" /> Images only
+                      </span>
+                      <span>Up to 10 files, 25MB each</span>
+                    </>
+                  )}
                 </div>
               </div>
             )}

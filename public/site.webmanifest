@@ -3,6 +3,7 @@
   "short_name": "MultiPost",
   "description": "Post to multiple Reddit communities with a single click. Share once, reach everywhere.",
   "start_url": "/",
+  "id": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
