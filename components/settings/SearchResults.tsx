@@ -3,13 +3,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X, Users, ExternalLink } from 'lucide-react';
 import { Category } from './types';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { NativeSelect } from '@/components/ui/native-select';
 
 interface SearchResult {
   name: string;
@@ -103,25 +97,19 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 
                 {categories.length > 0 && (
                   <div className="flex-shrink-0 ml-4">
-                    <Select
+                    <NativeSelect
                       value=""
                       onValueChange={(value) => handleAdd(value, subreddit.name)}
                       disabled={addingSub === subreddit.name}
-                    >
-                      <SelectTrigger
-                        className="h-8 w-[110px] text-[11px] font-medium bg-secondary/50 border-border/50 hover:bg-secondary transition-colors cursor-pointer"
-                        aria-label={`Add r/${subreddit.name} to list`}
-                      >
-                        <SelectValue placeholder={addingSub === subreddit.name ? "Adding..." : "Add to list"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id} className="text-xs">
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder={addingSub === subreddit.name ? "Adding..." : "Add to list"}
+                      options={categories.map((category) => ({
+                        value: category.id,
+                        label: category.name,
+                      }))}
+                      className="w-[110px]"
+                      triggerClassName="h-8 text-[11px] font-medium bg-secondary/50 border-border/50 hover:bg-secondary transition-colors cursor-pointer"
+                      aria-label={`Add r/${subreddit.name} to list`}
+                    />
                   </div>
                 )}
               </div>

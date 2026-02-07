@@ -3,13 +3,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { NativeSelect } from '@/components/ui/native-select';
 import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
@@ -503,50 +497,39 @@ const SubredditRow = React.memo(({
         >
             {/* Flair Dropdown - Only show when there are flair options */}
             {flairOptions.length > 0 && (
-              <Select
-                value={flairValue || '__none__'}
-                onValueChange={(value) => onFlairChange(name, value === '__none__' ? '' : value)}
-              >
-                <SelectTrigger
-                  className={`h-9 sm:h-8 flex-1 w-full min-w-[100px] sm:max-w-[140px] text-xs cursor-pointer flex-shrink-0 font-medium ${hasError
-                    ? 'border-red-500 bg-red-500/10 text-red-400'
-                    : 'bg-secondary/80 hover:bg-secondary'
-                    }`}
-                  aria-label={`Pick flair for r/${name}`}
-                >
-                  <SelectValue placeholder={flairRequired ? 'Flair (req)' : 'Flair'} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">{flairRequired ? 'Flair (required)' : 'Flair'}</SelectItem>
-                  {flairOptions.map((f) => (
-                    <SelectItem key={f.id} value={f.id}>{f.text || '—'}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <NativeSelect
+                value={flairValue || ''}
+                onValueChange={(value) => onFlairChange(name, value)}
+                placeholder={flairRequired ? 'Flair (required)' : 'Flair'}
+                options={flairOptions.map((f) => ({
+                  value: f.id,
+                  label: f.text || '—',
+                }))}
+                className="flex-1 min-w-[100px] sm:max-w-[140px] flex-shrink-0"
+                triggerClassName={`h-9 sm:h-8 text-xs font-medium ${hasError
+                  ? 'border-red-500 bg-red-500/10 text-red-400'
+                  : 'bg-secondary/80 hover:bg-secondary'
+                }`}
+                aria-label={`Pick flair for r/${name}`}
+              />
             )}
 
             {/* Title Suffix - Only show when required strings exist */}
             {showTagControls && (
               <>
                 {!showCustomInput ? (
-                  <Select
-                    value={isCustomSuffix ? '__custom__' : (titleSuffix || '__none__')}
+                  <NativeSelect
+                    value={isCustomSuffix ? '__custom__' : (titleSuffix || '')}
                     onValueChange={handleSuffixSelectChange}
-                  >
-                    <SelectTrigger
-                      className="h-9 sm:h-8 flex-1 w-full min-w-[90px] sm:min-w-[80px] text-xs cursor-pointer flex-shrink-0 font-medium bg-secondary/80 hover:bg-secondary"
-                      aria-label={`Title tag for r/${name}`}
-                    >
-                      <SelectValue placeholder="Title tag" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Title tag</SelectItem>
-                      {suffixOptions.map((opt) => (
-                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                      ))}
-                      <SelectItem value="__custom__">Custom tag…</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    placeholder="Title tag"
+                    options={[
+                      ...suffixOptions.map((opt) => ({ value: opt, label: opt })),
+                      { value: '__custom__', label: 'Custom tag…' },
+                    ]}
+                    className="flex-1 min-w-[90px] sm:min-w-[80px] flex-shrink-0"
+                    triggerClassName="h-9 sm:h-8 text-xs font-medium bg-secondary/80 hover:bg-secondary"
+                    aria-label={`Title tag for r/${name}`}
+                  />
                 ) : (
                   <div className="flex items-center gap-1 flex-shrink-0 flex-1">
                     <Input

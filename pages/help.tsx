@@ -426,7 +426,7 @@ const HelpPage: React.FC = () => {
         <div className="app-container max-w-4xl py-6">
           <div className="w-full">
             {/* Tab selector - using brand colors */}
-            <div className="grid grid-cols-3 h-12 items-center justify-center rounded-xl bg-secondary/50 p-1.5 text-muted-foreground backdrop-blur-sm border border-border/50 w-full">
+            <div className="grid grid-cols-2 h-12 items-center justify-center rounded-xl bg-secondary/50 p-1.5 text-muted-foreground backdrop-blur-sm border border-border/50 w-full">
               <TabButton
                 value="faq"
                 activeTab={activeTab}
@@ -442,13 +442,14 @@ const HelpPage: React.FC = () => {
                 label="Feature Requests"
                 shortLabel="Features"
               />
-              <TabButton
+              {/* Bugs tab hidden for now */}
+              {/* <TabButton
                 value="bugs"
                 activeTab={activeTab}
                 onClick={handleTabChange}
                 icon={<Bug className="w-4 h-4" />}
                 label="Bugs"
-              />
+              /> */}
             </div>
 
             {/* Content area */}

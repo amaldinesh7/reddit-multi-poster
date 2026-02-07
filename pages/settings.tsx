@@ -375,8 +375,8 @@ export default function Settings() {
                   <FolderPlus className="w-4 h-4 mr-2" />
                   New list
                 </Button>
-                {/* Dev-only: Load NSFW subreddits */}
-                {isDev && (
+                {/* Dev-only: Load NSFW subreddits - hidden for now */}
+                {/* {isDev && (
                   <Button
                     onClick={handleLoadDevSubreddits}
                     disabled={isLoadingDev}
@@ -391,7 +391,7 @@ export default function Settings() {
                     )}
                     {isLoadingDev ? 'Loading...' : 'Load 20 NSFW (Dev)'}
                   </Button>
-                )}
+                )} */}
                 <Button
                   variant="ghost"
                   size="sm"

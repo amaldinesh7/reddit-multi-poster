@@ -9,13 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { NativeSelect } from '@/components/ui/native-select';
 import {
   AlertTriangle,
   Tag,
@@ -199,27 +193,21 @@ const EditFailedPostDialog: React.FC<EditFailedPostDialogProps> = ({
                   Loading flairs...
                 </div>
               ) : flairOptions.length > 0 ? (
-                <Select value={flairId} onValueChange={setFlairId}>
-                  <SelectTrigger id="flair-select" className="cursor-pointer">
-                    <SelectValue placeholder="Select a flair" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {!flairRequired && (
-                      <SelectItem value="_none" className="cursor-pointer">
-                        <span className="text-muted-foreground">No flair</span>
-                      </SelectItem>
-                    )}
-                    {flairOptions.map((flair) => (
-                      <SelectItem
-                        key={flair.id}
-                        value={flair.id}
-                        className="cursor-pointer"
-                      >
-                        {flair.text}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <NativeSelect
+                  value={flairId}
+                  onValueChange={setFlairId}
+                  placeholder="Select a flair"
+                  options={[
+                    ...(!flairRequired ? [{ value: '_none', label: 'No flair' }] : []),
+                    ...flairOptions.map((flair) => ({
+                      value: flair.id,
+                      label: flair.text || '—',
+                    })),
+                  ]}
+                  className="w-full"
+                  triggerClassName="cursor-pointer"
+                  aria-label="Select a flair"
+                />
               ) : (
                 <p className="text-sm text-muted-foreground py-2">
                   No flairs available for this subreddit
