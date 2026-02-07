@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
-import { LogOut, ExternalLink } from 'lucide-react';
+import { LogOut, ExternalLink, Shield } from 'lucide-react';
 import { House, GearSix, Question, UserCircle } from 'phosphor-react';
 import { Avatar } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
@@ -60,6 +60,22 @@ const MobileBottomNav: React.FC = () => {
     checkAdmin();
   }, [me?.name]);
 
+  const schedulePrefetch = useCallback((href: string) => {
+    if (typeof window === 'undefined') return;
+    const run = () => router.prefetch(href).catch(() => {});
+    if ('requestIdleCallback' in window) {
+      (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout?: number }) => void }).requestIdleCallback(run, { timeout: 1200 });
+    } else {
+      setTimeout(run, 250);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    schedulePrefetch('/');
+    schedulePrefetch('/settings');
+    schedulePrefetch('/help');
+  }, [schedulePrefetch]);
+
   // Don't render on unauthenticated or loading states, or on excluded routes
   if (!isAuthenticated || isLoading || shouldHideNav(router.pathname)) {
     return null;
@@ -84,6 +100,11 @@ const MobileBottomNav: React.FC = () => {
       '_blank',
       'noopener,noreferrer'
     );
+  };
+
+  const handleAdminPanel = () => {
+    setProfileOpen(false);
+    router.push('/admin');
   };
 
   const tabs: NavTab[] = [
@@ -125,7 +146,6 @@ const MobileBottomNav: React.FC = () => {
       ),
       href: '/help',
       matchPaths: ['/help'],
-      adminOnly: true,
     },
     {
       id: 'profile',
@@ -177,7 +197,6 @@ const MobileBottomNav: React.FC = () => {
       "text-[10px] font-medium leading-none",
       active ? "text-foreground" : "text-muted-foreground"
     );
-
 
   return (
     <>
@@ -272,6 +291,18 @@ const MobileBottomNav: React.FC = () => {
                 <ExternalLink className="w-4 h-4 text-muted-foreground" />
                 View Reddit Profile
               </button>
+
+              {/* Admin Panel - Only for admins */}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleAdminPanel}
+                  className="flex items-center gap-3 w-full py-3 px-1 rounded-lg text-sm font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer active:opacity-70"
+                >
+                  <Shield className="w-4 h-4 text-muted-foreground" />
+                  Admin Panel
+                </button>
+              )}
 
               {/* Logout */}
               <button

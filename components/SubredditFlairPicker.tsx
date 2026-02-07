@@ -82,7 +82,10 @@ const SubredditFlairPicker: React.FC<Props> = ({
   userData,
   onRequestUpgrade,
 }) => {
+  const [query, setQuery] = React.useState('');
+  const [expandedCategories, setExpandedCategories] = usePersistentState<string[]>('rmp_expanded_categories', []);
   const { entitlement } = useAuthContext();
+
   const {
     allSubreddits,
     categorizedSubreddits,
@@ -96,10 +99,10 @@ const SubredditFlairPicker: React.FC<Props> = ({
     reloadSelectedData,
     isReloading,
     addSubreddit,
-  } = useSubredditFlairData();
-
-  const [query, setQuery] = React.useState('');
-  const [expandedCategories, setExpandedCategories] = usePersistentState<string[]>('rmp_expanded_categories', []);
+  } = useSubredditFlairData({
+    eagerSubreddits: selected,
+    loadAllOnMount: false,
+  });
 
   // Search & Temporary State
   const [temporarySubreddits, setTemporarySubreddits] = usePersistentState<string[]>('rmp_temporary_subreddits', []);

@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { ChevronDown, ChevronRight, AlertTriangle, Settings } from 'lucide-react';
 import SubredditRow, { SubredditRules } from './SubredditRow';
 import { PostRequirements, SubredditEligibility, RedditUser } from '@/utils/reddit';
@@ -88,13 +89,13 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
     return (
       <div className="px-4 py-8 text-center text-muted-foreground">
         <p className="text-sm">No communities added yet.</p>
-        <a
+        <Link
           href="/settings"
           className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 text-sm font-medium rounded-md bg-primary text-white hover:bg-primary/90 transition-colors cursor-pointer"
         >
           <Settings className="h-4 w-4" />
           Go to Settings
-        </a>
+        </Link>
       </div>
     );
   }

@@ -9,7 +9,6 @@ import { checkAuthCookies, redirectToLogin } from '@/lib/serverAuth';
 import * as Sentry from '@sentry/nextjs';
 import MediaUpload from '../components/MediaUpload';
 import PostComposer from '../components/PostComposer';
-import ReviewPanel from '../components/ReviewPanel';
 import { AppLoader, Skeleton, SubredditRowSkeleton, CardSkeleton } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -75,6 +74,11 @@ const PostingQueue = dynamic(
 
 const UpgradeModal = dynamic(
   () => import('../components/UpgradeModal'),
+  { ssr: false }
+);
+
+const ReviewPanel = dynamic(
+  () => import('../components/ReviewPanel'),
   { ssr: false }
 );
 
