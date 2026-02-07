@@ -69,6 +69,7 @@ export default function Settings() {
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [newlyCreatedCategoryId, setNewlyCreatedCategoryId] = React.useState<string | null>(null);
 
   // Use limits from auth (for paid users, maxSubreddits is MAX_SAFE_INTEGER)
   const maxSubreddits = limits.maxSubreddits;
@@ -174,11 +175,23 @@ export default function Settings() {
       ? availableNames[0]
       : `Category ${data.categories.length + 1}`;
 
-    await createCategory(categoryName);
+    const newCategory = await createCategory(categoryName);
+    
+    // Track the newly created category to auto-enable edit mode
+    if (newCategory) {
+      setNewlyCreatedCategoryId(newCategory.id);
+    }
     
     // Track category creation for feature discovery analytics
     trackEvent('category_created', { category_name: categoryName });
   };
+  
+  // Clear newly created category tracking after it has been rendered (for edit mode)
+  const handleClearNewlyCreated = React.useCallback((categoryId: string) => {
+    if (newlyCreatedCategoryId === categoryId) {
+      setNewlyCreatedCategoryId(null);
+    }
+  }, [newlyCreatedCategoryId]);
 
   // Search subreddits
   const searchSubreddits = async () => {
@@ -326,6 +339,8 @@ export default function Settings() {
       loading: cacheLoading,
       errors: cacheErrors,
       dragOverCategoryId,
+      newlyCreatedCategoryId,
+      onClearNewlyCreated: handleClearNewlyCreated,
     }}>
       <>
         <Head>

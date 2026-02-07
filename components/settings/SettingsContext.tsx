@@ -11,6 +11,8 @@ export const SettingsContext = React.createContext<SettingsContextType>({
   loading: {},
   errors: {},
   dragOverCategoryId: null,
+  newlyCreatedCategoryId: null,
+  onClearNewlyCreated: () => {},
 });
 
 export const useSettingsContext = () => React.useContext(SettingsContext);

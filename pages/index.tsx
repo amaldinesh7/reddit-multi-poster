@@ -866,6 +866,7 @@ export default function Home() {
             flairValue={flairs}
             flairOptions={flairOptions}
             titleSuffixes={titleSuffixes}
+            contentOverrides={contentOverrides}
             canPost={canPost}
             onPostNow={handlePostNow}
             onResetSelection={handleResetSelection}

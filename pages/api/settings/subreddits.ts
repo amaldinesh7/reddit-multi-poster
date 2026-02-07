@@ -105,6 +105,33 @@ export default async function handler(
         // Clean subreddit name (remove r/ prefix if present)
         const cleanName = subreddit_name.trim().replace(/^r\//, '');
 
+        // Check if subreddit already exists in any of the user's categories
+        const { data: userCategoryIdsForDupeCheck } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('user_id', userId);
+        
+        const userCatIds = (userCategoryIdsForDupeCheck || []).map((c) => c.id);
+        if (userCatIds.length > 0) {
+          const { data: existingSub } = await supabase
+            .from('user_subreddits')
+            .select('id, subreddit_name, category_id')
+            .in('category_id', userCatIds)
+            .ilike('subreddit_name', cleanName)
+            .limit(1)
+            .single();
+
+          if (existingSub) {
+            return res.status(409).json({
+              success: false,
+              error: {
+                code: 'DUPLICATE_SUBREDDIT',
+                message: `r/${cleanName} is already in your lists`,
+              },
+            });
+          }
+        }
+
         const { data: subreddit, error } = await supabase
           .from('user_subreddits')
           .insert({

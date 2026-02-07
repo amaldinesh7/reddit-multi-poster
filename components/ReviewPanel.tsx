@@ -2,8 +2,13 @@ import React from 'react';
 import { Drawer, DrawerContent, DrawerTitle, DrawerClose } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Link as LinkIcon } from 'lucide-react';
+import { Link as LinkIcon, Pencil } from 'lucide-react';
 import { X } from 'lucide-react';
+
+interface PerSubredditOverride {
+  title?: string;
+  body?: string;
+}
 
 interface ReviewPanelProps {
   open: boolean;
@@ -19,6 +24,7 @@ interface ReviewPanelProps {
   flairValue: Record<string, string | undefined>;
   flairOptions: Record<string, { id: string; text: string }[]>;
   titleSuffixes: Record<string, string | undefined>;
+  contentOverrides?: Record<string, PerSubredditOverride>;
   canPost: boolean;
   onPostNow: () => void;
   onResetSelection: () => void;
@@ -38,6 +44,7 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({
   flairValue,
   flairOptions,
   titleSuffixes,
+  contentOverrides,
   canPost,
   onPostNow,
   onResetSelection,
@@ -140,11 +147,18 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({
                       : undefined;
                     const titleTag = !isProfile ? titleSuffixes[subredditKey] : undefined;
                     const flairMissing = !isProfile && flairRequired[subredditKey] && !flairValue[subredditKey];
+                    const hasCustomContent = !isProfile && contentOverrides?.[subredditKey] && 
+                      (contentOverrides[subredditKey].title || contentOverrides[subredditKey].body);
 
                     return (
                       <div key={target} className="flex items-center justify-between gap-2 py-1.5">
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex items-center gap-1.5">
                           <div className="text-sm font-medium truncate">{target}</div>
+                          {hasCustomContent && (
+                            <span title="Custom content applied">
+                              <Pencil className="h-3 w-3 text-muted-foreground/60 flex-shrink-0" />
+                            </span>
+                          )}
                         </div>
                         <div className="flex flex-wrap gap-1.5 justify-end">
                           {flairMissing && (

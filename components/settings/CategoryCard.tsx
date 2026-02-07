@@ -30,8 +30,17 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   const [editingCategory, setEditingCategory] = React.useState(false);
   const [newSubredditName, setNewSubredditName] = React.useState('');
   const [isAddingSubreddit, setIsAddingSubreddit] = React.useState(false);
-  const { addSubreddit, updateCategory, deleteCategory, fetchAndCache, dragOverCategoryId } = useSettingsContext();
+  const { addSubreddit, updateCategory, deleteCategory, fetchAndCache, dragOverCategoryId, newlyCreatedCategoryId, onClearNewlyCreated } = useSettingsContext();
   const confirmDialog = useConfirmDialog();
+  
+  // Auto-enable edit mode for newly created categories
+  React.useEffect(() => {
+    if (newlyCreatedCategoryId === category.id) {
+      setEditingCategory(true);
+      // Clear the tracking after enabling edit mode
+      onClearNewlyCreated(category.id);
+    }
+  }, [newlyCreatedCategoryId, category.id, onClearNewlyCreated]);
 
   // Make category a drop zone for subreddits
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
