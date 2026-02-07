@@ -9,6 +9,7 @@ import * as Sentry from '@sentry/nextjs';
 import { getUserId } from '../../../lib/apiAuth';
 import { getEntitlement } from '../../../lib/entitlement';
 import { addApiBreadcrumb } from '../../../lib/apiErrorHandler';
+import { trackServerEvent } from '../../../lib/posthog-server';
 
 const DODO_BASE_URL =
   process.env.DODO_PAYMENTS_ENVIRONMENT === 'live_mode'
@@ -90,6 +91,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     addApiBreadcrumb('Checkout session created', {});
+    
+    // Track checkout started for funnel analytics
+    trackServerEvent(userId, 'checkout_started', {
+      plan: 'pro',
+      amount: 199,
+      currency: 'INR',
+    });
+    
     return res.status(200).json({ 
       checkout_url: checkoutUrl,
       session_id: sessionId,

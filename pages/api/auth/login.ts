@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getAuthUrl } from '../../../utils/reddit';
 import { serialize } from 'cookie';
 import { applyRateLimit, authRateLimit } from '../../../lib/rateLimit';
+import { trackServerEvent, flushPostHogServer } from '../../../lib/posthog-server';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -23,6 +24,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     secure: isProduction // Secure cookies in production (HTTPS), allow HTTP in development
   }));
   
-  // console.log('Login debug - setting state:', state); // Debug message removed
+  // Track OAuth initiation (use state as anonymous distinct ID)
+  // This will be aliased to the real user ID in callback.ts
+  trackServerEvent(state, 'oauth_started', { source: 'login_api' });
+  
+  // Flush PostHog events before redirecting to ensure they're sent
+  await flushPostHogServer();
+  
   res.redirect(302, redirect);
 } 

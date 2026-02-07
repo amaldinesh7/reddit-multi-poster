@@ -7,7 +7,8 @@ import {
   formatFileSize,
 } from '../../lib/queueLimits';
 import { getUserId } from '../../lib/apiAuth';
-import { logPostAttempt, classifyPostError } from '../../lib/supabase';
+import { logPostAttempt, classifyPostError, isUserFirstPost } from '../../lib/supabase';
+import { trackServerEvent, flushPostHogServer } from '../../lib/posthog-server';
 import { addApiBreadcrumb } from '../../lib/apiErrorHandler';
 import formidable from 'formidable';
 import fs from 'fs';
@@ -196,10 +197,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   
   // Get user ID for analytics logging (non-blocking)
   let userId: string | null = null;
+  let isFirstPost = false;
   try {
     userId = await getUserId(req, res);
     if (userId) {
       Sentry.setUser({ id: userId });
+      // Check if this is the user's first post (for activation tracking)
+      isFirstPost = await isUserFirstPost(userId);
     }
   } catch {
     // Don't block posting if user ID lookup fails
@@ -219,6 +223,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Send initial message to establish connection
     write({ status: 'started', total: items.length });
+    
+    // Track post submitted for engagement analytics
+    if (userId) {
+      // Determine if media is being uploaded
+      const sharedFileCountField = Array.isArray(fields.sharedFileCount) 
+        ? fields.sharedFileCount[0] 
+        : fields.sharedFileCount;
+      const sharedFileCount = sharedFileCountField ? parseInt(sharedFileCountField as string) : 0;
+      const hasMedia = sharedFileCount > 0 || Object.keys(files).length > 0;
+      
+      trackServerEvent(userId, 'post_submitted', {
+        subreddit_count: items.length,
+        post_kind: items[0]?.kind || 'unknown',
+      });
+      
+      // Track media upload if files were included
+      if (hasMedia) {
+        const mediaType = items[0]?.kind === 'video' ? 'video' : 
+                         sharedFileCount > 1 ? 'gallery' : 'image';
+        trackServerEvent(userId, 'media_uploaded', {
+          media_type: mediaType,
+          file_count: sharedFileCount || Object.keys(files).length,
+        });
+      }
+    }
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
@@ -341,6 +370,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             reddit_post_url: result.url || null,
             status: 'success',
           }).catch(() => {}); // Fire and forget
+          
+          // Track post success for engagement analytics
+          trackServerEvent(userId, 'post_success', {
+            post_kind: postKind,
+          });
+          
+          // Track first post for activation funnel (only on first successful post in batch)
+          if (isFirstPost) {
+            trackServerEvent(userId, 'first_post_created', {
+              subreddit_count: items.length,
+              post_kind: postKind,
+            });
+            isFirstPost = false; // Only track once per batch
+          }
         }
         
         write({ 
@@ -374,13 +417,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         // Log error for analytics (non-blocking, privacy-first)
         if (userId) {
+          const errorCategory = classifyPostError(msg);
           logPostAttempt({
             user_id: userId,
             subreddit_name: item.subreddit,
             post_kind: item.kind,
             status: 'error',
-            error_code: classifyPostError(msg),
+            error_code: errorCategory,
           }).catch(() => {}); // Fire and forget
+          
+          // Track post failure for engagement analytics
+          trackServerEvent(userId, 'post_failed', {
+            post_kind: item.kind,
+            error_category: errorCategory,
+          });
         }
         
         write({ index: i, status: 'error', subreddit: item.subreddit, error: msg });
@@ -397,6 +447,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Send completion message
     write({ status: 'completed' });
+    
+    // Flush PostHog events before ending response to ensure they're sent
+    await flushPostHogServer();
+    
     res.end();
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Error';

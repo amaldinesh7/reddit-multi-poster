@@ -109,6 +109,31 @@ export interface PostLog {
 }
 
 /**
+ * Check if a user has any successful posts.
+ * Used to determine if this is their first post (for activation tracking).
+ */
+export async function isUserFirstPost(userId: string): Promise<boolean> {
+  try {
+    const client = createServerSupabaseClient();
+    const { count, error } = await client
+      .from('post_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'success');
+
+    if (error) {
+      console.error('Failed to check user post history:', error);
+      return false; // Assume not first post on error
+    }
+
+    return count === 0;
+  } catch (err) {
+    console.error('Error checking user post history:', err);
+    return false;
+  }
+}
+
+/**
  * Log a post attempt for analytics (privacy-first).
  * Only stores metadata - no user content (images, text, URLs).
  */

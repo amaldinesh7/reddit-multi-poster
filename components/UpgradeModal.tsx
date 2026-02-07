@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from './ui/button';
 import { X, Crown, Zap, Infinity as InfinityIcon, Check, Loader2 } from 'lucide-react';
+import { trackEvent } from '@/lib/posthog';
 
 interface UpgradeModalProps {
   open: boolean;
@@ -32,17 +33,21 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [open, onOpenChange]);
 
-  // Prevent body scroll when open
+  // Prevent body scroll when open and track modal open event
   React.useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden';
+      // Track upgrade modal opened for funnel analytics
+      trackEvent('upgrade_modal_opened', {
+        source: context?.title || 'direct',
+      });
     } else {
       document.body.style.overflow = '';
     }
     return () => {
       document.body.style.overflow = '';
     };
-  }, [open]);
+  }, [open, context?.title]);
 
   if (!open) return null;
 
@@ -160,7 +165,13 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
         {/* Actions */}
         <div className="px-6 pb-6 space-y-3">
           <Button
-            onClick={onUpgrade}
+            onClick={() => {
+              // Track upgrade button click for funnel analytics
+              trackEvent('upgrade_clicked', {
+                source: context?.title || 'upgrade_modal',
+              });
+              onUpgrade();
+            }}
             disabled={upgradeLoading}
             className="w-full h-12 text-base font-semibold bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-purple-500/25 cursor-pointer transition-all hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98]"
           >

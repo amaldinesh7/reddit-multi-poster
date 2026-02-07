@@ -93,8 +93,8 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[60dvh] w-full">
-        <div className="flex h-full flex-col">
+      <DrawerContent className="h-[80dvh] max-h-[80dvh] w-full">
+        <div className="flex h-full min-h-0 flex-col">
           <div className="flex justify-center pt-3 pb-1">
             <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
           </div>
@@ -108,7 +108,7 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 py-3 sm:px-8 sm:py-4 space-y-4 max-h-[calc(60dvh-120px)]">
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 sm:px-8 sm:py-4 space-y-4">
             <div className="max-w-3xl mx-auto w-full space-y-4">
               <section className="space-y-2 border-b border-border/40 pb-3">
                 {mediaUrl && (
@@ -169,7 +169,7 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({
             </div>
           </div>
 
-          <div className="border-t border-border/40 px-4 py-3 sm:px-8 sm:py-4 bg-background/95 sticky bottom-0">
+          <div className="shrink-0 border-t border-border/40 px-4 py-3 sm:px-8 sm:py-4 bg-background/95">
             <div className="max-w-3xl mx-auto w-full">
               <div className="flex items-center gap-2">
                 <Button

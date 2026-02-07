@@ -12,6 +12,7 @@ import { useSettingsDnd } from '../hooks/useSettingsDnd';
 import { searchSubreddits as searchSubredditsAPI } from '../lib/api/reddit';
 import UpgradeModal from '../components/UpgradeModal';
 import { AppHeader } from '@/components/layout';
+import { trackEvent } from '@/lib/posthog';
 
 import {
   DndContext,
@@ -99,6 +100,13 @@ export default function Settings() {
     }
   }, [authLoading, isAuthenticated, router]);
 
+  // Track settings page visit for feature discovery analytics
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      trackEvent('settings_visited', { source: 'navigation' });
+    }
+  }, [isAuthenticated]);
+
   // Check admin status (non-blocking)
   React.useEffect(() => {
     if (!isAuthenticated) return;
@@ -123,6 +131,11 @@ export default function Settings() {
   const addSubredditWithLimitCheck = React.useCallback(async (categoryId: string, subredditName: string) => {
     // Check if free user is at limit
     if (entitlement === 'free' && currentSubredditCount >= maxSubreddits) {
+      // Track free limit reached for funnel analytics
+      trackEvent('free_limit_reached', {
+        source: 'settings_add_subreddit',
+        subreddit_count: currentSubredditCount,
+      });
       setUpgradeModalContext({
         title: 'Free limit reached',
         message: `You've reached the free limit of ${maxSubreddits} communities. Upgrade to save unlimited.`,
@@ -162,6 +175,9 @@ export default function Settings() {
       : `Category ${data.categories.length + 1}`;
 
     await createCategory(categoryName);
+    
+    // Track category creation for feature discovery analytics
+    trackEvent('category_created', { category_name: categoryName });
   };
 
   // Search subreddits
@@ -173,6 +189,9 @@ export default function Settings() {
       const subreddits = await searchSubredditsAPI(searchQuery.trim(), 5);
       setSearchResults(subreddits);
       setShowSearchResults(true);
+      
+      // Track subreddit search for feature discovery analytics
+      trackEvent('subreddit_search_used', { search_query: searchQuery.trim() });
     } catch (error) {
       console.error('Search failed:', error);
       setSearchResults([]);

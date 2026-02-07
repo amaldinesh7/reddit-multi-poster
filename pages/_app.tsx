@@ -11,6 +11,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { MobileBottomNav } from "@/components/layout";
 import { inter, fontVariables } from "@/lib/fonts";
 import { swrConfig } from "@/lib/swr";
+import { initPostHogClient, trackPageView } from "@/lib/posthog";
 
 /**
  * Thin progress bar shown during page transitions.
@@ -98,6 +99,30 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
 };
 
 export default function App({ Component, pageProps }: AppProps) {
+  const router = useRouter();
+
+  // Initialize PostHog on mount
+  useEffect(() => {
+    initPostHogClient();
+  }, []);
+
+  // Track page views on route changes
+  useEffect(() => {
+    const handleRouteChange = (url: string) => {
+      trackPageView(url);
+    };
+
+    // Track initial page view
+    trackPageView(router.asPath);
+
+    // Track subsequent page views
+    router.events.on("routeChangeComplete", handleRouteChange);
+
+    return () => {
+      router.events.off("routeChangeComplete", handleRouteChange);
+    };
+  }, [router]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const ua = navigator.userAgent || "";
