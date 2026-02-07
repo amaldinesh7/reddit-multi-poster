@@ -661,6 +661,7 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
       .map(l => l.subreddit);
     if (onUnselectSuccessItems && successSubreddits.length > 0) {
       onUnselectSuccessItems(successSubreddits);
+      reset();
     }
   };
 
