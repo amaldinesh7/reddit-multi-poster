@@ -18,6 +18,8 @@ import {
 import { Button } from '../../components/ui/button';
 import { toast } from '@/hooks/useToast';
 import { SWR_KEYS } from '@/lib/swr';
+import { usePricing } from '@/hooks/usePricing';
+import type { PricingInfo } from '@/lib/pricing';
 
 // Import Dodo Payments SDK types
 interface CheckoutBreakdownData {
@@ -73,8 +75,10 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const errorRef = useRef<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [sessionPricing, setSessionPricing] = useState<PricingInfo | null>(null);
   const [sdkInitialized, setSdkInitialized] = useState(false);
   const initRef = useRef(false);
+  const { pricing: pricingFromGeo } = usePricing();
 
   // Keep statusRef in sync with status state
   useEffect(() => {
@@ -92,7 +96,7 @@ export default function CheckoutPage() {
     const init = async () => {
       try {
         // 1. Create checkout session
-        const { data } = await axios.post<{ checkout_url: string; session_id?: string }>(
+        const { data } = await axios.post<{ checkout_url: string; session_id?: string; pricing?: PricingInfo }>(
           '/api/checkout/create-session'
         );
         
@@ -103,6 +107,7 @@ export default function CheckoutPage() {
         }
 
         setCheckoutUrl(data.checkout_url);
+        setSessionPricing(data.pricing ?? null);
 
         // 2. Load and initialize Dodo SDK
         const sdk = await import('dodopayments-checkout');
@@ -281,6 +286,9 @@ export default function CheckoutPage() {
     { text: 'One-time payment', icon: Check },
   ];
 
+  const pricing = sessionPricing ?? pricingFromGeo;
+  const formattedPrice = pricing?.formatted ?? '₹299';
+
   return (
     <>
       <Head>
@@ -389,7 +397,7 @@ export default function CheckoutPage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-white">₹199</p>
+                    <p className="text-2xl font-bold text-white">{formattedPrice}</p>
                     <p className="text-xs text-zinc-500">incl. taxes</p>
                   </div>
                 </div>
@@ -421,7 +429,7 @@ export default function CheckoutPage() {
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-zinc-400">Subtotal</span>
-                    <span className="text-zinc-300">₹199.00</span>
+                    <span className="text-zinc-300">{formattedPrice}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-zinc-400">Tax</span>
@@ -430,7 +438,7 @@ export default function CheckoutPage() {
                   <div className="border-t border-zinc-800 pt-3">
                     <div className="flex justify-between">
                       <span className="font-medium text-white">Total</span>
-                      <span className="text-xl font-bold text-white">₹199.00</span>
+                      <span className="text-xl font-bold text-white">{formattedPrice}</span>
                     </div>
                   </div>
                 </div>
@@ -451,7 +459,7 @@ export default function CheckoutPage() {
                   ) : status === 'failed' ? (
                     'Try Again'
                   ) : (
-                    'Pay ₹199'
+                    `Pay ${formattedPrice}`
                   )}
                 </Button>
                 {status === 'failed' && (

@@ -181,13 +181,21 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             </Button>
           )}
           <div className="flex min-w-0 shrink-0 items-center gap-2.5">
-            <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg flex items-center justify-center">
+            <a
+              href="/"
+              aria-label="Go to post screen"
+              className={cn(
+                "relative h-9 w-9 shrink-0 overflow-hidden rounded-lg flex items-center justify-center",
+                "cursor-pointer",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              )}
+            >
               <img 
                 src="/logo.png" 
                 alt="Reddit Multi Poster" 
                 className="h-full w-full object-contain" 
               />
-            </div>
+            </a>
             {pageTitle ? (
               <div className="flex items-center gap-2 min-w-0">
                 {showAdminIcon && <Shield className="w-4 h-4 text-cyan-400" aria-hidden="true" />}

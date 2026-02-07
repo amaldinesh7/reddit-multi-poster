@@ -1,6 +1,9 @@
 /**
  * POST /api/checkout/create-session
- * Creates a Dodo Payments checkout session for the ₹199 one-time product.
+ * Creates a Dodo Payments checkout session for a one-time lifetime product.
+ * Region routing:
+ * - India: INR product (exact ₹299)
+ * - US/Canada + Rest of world: USD product ($9)
  * Returns checkout_url for inline checkout SDK.
  */
 
@@ -10,6 +13,8 @@ import { getUserId } from '../../../lib/apiAuth';
 import { getEntitlement } from '../../../lib/entitlement';
 import { addApiBreadcrumb } from '../../../lib/apiErrorHandler';
 import { trackServerEvent } from '../../../lib/posthog-server';
+import { getPricingForRequest, getPricingRegionForCountry, getCountryCodeFromRequest } from '@/lib/pricing';
+import { getPricingAmountsFromEnv } from '@/lib/pricingConfig';
 
 const DODO_BASE_URL =
   process.env.DODO_PAYMENTS_ENVIRONMENT === 'live_mode'
@@ -27,11 +32,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const apiKey = process.env.DODO_PAYMENTS_API_KEY;
-  const productId = process.env.DODO_PAYMENTS_PRODUCT_ID;
   const returnUrl = process.env.DODO_PAYMENTS_RETURN_URL;
+  const inrProductId = process.env.DODO_PAYMENTS_PRODUCT_ID_INR;
+  const usdProductId = process.env.DODO_PAYMENTS_PRODUCT_ID_USD;
 
-  if (!apiKey || !productId) {
-    Sentry.captureMessage('Missing DODO_PAYMENTS_API_KEY or DODO_PAYMENTS_PRODUCT_ID', { level: 'error' });
+  if (!apiKey || !inrProductId || !usdProductId) {
+    Sentry.captureMessage('Missing DODO_PAYMENTS_API_KEY, DODO_PAYMENTS_PRODUCT_ID_INR, or DODO_PAYMENTS_PRODUCT_ID_USD', {
+      level: 'error',
+    });
     return res.status(500).json({ error: 'Checkout not configured' });
   }
 
@@ -41,6 +49,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    const countryCode = getCountryCodeFromRequest(req);
+    const region = getPricingRegionForCountry(countryCode);
+    const pricing = getPricingForRequest(req, getPricingAmountsFromEnv());
+
+    const productId = region === 'india' ? inrProductId : usdProductId;
+
     const body = {
       product_cart: [{ product_id: productId, quantity: 1 }],
       return_url: returnUrl || undefined,
@@ -50,6 +64,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('[Dodo Debug] Creating checkout session:', {
       url: `${DODO_BASE_URL}/checkouts`,
       productId,
+      region,
+      countryCode,
       environment: process.env.DODO_PAYMENTS_ENVIRONMENT,
       hasApiKey: !!apiKey,
     });
@@ -95,13 +111,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Track checkout started for funnel analytics
     trackServerEvent(userId, 'checkout_started', {
       plan: 'pro',
-      amount: 199,
-      currency: 'INR',
+      amount: pricing.amount,
+      currency: pricing.currency,
+      pricing_region: pricing.region,
     });
     
     return res.status(200).json({ 
       checkout_url: checkoutUrl,
       session_id: sessionId,
+      pricing,
     });
   } catch (error) {
     Sentry.captureException(error, {

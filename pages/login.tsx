@@ -108,14 +108,13 @@ export default function Login() {
             <div className="p-4 sm:p-8 sm:backdrop-blur-xl sm:bg-white/[0.03] sm:border sm:border-white/[0.08] sm:rounded-3xl sm:shadow-[0_0_80px_rgba(255,69,0,0.05),0_25px_50px_-12px_rgba(0,0,0,0.5)]">
               {/* Logo */}
               <div className="flex flex-col items-center mb-8">
-                <div
-                  className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center mb-4 shadow-lg"
-                // style={{
-                //   boxShadow: '0 0 40px rgba(255, 69, 0, 0.3)',
-                // }}
+                <a
+                  href="/"
+                  aria-label="Go to post screen"
+                  className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center mb-4 shadow-lg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
                 >
                   <img src="/logo.png" alt="Reddit Multi Poster" className="w-full h-full object-contain" />
-                </div>
+                </a>
                 <h1 className="text-2xl font-bold text-white mb-2">Reddit Multi Poster</h1>
                 <p className="text-gray-400 text-center text-sm">
                   Post to multiple communities in one click

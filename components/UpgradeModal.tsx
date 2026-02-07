@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from './ui/button';
 import { X, Crown, Zap, Infinity as InfinityIcon, Check, Loader2 } from 'lucide-react';
 import { trackEvent } from '@/lib/posthog';
+import { usePricing } from '@/hooks/usePricing';
 
 interface UpgradeModalProps {
   open: boolean;
@@ -22,6 +23,8 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
   upgradeLoading = false,
   context,
 }) => {
+  const { pricing } = usePricing();
+
   // Handle escape key
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -50,6 +53,8 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
   }, [open, context?.title]);
 
   if (!open) return null;
+
+  const priceLabel = pricing?.formatted ?? '₹299';
 
   const benefits = [
     'Unlimited communities',
@@ -152,7 +157,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
           <div className="text-center py-2">
             <div className="inline-flex items-baseline gap-1">
               <span className="text-4xl font-bold bg-gradient-to-r from-violet-500 to-purple-600 bg-clip-text text-transparent">
-                ₹199
+                {priceLabel}
               </span>
               <span className="text-muted-foreground text-sm">one-time</span>
             </div>
