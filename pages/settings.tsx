@@ -73,9 +73,9 @@ export default function Settings() {
   const maxSubreddits = limits.maxSubreddits;
 
   const handleUpgrade = React.useCallback(() => {
-    // Navigate to inline checkout page
-    router.push('/checkout');
-  }, [router]);
+    // Navigate to inline checkout page (full page load for consistency)
+    window.location.href = '/checkout';
+  }, []);
 
   // DnD handling
   const {
