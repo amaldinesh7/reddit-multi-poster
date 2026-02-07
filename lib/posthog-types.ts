@@ -91,6 +91,7 @@ export interface EventProperties {
   plan?: string;
   amount?: number;
   currency?: string;
+  pricing_region?: 'india' | 'us_canada' | 'rest_of_world';
   
   // Feature properties
   category_name?: string;

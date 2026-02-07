@@ -11,6 +11,7 @@ import { createServerSupabaseClient } from '../../../lib/supabase';
 import { invalidateEntitlementCache } from '../../../lib/entitlement';
 import { addApiBreadcrumb } from '../../../lib/apiErrorHandler';
 import { trackServerEvent } from '../../../lib/posthog-server';
+import { getPricingRegionForCountry } from '@/lib/pricing';
 
 export const config = {
   api: { bodyParser: false },
@@ -103,6 +104,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const userId = payload.data?.metadata?.user_id;
   const paymentId = payload.data?.payment_id;
+  const pricingRegion = getPricingRegionForCountry(payload.data?.metadata?.country_code ?? null);
 
   if (!userId) {
     addApiBreadcrumb('Dodo webhook: payment.succeeded without metadata.user_id', {}, 'warning');
@@ -160,8 +162,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Track checkout completion for funnel analytics
   trackServerEvent(userId, 'checkout_completed', {
     plan: 'pro',
-    amount: 199,
-    currency: 'INR',
+    // Webhook doesn't currently include amount/currency reliably; keep as metadata-only.
+    pricing_region: pricingRegion,
   });
 
   return res.status(200).json({ received: true });
