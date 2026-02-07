@@ -452,9 +452,9 @@ export default function Home() {
   }, [logout]);
 
   const handleUpgrade = React.useCallback(() => {
-    // Navigate to inline checkout page
-    router.push('/checkout');
-  }, [router]);
+    // Navigate to inline checkout page (full page load for consistency)
+    window.location.href = '/checkout';
+  }, []);
 
   // Calculate user stats for header display
   const userStats = React.useMemo(() => {
