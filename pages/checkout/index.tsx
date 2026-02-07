@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import axios from 'axios';
+import { mutate } from 'swr';
 import { 
   Crown, 
   Check, 
@@ -15,6 +16,8 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { toast } from '@/hooks/useToast';
+import { SWR_KEYS } from '@/lib/swr';
 
 // Import Dodo Payments SDK types
 interface CheckoutBreakdownData {
@@ -68,6 +71,7 @@ export default function CheckoutPage() {
   const [status, setStatus] = useState<CheckoutStatus>('loading');
   const statusRef = useRef<CheckoutStatus>(status);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [sdkInitialized, setSdkInitialized] = useState(false);
   const initRef = useRef(false);
@@ -126,7 +130,15 @@ export default function CheckoutPage() {
               case 'checkout.closed':
                 // User closed the overlay - go back to ready state
                 // Use statusRef.current to get latest status (avoids stale closure)
-                if (statusRef.current !== 'succeeded' && statusRef.current !== 'processing') {
+                // Preserve 'failed' and 'error' states so error message stays visible
+                // Also check errorRef in case error was set but status update is pending
+                if (
+                  statusRef.current !== 'succeeded' && 
+                  statusRef.current !== 'processing' && 
+                  statusRef.current !== 'failed' &&
+                  statusRef.current !== 'error' &&
+                  !errorRef.current
+                ) {
                   setStatus('ready');
                 }
                 break;
@@ -135,9 +147,20 @@ export default function CheckoutPage() {
                 const statusData = event.data?.message as { status?: string };
                 if (statusData?.status === 'succeeded') {
                   setStatus('succeeded');
+                  errorRef.current = null;
+                  // Refresh auth cache so entitlement updates immediately
+                  // The webhook updates the DB, this refreshes the frontend cache
+                  mutate(SWR_KEYS.AUTH);
                 } else if (statusData?.status === 'failed') {
+                  const errorMessage = 'Payment failed. Please try again with a different payment method.';
                   setStatus('failed');
-                  setError('Payment failed. Please try again.');
+                  setError(errorMessage);
+                  errorRef.current = errorMessage;
+                  toast.error({
+                    title: 'Payment Failed',
+                    description: 'Please try again or use a different payment method.',
+                    duration: 6000,
+                  });
                 }
                 break;
               }
@@ -151,16 +174,32 @@ export default function CheckoutPage() {
                 break;
               }
 
-              case 'checkout.error':
+              case 'checkout.error': {
                 console.error('Checkout error:', event.data?.message);
+                const errorMessage = 'An error occurred during checkout. Please try again.';
                 setStatus('error');
-                setError('An error occurred during checkout. Please try again.');
+                setError(errorMessage);
+                errorRef.current = errorMessage;
+                toast.error({
+                  title: 'Checkout Error',
+                  description: 'An error occurred during checkout. Please try again.',
+                  duration: 6000,
+                });
                 break;
+              }
 
-              case 'checkout.link_expired':
+              case 'checkout.link_expired': {
+                const errorMessage = 'Checkout session expired. Please refresh the page.';
                 setStatus('error');
-                setError('Checkout session expired. Please refresh the page.');
+                setError(errorMessage);
+                errorRef.current = errorMessage;
+                toast.error({
+                  title: 'Session Expired',
+                  description: 'Your checkout session has expired. Please refresh to try again.',
+                  duration: 6000,
+                });
                 break;
+              }
             }
           },
         });
@@ -398,22 +437,33 @@ export default function CheckoutPage() {
               </div>
 
               {/* Pay Button */}
-              <Button
-                onClick={handlePay}
-                disabled={status === 'opening' || status === 'processing' || !sdkInitialized}
-                className="w-full h-14 text-lg font-semibold bg-violet-600 hover:bg-violet-700 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {status === 'opening' || status === 'processing' ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                    {status === 'processing' ? 'Processing...' : 'Opening checkout...'}
-                  </>
-                ) : status === 'failed' ? (
-                  'Try Again'
-                ) : (
-                  'Pay ₹199'
+              <div className={status === 'failed' ? 'flex gap-3' : ''}>
+                <Button
+                  onClick={handlePay}
+                  disabled={status === 'opening' || status === 'processing' || !sdkInitialized}
+                  className={`${status === 'failed' ? 'flex-1' : 'w-full'} h-14 text-lg font-semibold bg-violet-600 hover:bg-violet-700 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {status === 'opening' || status === 'processing' ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                      {status === 'processing' ? 'Processing...' : 'Opening checkout...'}
+                    </>
+                  ) : status === 'failed' ? (
+                    'Try Again'
+                  ) : (
+                    'Pay ₹199'
+                  )}
+                </Button>
+                {status === 'failed' && (
+                  <Button
+                    variant="outline"
+                    onClick={handleBack}
+                    className="h-14 px-6 text-lg font-semibold cursor-pointer"
+                  >
+                    Go Back
+                  </Button>
                 )}
-              </Button>
+              </div>
 
               {/* Security Badge */}
               <div className="flex items-center justify-center gap-2 text-zinc-500">

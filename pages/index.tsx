@@ -9,9 +9,17 @@ import { checkAuthCookies, redirectToLogin } from '@/lib/serverAuth';
 import * as Sentry from '@sentry/nextjs';
 import MediaUpload from '../components/MediaUpload';
 import PostComposer from '../components/PostComposer';
+import ReviewPanel from '../components/ReviewPanel';
 import { AppLoader, Skeleton, SubredditRowSkeleton, CardSkeleton } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItemPrimitive,
+} from '@/components/ui/dropdown-menu';
+import { ChevronDown } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { AppHeader, MobileUserStatsBanner, AppFooter } from '@/components/layout';
 import { useHomePageState } from '@/hooks/useHomePageState';
@@ -21,7 +29,7 @@ import { useQueueJob } from '@/hooks/useQueueJob';
 import { useAuth } from '@/hooks/useAuth';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { captureClientError, addActionBreadcrumb } from '@/lib/clientErrorHandler';
-import type { ValidationIssue } from '@/lib/preflightValidation';
+import type { ValidationIssue, PreflightResult } from '@/lib/preflightValidation';
 import { cn } from '@/lib/utils';
 import type { PerSubredditOverride } from '../components/subreddit-picker';
 
@@ -96,6 +104,16 @@ export default function Home() {
   const [mediaResetCounter, setMediaResetCounter] = React.useState(0);
   const [benchResetCounter, setBenchResetCounter] = React.useState(0);
   const [communitiesView, setCommunitiesView] = usePersistentState<'grouped' | 'all'>('rmp_communities_view', 'grouped');
+  const [isReviewOpen, setIsReviewOpen] = React.useState(false);
+  const postActionRef = React.useRef<(() => void) | null>(null);
+  const [validationState, setValidationState] = React.useState<{
+    canSubmit: boolean;
+    errors: ValidationIssue[];
+    warnings: ValidationIssue[];
+    result: PreflightResult;
+    issuesBySubreddit: Record<string, ValidationIssue[]>;
+  } | null>(null);
+  const [isMoreActionsOpen, setIsMoreActionsOpen] = React.useState(false);
 
   // Smooth loader exit: keep AppLoader mounted briefly to fade out
   const [showLoader, setShowLoader] = React.useState(true);
@@ -165,6 +183,18 @@ export default function Home() {
     setBenchResetCounter((prev) => prev + 1);
   }, [clearAllState]);
 
+  const hasTitle = caption.trim().length > 0;
+  const hasDestinations = selectedSubs.length > 0 || postToProfile;
+  const canReview = hasTitle && hasDestinations && (validationState?.canSubmit ?? true);
+  const canPost = canReview;
+  const isReviewDisabled = !canReview;
+
+  React.useEffect(() => {
+    if (isReviewDisabled && isMoreActionsOpen) {
+      setIsMoreActionsOpen(false);
+    }
+  }, [isReviewDisabled, isMoreActionsOpen]);
+
   // Failed posts tracking for inline error display
   const failedPostsHook = useFailedPosts();
 
@@ -209,6 +239,32 @@ export default function Home() {
   const handleQueueValidationChange = React.useCallback((issuesBySubreddit: Record<string, ValidationIssue[]>) => {
     setValidationIssuesBySubreddit(issuesBySubreddit);
   }, []);
+
+  const handleValidationStateChange = React.useCallback((state: {
+    canSubmit: boolean;
+    errors: ValidationIssue[];
+    warnings: ValidationIssue[];
+    result: PreflightResult;
+    issuesBySubreddit: Record<string, ValidationIssue[]>;
+  }) => {
+    setValidationState(state);
+  }, []);
+
+  const handleOpenReview = React.useCallback(() => {
+    setIsReviewOpen(true);
+  }, []);
+
+  const handlePostNow = React.useCallback(() => {
+    if (postActionRef.current) {
+      postActionRef.current();
+    }
+    setIsReviewOpen(false);
+  }, []);
+
+  const handleResetSelection = React.useCallback(() => {
+    clearSelection();
+    setPostToProfile(false);
+  }, [clearSelection, setPostToProfile]);
 
   // Handle posting results and track failed posts
   const handleResultsAvailable = React.useCallback((
@@ -512,7 +568,7 @@ export default function Home() {
                 <section className="space-y-4 mb-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-base lg:text-lg font-semibold tracking-tight">Media</h3>
+                      <h3 className="text-base lg:text-lg font-semibold tracking-tight pt-1 lg:pt-2">Media</h3>
                       <Tooltip content="Upload videos to Imgur, Redgif, or GIPHY and paste the link in the URL tab.">
                         <span className="inline-flex items-center gap-1 rounded-full bg-secondary/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground cursor-pointer">
                           <Info className="h-3 w-3" aria-hidden="true" />
@@ -527,11 +583,12 @@ export default function Home() {
                           setMediaType('image');
                         }}
                         className={cn(
-                          "inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1.5 text-sm font-medium transition-colors",
+                          "inline-flex items-center justify-center whitespace-nowrap rounded px-2.5 py-1 text-xs font-medium transition-colors",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                           mediaType === 'image'
                             ? 'bg-background text-foreground shadow-sm'
-                            : 'hover:bg-background/50 hover:text-foreground'
+                            : 'hover:bg-background/50 hover:text-foreground',
+                          "cursor-pointer"
                         )}
                         aria-pressed={mediaType === 'image'}
                       >
@@ -543,11 +600,12 @@ export default function Home() {
                           setMediaType('url');
                         }}
                         className={cn(
-                          "inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1.5 text-sm font-medium transition-colors",
+                          "inline-flex items-center justify-center whitespace-nowrap rounded px-2.5 py-1 text-xs font-medium transition-colors",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                           mediaType === 'url'
                             ? 'bg-background text-foreground shadow-sm'
-                            : 'hover:bg-background/50 hover:text-foreground'
+                            : 'hover:bg-background/50 hover:text-foreground',
+                          "cursor-pointer"
                         )}
                         aria-pressed={mediaType === 'url'}
                       >
@@ -594,7 +652,7 @@ export default function Home() {
                   )}
                 >
                   <div className="flex items-center justify-between">
-                    <h3 className="text-base lg:text-lg font-semibold tracking-tight">Communities</h3>
+                    <h3 className="text-base lg:text-lg font-semibold tracking-tight pt-1 lg:pt-2">Communities</h3>
                     <div className="flex items-center gap-2">
                       <div className="inline-flex items-center rounded-md bg-secondary/50 p-1 text-muted-foreground">
                         <button
@@ -604,7 +662,8 @@ export default function Home() {
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                             communitiesView === 'grouped'
                               ? 'bg-background text-foreground shadow-sm'
-                              : 'hover:bg-background/50 hover:text-foreground'
+                              : 'hover:bg-background/50 hover:text-foreground',
+                            "cursor-pointer"
                           )}
                           aria-pressed={communitiesView === 'grouped'}
                         >
@@ -617,7 +676,8 @@ export default function Home() {
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                             communitiesView === 'all'
                               ? 'bg-background text-foreground shadow-sm'
-                              : 'hover:bg-background/50 hover:text-foreground'
+                              : 'hover:bg-background/50 hover:text-foreground',
+                            "cursor-pointer"
                           )}
                           aria-pressed={communitiesView === 'all'}
                         >
@@ -698,6 +758,58 @@ export default function Home() {
                     "pt-2 lg:pt-0"
                   )}
                 >
+                  <div className="mb-3 hidden lg:flex items-center gap-2">
+                    <div className="flex flex-1 items-center">
+                      <Button
+                        onClick={handleOpenReview}
+                        disabled={!canReview}
+                        className="flex-1 cursor-pointer rounded-r-none"
+                        aria-label="Review and post"
+                      >
+                        Review &amp; post
+                      </Button>
+                      <DropdownMenuRoot
+                        open={isMoreActionsOpen}
+                        onOpenChange={(nextOpen) => {
+                          if (isReviewDisabled) {
+                            setIsMoreActionsOpen(false);
+                            return;
+                          }
+                          setIsMoreActionsOpen(nextOpen);
+                        }}
+                      >
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="icon"
+                            disabled={isReviewDisabled}
+                            className={cn(
+                              "h-10 w-10 cursor-pointer rounded-l-none bg-primary text-primary-foreground border border-primary/80 border-l border-l-white/20",
+                              "hover:bg-primary/90",
+                              "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary"
+                            )}
+                            aria-label="More actions"
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItemPrimitive
+                            onClick={handlePostNow}
+                            className="text-sm cursor-pointer"
+                          >
+                            Post now
+                          </DropdownMenuItemPrimitive>
+                        </DropdownMenuContent>
+                      </DropdownMenuRoot>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      onClick={handleClearAll}
+                      className="hidden lg:inline-flex h-10 px-3 text-sm font-medium cursor-pointer"
+                    >
+                      Reset
+                    </Button>
+                  </div>
                   <PostingQueue
                     items={items}
                     caption={caption}
@@ -712,11 +824,37 @@ export default function Home() {
                     onResetMedia={resetMedia}
                     onResultsAvailable={handleResultsAvailable}
                     onValidationChange={handleQueueValidationChange}
+                    onValidationStateChange={handleValidationStateChange}
+                    mode="review-entry"
+                    onPostActionReady={(handler) => {
+                      postActionRef.current = handler;
+                    }}
+                    onReviewRequest={handleOpenReview}
+                    hideMobileBar={isReviewOpen}
                   />
                 </section>
               </div>
             </div>
           </main>
+
+          <ReviewPanel
+            open={isReviewOpen}
+            onOpenChange={setIsReviewOpen}
+            title={caption}
+            body={body}
+            mediaFiles={mediaFiles}
+            mediaUrl={mediaUrl}
+            selectedSubs={selectedSubs}
+            postToProfile={postToProfile}
+            userName={me?.name}
+            flairRequired={flairRequired}
+            flairValue={flairs}
+            flairOptions={flairOptions}
+            titleSuffixes={titleSuffixes}
+            canPost={canPost}
+            onPostNow={handlePostNow}
+            onResetSelection={handleResetSelection}
+          />
 
           {/* Footer */}
           <AppFooter />

@@ -76,6 +76,37 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
 
   const handleUnselectSuccessItems = useCallback((subreddits: string[]) => {
     setSelectedSubs(prev => prev.filter(s => !subreddits.includes(s)));
+    setFlairs(prev => {
+      const next = { ...prev };
+      subreddits.forEach((subreddit) => {
+        delete next[subreddit];
+      });
+      return next;
+    });
+    setTitleSuffixes(prev => {
+      const next = { ...prev };
+      subreddits.forEach((subreddit) => {
+        delete next[subreddit];
+      });
+      return next;
+    });
+    setCustomTitles(prev => {
+      const next = { ...prev };
+      subreddits.forEach((subreddit) => {
+        delete next[subreddit];
+      });
+      return next;
+    });
+    setContentOverrides(prev => {
+      const next = { ...prev };
+      subreddits.forEach((subreddit) => {
+        delete next[subreddit];
+      });
+      return next;
+    });
+    if (subreddits.some((subreddit) => subreddit.startsWith('u_'))) {
+      setPostToProfile(false);
+    }
   }, []);
 
   const clearSelection = useCallback(() => {

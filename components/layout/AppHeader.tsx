@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { ChevronDown, User, Settings, LogOut, Shield, Sun, Moon, Monitor, Infinity } from 'lucide-react';
+import { ChevronDown, User, Settings, LogOut, Shield, Sun, Moon, Monitor, Infinity, ArrowLeft, HelpCircle } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { Theme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface UserStats {
   totalKarma?: number;
@@ -23,6 +24,11 @@ interface AppHeaderProps {
   onUpgrade?: () => void;
   upgradeLoading?: boolean;
   userStats?: UserStats;
+  pageTitle?: string;
+  pageSubtitle?: string;
+  headerActions?: React.ReactNode;
+  showBackButton?: boolean;
+  onBack?: () => void;
 }
 
 /**
@@ -100,11 +106,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onUpgrade,
   upgradeLoading = false,
   userStats: _userStats,
+  pageTitle,
+  headerActions,
+  showBackButton = false,
+  onBack,
 }) => {
   const { theme, setTheme } = useTheme();
   const { isVisible, isAtTop } = useScrollDirection();
   const showUpgrade = entitlement !== 'paid' && onUpgrade;
   const trimmedUserName = userName?.trim() || '';
+  const showAdminIcon = isAdmin && pageTitle === 'Admin Panel';
 
   // Theme cycle for mobile tap-to-switch button
   const THEME_CYCLE: Theme[] = ['light', 'dark', 'system'];
@@ -116,8 +127,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     const next = THEME_CYCLE[(idx + 1) % THEME_CYCLE.length];
     setTheme(next);
   };
-  
-  const handleThemeSelect = (next: Theme) => () => setTheme(next);
 
   const handleViewProfile = () => {
     if (!trimmedUserName) return;
@@ -128,8 +137,20 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     window.location.href = '/settings';
   };
 
+  const handleHelp = () => {
+    window.location.href = '/help';
+  };
+
   const handleAdminPanel = () => {
     window.location.href = '/admin';
+  };
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+    window.history.back();
   };
 
   return (
@@ -137,10 +158,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
       className={cn(
         // Base styles
         "sticky top-0 z-50 pt-[env(safe-area-inset-top)]",
-        // Background with subtle blur
-        "bg-background/95 backdrop-blur-sm",
-        // Simple border
-        "border-b border-border/50",
+        // Solid background
+        "bg-background",
         // Subtle shadow when scrolled
         !isAtTop && "shadow-sm",
         // Mobile: Slide up/down transition
@@ -150,7 +169,17 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     >
       <div className="app-container">
         <div className="flex h-14 min-h-[44px] items-center gap-2">
-          {/* Logo */}
+          {showBackButton && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="hidden md:inline-flex min-h-[44px] min-w-[44px] p-2 cursor-pointer"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+            </Button>
+          )}
           <div className="flex min-w-0 shrink-0 items-center gap-2.5">
             <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg flex items-center justify-center">
               <img 
@@ -159,15 +188,55 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 className="h-full w-full object-contain" 
               />
             </div>
-            <span className="truncate font-semibold tracking-tight">Multi Poster</span>
-            {entitlement === 'paid' && (
-              <span 
-                className="relative inline-flex items-center text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-gradient-to-r from-violet-500/15 via-purple-500/20 to-violet-500/15 text-violet-400 border border-violet-400/25 shadow-sm shadow-violet-500/20 overflow-hidden"
-                aria-label="Pro plan active"
-              >
-                <span className="relative z-10">Pro</span>
-                <span className="absolute inset-0 animate-pro-shimmer" aria-hidden="true" />
-              </span>
+            {pageTitle ? (
+              <div className="flex items-center gap-2 min-w-0">
+                {showAdminIcon && <Shield className="w-4 h-4 text-cyan-400" aria-hidden="true" />}
+                <span className="truncate text-base font-semibold tracking-tight">
+                  {pageTitle}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span 
+                  className={cn(
+                    "truncate font-semibold tracking-tight",
+                    entitlement === 'paid' && "font-display font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-violet-400 bg-clip-text text-transparent"
+                  )}
+                >
+                  Multi Poster
+                </span>
+                {showUpgrade && (
+                  <button
+                    type="button"
+                    onClick={onUpgrade}
+                    disabled={upgradeLoading}
+                    className={cn(
+                      "hidden md:inline-flex shrink-0 items-center gap-1.5 text-xs cursor-pointer",
+                      "disabled:opacity-50 disabled:cursor-not-allowed",
+                      "h-7 rounded-md px-2.5 font-semibold",
+                      "text-violet-700 dark:text-violet-300",
+                      "border border-violet-500/30 dark:border-violet-400/25",
+                      "bg-violet-600/10 dark:bg-violet-400/10",
+                      "transition-colors duration-200",
+                      "hover:bg-violet-600/15 dark:hover:bg-violet-400/15",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    )}
+                    aria-label="Go Unlimited"
+                  >
+                    <Infinity className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>{upgradeLoading ? 'Opening checkout…' : 'Go Unlimited'}</span>
+                  </button>
+                )}
+                {entitlement === 'paid' && (
+                  <span 
+                    className="relative inline-flex items-center text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-gradient-to-r from-violet-500/20 via-purple-500/25 to-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/40 dark:border-violet-400/25 shadow-sm shadow-violet-500/25 overflow-hidden"
+                    aria-label="Pro plan active"
+                  >
+                    <span className="relative z-10">Pro</span>
+                    <span className="absolute inset-0 animate-pro-shimmer" aria-hidden="true" />
+                  </span>
+                )}
+              </div>
             )}
           </div>
 
@@ -182,7 +251,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 onClick={onUpgrade}
                 disabled={upgradeLoading}
                 className={cn(
-                  "shrink-0 flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer",
+                  "md:hidden shrink-0 flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer",
                   "disabled:opacity-50 disabled:cursor-not-allowed",
                   "rounded-md px-3.5 py-1.5 font-semibold",
                   "text-white border border-violet-700/40",
@@ -200,6 +269,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <span className="sm:hidden">{upgradeLoading ? '…' : 'Go Unlimited'}</span>
               </button>
             )}
+            {headerActions}
             {/* Mobile-only: Theme cycle button */}
             <button
               type="button"
@@ -213,6 +283,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             >
               <ThemeIcon className="w-[18px] h-[18px] text-muted-foreground" aria-hidden="true" />
             </button>
+            {/* Desktop-only: Theme cycle button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCycleTheme}
+              className="hidden md:inline-flex min-h-[44px] min-w-[44px] p-2 cursor-pointer"
+              aria-label={`Theme: ${theme}. Click to switch.`}
+            >
+              <ThemeIcon className="w-[18px] h-[18px] text-muted-foreground" aria-hidden="true" />
+            </Button>
             {/* Desktop-only: User dropdown (profile/settings/theme/logout moved to bottom nav on mobile) */}
             <div className="hidden md:flex">
             <DropdownMenu
@@ -233,27 +313,13 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     fallback={trimmedUserName || 'U'}
                     size="sm"
                   />
-                  <span className="text-sm font-medium hidden sm:inline truncate max-w-[120px]">
+                  <span className="text-sm font-medium hidden sm:inline">
                     u/{trimmedUserName || 'user'}
                   </span>
                   <ChevronDown className="hidden sm:block h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" aria-hidden="true" />
                 </button>
               }
             >
-              {/* Theme options */}
-              <DropdownMenuItem onClick={handleThemeSelect('light')}>
-                <Sun className="h-4 w-4 mr-2" aria-hidden="true" />
-                Light
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleThemeSelect('dark')}>
-                <Moon className="h-4 w-4 mr-2" aria-hidden="true" />
-                Dark
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleThemeSelect('system')}>
-                <Monitor className="h-4 w-4 mr-2" aria-hidden="true" />
-                System
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               {/* User actions */}
               <DropdownMenuItem onClick={handleViewProfile}>
                 <User className="h-4 w-4 mr-2" aria-hidden="true" />
@@ -263,6 +329,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <Settings className="h-4 w-4 mr-2" aria-hidden="true" />
                 Settings
               </DropdownMenuItem>
+              {isAdmin && (
+                <DropdownMenuItem onClick={handleHelp}>
+                  <HelpCircle className="h-4 w-4 mr-2" aria-hidden="true" />
+                  Help & Feedback
+                </DropdownMenuItem>
+              )}
               {isAdmin && (
                 <DropdownMenuItem onClick={handleAdminPanel}>
                   <Shield className="h-4 w-4 mr-2" aria-hidden="true" />

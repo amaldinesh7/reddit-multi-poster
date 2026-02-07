@@ -157,6 +157,23 @@ export const UserManagementTab: React.FC = () => {
     setSearchQuery('');
   };
 
+  const openUserProfile = (username: string) => {
+    const trimmed = username.trim();
+    if (!trimmed) return;
+    window.open(`https://reddit.com/user/${trimmed}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleProfileClick = (username: string) => (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    openUserProfile(username);
+  };
+
+  const handleProfileKeyDown = (username: string) => (event: React.KeyboardEvent<HTMLAnchorElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    openUserProfile(username);
+  };
+
   if (error && !isLoading) {
     return (
       <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
@@ -371,7 +388,16 @@ export const UserManagementTab: React.FC = () => {
                     className="flex items-center justify-between gap-3 p-4 hover:bg-secondary/30 transition-colors"
                     style={{ animationDelay: `${index * 30}ms` }}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <a
+                      href={`https://reddit.com/user/${user.reddit_username}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      tabIndex={0}
+                      aria-label={`Open profile for u/${user.reddit_username}`}
+                      onClick={handleProfileClick(user.reddit_username)}
+                      onKeyDown={handleProfileKeyDown(user.reddit_username)}
+                      className="flex items-center gap-3 min-w-0 cursor-pointer hover:underline"
+                    >
                       <Avatar
                         src={user.reddit_avatar_url || undefined}
                         alt={user.reddit_username}
@@ -389,7 +415,7 @@ export const UserManagementTab: React.FC = () => {
                           <span className="font-mono-admin">{user.post_count} posts</span>
                         </div>
                       </div>
-                    </div>
+                    </a>
 
                     <div className="flex items-center gap-3 shrink-0">
                       {user.entitlement === 'paid' ? (

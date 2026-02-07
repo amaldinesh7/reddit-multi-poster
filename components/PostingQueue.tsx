@@ -22,6 +22,7 @@ import { useFailedPosts, FailedPost } from '../hooks/useFailedPosts';
 import { useSubredditFlairData } from '../hooks/useSubredditFlairData';
 import { ErrorCategory } from '@/lib/errorClassification';
 import { usePreflightValidation, ValidationIssue } from '../hooks/usePreflightValidation';
+import type { PreflightResult } from '@/lib/preflightValidation';
 import type { PerSubredditOverride } from './subreddit-picker';
 
 interface Item {
@@ -58,6 +59,22 @@ interface Props {
   onResultsAvailable?: (results: Array<{ index: number; status: 'success' | 'error' | 'skipped'; subreddit: string; error?: string; url?: string }>, items: Item[]) => void;
   /** Callback when validation issues change (for inline error display) */
   onValidationChange?: (issuesBySubreddit: Record<string, ValidationIssue[]>) => void;
+  /** Callback when full validation state changes (for review panel) */
+  onValidationStateChange?: (state: {
+    canSubmit: boolean;
+    errors: ValidationIssue[];
+    warnings: ValidationIssue[];
+    result: PreflightResult;
+    issuesBySubreddit: Record<string, ValidationIssue[]>;
+  }) => void;
+  mode?: 'inline' | 'review-entry';
+  onPostActionReady?: (handler: () => void) => void;
+  onReviewRequest?: () => void;
+  hideMobileBar?: boolean;
+}
+
+export interface PostingQueueHandle {
+  triggerPost: () => void;
 }
 
 // ============================================================================
@@ -159,7 +176,7 @@ const BatchProgress: React.FC<BatchProgressProps> = ({
 // Main Component
 // ============================================================================
 
-const PostingQueue: React.FC<Props> = ({
+const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
   items,
   caption,
   body,
@@ -174,7 +191,12 @@ const PostingQueue: React.FC<Props> = ({
   maxItems: maxItemsProp,
   onResultsAvailable,
   onValidationChange,
-}) => {
+  onValidationStateChange,
+  mode = 'inline',
+  onPostActionReady,
+  onReviewRequest,
+  hideMobileBar = false,
+}, ref) => {
   const maxItems = maxItemsProp ?? QUEUE_LIMITS.MAX_TOTAL_ITEMS;
   const {
     state,
@@ -259,6 +281,25 @@ const PostingQueue: React.FC<Props> = ({
       onValidationChange(validation.issuesBySubreddit);
     }
   }, [validation.issuesBySubreddit, onValidationChange]);
+
+  useEffect(() => {
+    if (onValidationStateChange) {
+      onValidationStateChange({
+        canSubmit: validation.canSubmit,
+        errors: validation.errors,
+        warnings: validation.warnings,
+        result: validation.result,
+        issuesBySubreddit: validation.issuesBySubreddit,
+      });
+    }
+  }, [
+    onValidationStateChange,
+    validation.canSubmit,
+    validation.errors,
+    validation.warnings,
+    validation.result,
+    validation.issuesBySubreddit,
+  ]);
 
   // Reset validation dismissed state when items change
   useEffect(() => {
@@ -620,6 +661,7 @@ const PostingQueue: React.FC<Props> = ({
       .map(l => l.subreddit);
     if (onUnselectSuccessItems && successSubreddits.length > 0) {
       onUnselectSuccessItems(successSubreddits);
+      reset();
     }
   };
 
@@ -677,6 +719,20 @@ const PostingQueue: React.FC<Props> = ({
     }
   }, [reset, onResetMedia]);
 
+  const handleMobileResetAll = useCallback(() => {
+    reset();
+    if (onClearAll) {
+      onClearAll();
+    }
+  }, [reset, onClearAll]);
+
+  const handleDesktopResetAll = useCallback(() => {
+    reset();
+    if (onClearAll) {
+      onClearAll();
+    }
+  }, [reset, onClearAll]);
+
   // Get the appropriate error icon based on error type
   const getErrorIcon = () => {
     if (error?.message?.includes('network') || error?.message?.includes('connect')) {
@@ -694,13 +750,22 @@ const PostingQueue: React.FC<Props> = ({
   // Determine if error is recoverable
   const isRecoverable = error?.recoverable !== false;
 
+  const isReviewEntry = mode === 'review-entry';
+  const handleMobilePost = onReviewRequest ?? handleButtonClick;
+
+  useEffect(() => {
+    if (onPostActionReady) {
+      onPostActionReady(handleButtonClick);
+    }
+  }, [onPostActionReady, handleButtonClick]);
+
   return (
     <div className="space-y-4" ref={queueRef} tabIndex={-1}>
       {/* Posting Queue Header - Visible when posting starts */}
       {(running || logs.length > 0) && (
         <div className="flex flex-col gap-2 mb-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-base lg:text-lg font-semibold tracking-tight">Ready to post</h3>
+            <h3 className="text-base lg:text-lg font-semibold tracking-tight pt-1 lg:pt-2">Ready to post</h3>
             {items.length > 0 && (
               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
                 {items.length}
@@ -787,7 +852,8 @@ const PostingQueue: React.FC<Props> = ({
         />
       )}
 
-      {/* Action Buttons (Hidden on mobile) */}
+      {/* Action Buttons (Hidden on review-entry) */}
+      {!isReviewEntry && (
       <div className="hidden lg:flex gap-2">
         {/* Reset Button - Icon only, next to Post button */}
         {!running && !completed && items.length > 0 && onClearAll && (
@@ -877,9 +943,10 @@ const PostingQueue: React.FC<Props> = ({
           </Button>
         )}
       </div>
+      )}
 
       {/* Empty State */}
-      {items.length === 0 && !running && !completed && !cancelled && !error && (
+      {!isReviewEntry && items.length === 0 && !running && !completed && !cancelled && !error && (
         <div className="text-center py-6 text-muted-foreground hidden lg:block">
           <Send className="w-8 h-8 mx-auto mb-2 opacity-50" aria-hidden="true" />
           <p className="text-sm">Pick communities above, then post</p>
@@ -900,9 +967,21 @@ const PostingQueue: React.FC<Props> = ({
       {/* Success Message */}
       {completed && failedPostsHook.state.posts.length === 0 && (
         <div className="rounder-md bg-green-600/20 border border-green-600/30 p-3 text-green-500 hidden lg:block">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5" aria-hidden="true" />
-            <span className="font-medium">All done!</span>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5" aria-hidden="true" />
+              <span className="font-medium">All done!</span>
+            </div>
+            <Button
+              onClick={handleDesktopResetAll}
+              variant="outline"
+              size="sm"
+              className="cursor-pointer border-green-600/40 text-green-200 hover:text-green-100 hover:bg-green-600/20"
+              aria-label="Reset post"
+            >
+              <RotateCcw className="h-4 w-4 mr-1.5" />
+              Reset
+            </Button>
           </div>
         </div>
       )}
@@ -959,18 +1038,22 @@ const PostingQueue: React.FC<Props> = ({
       {/* <div className="min-h-[calc(2rem+env(safe-area-inset-bottom,0px))] lg:min-h-0 lg:h-0" aria-hidden="true" /> */}
 
       {/* Mobile Sticky Queue Footer */}
-      <MobileStickyQueue
-        items={items}
-        isPosting={running}
-        isCompleted={completed}
-        hasErrors={hasFlairErrors || !batchInfo.canProceed || !validation.canSubmit}
-        onPostClick={handleButtonClick}
-        onResetClick={handleMobileReset}
-        onStopClick={handleCancel}
-        onClearClick={onClearAll}
-      />
+      {!hideMobileBar && (
+        <MobileStickyQueue
+          items={items}
+          isPosting={running}
+          isCompleted={completed}
+          hasErrors={hasFlairErrors || !batchInfo.canProceed || !validation.canSubmit}
+          onPostClick={handleMobilePost}
+          onResetClick={handleMobileResetAll}
+          onStopClick={handleCancel}
+          onClearClick={onClearAll}
+        />
+      )}
     </div>
   );
-};
+});
+
+PostingQueue.displayName = 'PostingQueue';
 
 export default PostingQueue;

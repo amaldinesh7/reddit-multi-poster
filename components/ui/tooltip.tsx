@@ -21,7 +21,7 @@ export function Tooltip({ content, children, side = 'left' }: TooltipProps) {
       <TooltipPrimitive.Root>
         <TooltipPrimitive.Trigger asChild>
           <div
-            className="inline-flex"
+            className="inline-flex cursor-pointer"
             tabIndex={0}
             role="button"
             onKeyDown={handleKeyDown}

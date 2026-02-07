@@ -2,7 +2,7 @@ import React from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import axios from 'axios';
-import { Upload, Zap, Layers, CheckCircle } from 'lucide-react';
+import { Upload, Layers } from 'lucide-react';
 
 interface MeResponse {
   authenticated: boolean;
@@ -46,12 +46,12 @@ export default function Login() {
     {
       icon: Upload,
       title: 'Post once',
-      description: 'Share to many communities in one go',
+      description: 'Save time by posting to many communities at once',
     },
     {
       icon: Layers,
       title: 'See progress',
-      description: 'Watch posts go out in real time',
+      description: 'Quick, reliable updates on what went live',
     },
   ];
 
@@ -95,14 +95,11 @@ export default function Login() {
         <div className="absolute inset-0 bg-[#0a0a0a]">
           <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#12121a] to-[#1a1a2e]" />
           <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-orange-500/5 rounded-full blur-[120px] animate-pulse" />
-          <div
-            className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-[100px] animate-pulse"
-            style={{ animationDelay: '1s' }}
-          />
+          <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-[100px] animate-pulse" />
         </div>
 
         {/* Content */}
-        <div className="relative z-10 min-h-full flex flex-col items-center justify-center px-4 py-6 sm:py-12">
+        <div className="relative z-10 min-h-viewport flex flex-col items-center justify-center px-4">
           {/* Glass card */}
           <div className="w-full max-w-md">
             <div className="p-4 sm:p-8 sm:backdrop-blur-xl sm:bg-white/[0.03] sm:border sm:border-white/[0.08] sm:rounded-3xl sm:shadow-[0_0_80px_rgba(255,69,0,0.05),0_25px_50px_-12px_rgba(0,0,0,0.5)]">
@@ -158,19 +155,16 @@ export default function Login() {
               {/* Divider */}
               <div className="flex items-center gap-4 my-8">
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                <span className="text-gray-500 text-xs uppercase tracking-wider">Why use this</span>
+                <span className="text-gray-500 text-xs uppercase tracking-wider">Use cases</span>
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
               </div>
 
               {/* Features */}
-              <div className="space-y-4">
-                {features.map((feature, index) => (
+              <div className="space-y-3">
+                {features.map((feature) => (
                   <div
                     key={feature.title}
                     className="flex items-start gap-4 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] transition-all duration-300 hover:bg-white/[0.04] hover:border-white/[0.08]"
-                    style={{
-                      animationDelay: `${index * 100}ms`,
-                    }}
                   >
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500/20 to-orange-600/10 flex items-center justify-center flex-shrink-0">
                       <feature.icon className="w-5 h-5 text-orange-400" aria-hidden="true" />

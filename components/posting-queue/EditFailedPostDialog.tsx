@@ -240,10 +240,16 @@ const EditFailedPostDialog: React.FC<EditFailedPostDialogProps> = ({
               <Input
                 id="title-suffix"
                 value={titleSuffix}
-                onChange={(e) => setTitleSuffix(e.target.value)}
+                onChange={(e) => setTitleSuffix(e.target.value.slice(0, 300))}
                 placeholder="e.g., [OC], (25F)"
                 className="cursor-text"
+                maxLength={300}
               />
+              <div className="flex justify-end">
+                <span className={`text-xs ${titleSuffix.length > 270 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
+                  {titleSuffix.length}/300
+                </span>
+              </div>
             </div>
           )}
 

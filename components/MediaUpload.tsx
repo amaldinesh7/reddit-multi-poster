@@ -44,7 +44,7 @@ export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props)
     setTimeout(() => setRejectionError(null), 5000);
   }, [mode]);
 
-  const acceptConfig = React.useMemo(() => {
+  const acceptConfig = React.useMemo((): Record<string, string[]> => {
     if (mode === 'video') {
       return { 'video/*': ['.mp4', '.mov', '.avi', '.webm'] };
     }
@@ -135,7 +135,7 @@ export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props)
           <div
             {...getRootProps()}
             className={`
-              relative rounded-lg border-2 border-dashed p-8 text-center cursor-pointer transition-colors
+              relative rounded-lg border-2 border-dashed p-4 sm:p-6 text-center cursor-pointer transition-colors
               ${isDragActive
                 ? 'border-primary bg-primary/10'
                 : selectedFiles.length > 0
@@ -148,16 +148,16 @@ export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props)
 
             {selectedFiles.length > 0 ? (
               <div>
-                <p className="font-medium mb-4">
+                <p className="text-sm font-medium mb-3">
                   {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''}
                 </p>
 
                 {/* Files Preview */}
-                <div className="flex flex-wrap justify-center gap-2 mb-4">
+                <div className="flex flex-wrap justify-center gap-2 mb-3">
                   {selectedFiles.map((file, index) => (
                     <div key={index} className="relative group">
                       {previewUrls[index] && (
-                        <div className="w-20 h-20 rounded-md overflow-hidden bg-secondary">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-md overflow-hidden bg-secondary">
                           {file.type.startsWith('video/') ? (
                             <video src={previewUrls[index]} className="w-full h-full object-cover" muted />
                           ) : (
@@ -167,7 +167,7 @@ export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props)
                       )}
                       <button
                         onClick={(e) => { e.stopPropagation(); removeFile(index); }}
-                        className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -177,21 +177,21 @@ export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props)
 
                 <button
                   onClick={(e) => { e.stopPropagation(); clearMedia(); }}
-                  className="text-sm text-muted-foreground hover:text-foreground"
+                  className="text-sm text-muted-foreground hover:text-foreground cursor-pointer"
                 >
                   Remove all
                 </button>
               </div>
             ) : (
               <div>
-                <Upload className={`w-10 h-10 mx-auto mb-3 ${isDragActive ? 'text-primary' : 'text-muted-foreground'}`} />
-                <p className="font-medium mb-1">
+                <Upload className={`w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 ${isDragActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                <p className="text-sm sm:text-base font-medium mb-1">
                   {isDragActive ? 'Drop here' : mode === 'video' ? 'Drop a video here' : 'Drop images here'}
                 </p>
-                <p className="text-sm text-muted-foreground mb-3">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-2">
                   or click to choose
                 </p>
-                <div className="flex justify-center gap-3 text-xs text-muted-foreground">
+                <div className="flex flex-wrap justify-center gap-2 text-[10px] sm:text-xs text-muted-foreground">
                   {mode === 'video' ? (
                     <>
                       <span className="flex items-center gap-1">
@@ -234,18 +234,12 @@ export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props)
             {mediaUrl && (
               <button
                 onClick={clearMedia}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             )}
           </div>
-
-          {mediaUrl && (
-            <div className="p-3 rounded-md bg-secondary/50 text-sm">
-              <p className="text-muted-foreground truncate">{mediaUrl}</p>
-            </div>
-          )}
         </div>
       )}
     </div>

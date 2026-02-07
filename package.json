@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "db:start": "npx supabase start",
     "db:stop": "npx supabase stop",
     "db:status": "npx supabase status",
@@ -41,14 +42,17 @@
     "formidable": "^3.5.4",
     "lucide-react": "^0.468.0",
     "next": "14.2.35",
+    "phosphor-react": "^1.4.1",
     "postcss": "^8.5.6",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-dropzone": "^14.2.3",
     "recharts": "^3.7.0",
+    "standardwebhooks": "^1.0.0",
     "swr": "^2.4.0",
     "tailwind-merge": "^3.3.1",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "vaul": "^1.1.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",

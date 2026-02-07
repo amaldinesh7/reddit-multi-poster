@@ -134,7 +134,7 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
                       setCustomTitle(globalTitle);
                     }
                   }}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${
                     useCustomTitle ? 'bg-orange-500' : 'bg-muted-foreground/30'
                   }`}
                 >
@@ -195,7 +195,7 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
                       setCustomBody(globalBody);
                     }
                   }}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${
                     useCustomBody ? 'bg-orange-500' : 'bg-muted-foreground/30'
                   }`}
                 >
