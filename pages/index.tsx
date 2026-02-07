@@ -3,6 +3,7 @@ import type { GetServerSideProps } from 'next';
 import dynamic from 'next/dynamic';
 import { Lightbulb, Settings } from 'lucide-react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import { checkAuthCookies, redirectToLogin } from '@/lib/serverAuth';
@@ -694,12 +695,14 @@ export default function Home() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => router.push('/settings')}
                         className="h-9 px-3 text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground rounded-md transition-colors hover:bg-secondary"
                         aria-label="Manage communities and flairs"
+                        asChild
                       >
-                        <Settings className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" />
-                        Manage
+                        <Link href="/settings">
+                          <Settings className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" />
+                          Manage
+                        </Link>
                       </Button>
                     </div>
                   </div>
