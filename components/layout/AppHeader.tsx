@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/router';
 import { Avatar } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuItemPrimitive, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { ChevronDown, User, Settings, LogOut, Shield, Sun, Moon, Monitor, Infinity, ArrowLeft, HelpCircle } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { Theme } from '@/contexts/ThemeContext';
@@ -114,34 +113,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   showBackButton = false,
   onBack,
 }) => {
-  const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { isVisible, isAtTop } = useScrollDirection();
   const showUpgrade = entitlement !== 'paid' && onUpgrade;
   const trimmedUserName = userName?.trim() || '';
   const showAdminIcon = isAdmin && pageTitle === 'Admin Panel';
-
-  // Schedule prefetch without blocking initial render
-  const schedulePrefetch = useCallback((href: string) => {
-    if (typeof window === 'undefined') return;
-    const runner = () => {
-      router.prefetch(href).catch(() => {});
-    };
-    if ('requestIdleCallback' in window) {
-      (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout?: number }) => void }).requestIdleCallback(runner, { timeout: 1500 });
-    } else {
-      setTimeout(runner, 200);
-    }
-  }, [router]);
-
-  useEffect(() => {
-    schedulePrefetch('/settings');
-    schedulePrefetch('/help');
-    schedulePrefetch('/analytics');
-    if (isAdmin) {
-      schedulePrefetch('/admin');
-    }
-  }, [schedulePrefetch, isAdmin]);
 
   // Theme cycle for mobile tap-to-switch button
   const THEME_CYCLE: Theme[] = ['light', 'dark', 'system'];
@@ -157,26 +133,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   const handleViewProfile = () => {
     if (!trimmedUserName) return;
     window.open(`https://reddit.com/user/${trimmedUserName}`, '_blank');
-  };
-
-  const handleSettings = () => {
-    router.push('/settings');
-  };
-
-  const handleHelp = () => {
-    router.push('/help');
-  };
-
-  const handleAdminPanel = () => {
-    router.push('/admin');
-  };
-
-  const handleBack = () => {
-    if (onBack) {
-      onBack();
-      return;
-    }
-    router.push('/');
   };
 
   return (
@@ -196,15 +152,25 @@ const AppHeader: React.FC<AppHeaderProps> = ({
       <div className="app-container">
         <div className="flex h-14 min-h-[44px] items-center gap-2">
           {showBackButton && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleBack}
-              className="hidden md:inline-flex min-h-[44px] min-w-[44px] p-2 cursor-pointer"
-              aria-label="Go back"
-            >
-              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-            </Button>
+            onBack ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onBack}
+                className="hidden md:inline-flex min-h-[44px] min-w-[44px] p-2 cursor-pointer"
+                aria-label="Go back"
+              >
+                <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+              </Button>
+            ) : (
+              <Link
+                href="/"
+                className="hidden md:inline-flex min-h-[44px] min-w-[44px] p-2 items-center justify-center rounded-md hover:bg-secondary transition-colors cursor-pointer"
+                aria-label="Go back"
+              >
+                <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+              </Link>
+            )
           )}
           <div className="flex min-w-0 shrink-0 items-center gap-2.5">
             <Link
@@ -354,29 +320,35 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               }
             >
               {/* User actions */}
-              <DropdownMenuItem onClick={handleViewProfile}>
+              <DropdownMenuItemPrimitive onClick={handleViewProfile}>
                 <User className="h-4 w-4 mr-2" aria-hidden="true" />
                 View Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleSettings}>
-                <Settings className="h-4 w-4 mr-2" aria-hidden="true" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleHelp}>
-                <HelpCircle className="h-4 w-4 mr-2" aria-hidden="true" />
-                Help & Feedback
-              </DropdownMenuItem>
+              </DropdownMenuItemPrimitive>
+              <DropdownMenuItemPrimitive asChild>
+                <Link href="/settings">
+                  <Settings className="h-4 w-4 mr-2" aria-hidden="true" />
+                  Settings
+                </Link>
+              </DropdownMenuItemPrimitive>
+              <DropdownMenuItemPrimitive asChild>
+                <Link href="/help">
+                  <HelpCircle className="h-4 w-4 mr-2" aria-hidden="true" />
+                  Help & Feedback
+                </Link>
+              </DropdownMenuItemPrimitive>
               {isAdmin && (
-                <DropdownMenuItem onClick={handleAdminPanel}>
-                  <Shield className="h-4 w-4 mr-2" aria-hidden="true" />
-                  Admin Panel
-                </DropdownMenuItem>
+                <DropdownMenuItemPrimitive asChild>
+                  <Link href="/admin">
+                    <Shield className="h-4 w-4 mr-2" aria-hidden="true" />
+                    Admin Panel
+                  </Link>
+                </DropdownMenuItemPrimitive>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onLogout} className="text-red-400">
+              <DropdownMenuItemPrimitive onClick={onLogout} className="text-red-400">
                 <LogOut className="h-4 w-4 mr-2" aria-hidden="true" />
                 Logout
-              </DropdownMenuItem>
+              </DropdownMenuItemPrimitive>
             </DropdownMenu>
             </div>
           </div>

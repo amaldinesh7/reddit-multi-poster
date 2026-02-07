@@ -25,6 +25,9 @@ export default function Login() {
     const checkAuth = async () => {
       try {
         const { data } = await axios.get<MeResponse>('/api/me');
+        // #region agent log
+        fetch('http://127.0.0.1:7245/ingest/d1dd910a-8a0d-4999-8cd8-1087cab3ca13',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'login.tsx:checkAuth',message:'Login auth check result',data:{authenticated:data.authenticated},timestamp:Date.now(),hypothesisId:'C,D'})}).catch(()=>{});
+        // #endregion
         if (data.authenticated) {
           router.replace('/');
         } else {
@@ -179,7 +182,7 @@ export default function Login() {
             </div>
 
             {/* Footer */}
-            <div className="mt-6 text-center">
+            <div className="mt-6 text-center space-y-2">
               <p className="text-gray-600 text-xs">
                 By continuing, you agree to Reddit&apos;s{' '}
                 <a
@@ -189,6 +192,14 @@ export default function Login() {
                   className="text-gray-500 hover:text-orange-400 transition-colors cursor-pointer"
                 >
                   Terms of Service
+                </a>
+              </p>
+              <p className="text-gray-600 text-xs">
+                <a
+                  href="/help"
+                  className="text-gray-500 hover:text-orange-400 transition-colors cursor-pointer"
+                >
+                  Need help?
                 </a>
               </p>
             </div>

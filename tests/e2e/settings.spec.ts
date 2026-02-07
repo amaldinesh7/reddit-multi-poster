@@ -25,6 +25,7 @@ test.describe('Settings Page - Navigation', () => {
     
     // Should be on settings page
     await expect(authenticatedPage).toHaveURL('/settings');
+    await expect(authenticatedPage.getByText('Settings')).toBeVisible();
   });
 
   test('settings page displays correctly', async ({ authenticatedPage }) => {

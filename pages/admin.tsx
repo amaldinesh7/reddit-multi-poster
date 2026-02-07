@@ -126,6 +126,9 @@ export default function AdminPanel() {
 
     try {
       const res = await fetch('/api/analytics');
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/d1dd910a-8a0d-4999-8cd8-1087cab3ca13',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.tsx:fetchAnalytics',message:'Analytics API response',data:{status:res.status,ok:res.ok},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
 
       if (res.status === 401) {
         router.replace('/login');
@@ -154,9 +157,15 @@ export default function AdminPanel() {
 
   // Initial fetch
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/d1dd910a-8a0d-4999-8cd8-1087cab3ca13',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.tsx:authEffect',message:'Admin auth check',data:{authLoading,isAuthenticated,meName:me?.name||null},timestamp:Date.now(),hypothesisId:'C,E'})}).catch(()=>{});
+    // #endregion
     if (!authLoading && isAuthenticated) {
       fetchAnalytics();
     } else if (!authLoading && !isAuthenticated) {
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/d1dd910a-8a0d-4999-8cd8-1087cab3ca13',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.tsx:redirectToLogin',message:'Admin redirecting to /login',data:{authLoading,isAuthenticated},timestamp:Date.now(),hypothesisId:'C,E'})}).catch(()=>{});
+      // #endregion
       router.replace('/login');
     }
   }, [authLoading, isAuthenticated, router]);

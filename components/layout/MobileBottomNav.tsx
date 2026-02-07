@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { LogOut, ExternalLink, Shield } from 'lucide-react';
 import { House, GearSix, Question, UserCircle } from 'phosphor-react';
@@ -60,32 +61,10 @@ const MobileBottomNav: React.FC = () => {
     checkAdmin();
   }, [me?.name]);
 
-  const schedulePrefetch = useCallback((href: string) => {
-    if (typeof window === 'undefined') return;
-    const run = () => router.prefetch(href).catch(() => {});
-    if ('requestIdleCallback' in window) {
-      (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout?: number }) => void }).requestIdleCallback(run, { timeout: 1200 });
-    } else {
-      setTimeout(run, 250);
-    }
-  }, [router]);
-
-  useEffect(() => {
-    schedulePrefetch('/');
-    schedulePrefetch('/settings');
-    schedulePrefetch('/help');
-  }, [schedulePrefetch]);
-
   // Don't render on unauthenticated or loading states, or on excluded routes
   if (!isAuthenticated || isLoading || shouldHideNav(router.pathname)) {
     return null;
   }
-
-  const handleNavigate = (href: string) => {
-    if (router.pathname !== href) {
-      router.push(href);
-    }
-  };
 
   const handleLogout = async () => {
     setProfileOpen(false);
@@ -100,11 +79,6 @@ const MobileBottomNav: React.FC = () => {
       '_blank',
       'noopener,noreferrer'
     );
-  };
-
-  const handleAdminPanel = () => {
-    setProfileOpen(false);
-    router.push('/admin');
   };
 
   const tabs: NavTab[] = [
@@ -214,24 +188,36 @@ const MobileBottomNav: React.FC = () => {
           <div className={rowClassName}>
           {visibleTabs.map((tab) => {
             const active = isActive(tab) || (tab.id === 'profile' && profileOpen);
+
+            // Action-only tabs (e.g. profile toggle) stay as buttons
+            if (tab.action) {
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={tab.action}
+                  className={getButtonClassName(active)}
+                  aria-label={tab.label}
+                  aria-current={active ? 'page' : undefined}
+                >
+                  <span className={getIconWrapClassName(active)}>{tab.icon(active)}</span>
+                  <span className={getLabelClassName(active)}>{tab.label}</span>
+                </button>
+              );
+            }
+
+            // Navigation tabs use <Link> for proper Next.js client-side routing
             return (
-              <button
+              <Link
                 key={tab.id}
-                type="button"
-                onClick={() => {
-                  if (tab.action) {
-                    tab.action();
-                  } else if (tab.href) {
-                    handleNavigate(tab.href);
-                  }
-                }}
+                href={tab.href ?? '/'}
                 className={getButtonClassName(active)}
                 aria-label={tab.label}
                 aria-current={active ? 'page' : undefined}
               >
                 <span className={getIconWrapClassName(active)}>{tab.icon(active)}</span>
                 <span className={getLabelClassName(active)}>{tab.label}</span>
-              </button>
+              </Link>
             );
           })}
           </div>
@@ -295,14 +281,14 @@ const MobileBottomNav: React.FC = () => {
 
               {/* Admin Panel - Only for admins */}
               {isAdmin && (
-                <button
-                  type="button"
-                  onClick={handleAdminPanel}
+                <Link
+                  href="/admin"
+                  onClick={() => setProfileOpen(false)}
                   className="flex items-center gap-3 w-full py-3 px-1 rounded-lg text-sm font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer active:opacity-70"
                 >
                   <Shield className="w-4 h-4 text-muted-foreground" />
                   Admin Panel
-                </button>
+                </Link>
               )}
 
               {/* Logout */}

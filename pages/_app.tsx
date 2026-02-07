@@ -13,8 +13,8 @@ import { inter, fontVariables } from "@/lib/fonts";
 import { swrConfig } from "@/lib/swr";
 
 /**
- * Thin progress bar shown during page transitions.
- * Mimics the native iOS/Android top-loading indicator for an app-like feel.
+ * Thin progress bar shown during client-side page transitions.
+ * Always shows on routeChangeStart; hides on complete or error.
  */
 const RouteProgressBar = () => {
   const router = useRouter();
@@ -22,16 +22,16 @@ const RouteProgressBar = () => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const handleStart = (url: string) => {
-      // Clear any existing timer to prevent race conditions
+    const clearTimer = () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
-      // Only show for actual navigation, not hash changes
-      if (url !== router.asPath) {
-        setLoading(true);
-      }
+    };
+
+    const handleStart = () => {
+      clearTimer();
+      setLoading(true);
     };
 
     const handleDone = () => {
@@ -39,67 +39,57 @@ const RouteProgressBar = () => {
       timerRef.current = setTimeout(() => setLoading(false), 150);
     };
 
+    const handleError = (err: unknown, url: string) => {
+      // When a page chunk fails to load (commonly due to stale SW/PWA caches),
+      // Next.js may update the URL but keep the previous page rendered.
+      // Force a full navigation to the target URL to recover.
+      const message = err instanceof Error ? err.message : String(err);
+      const name = typeof err === 'object' && err !== null && 'name' in err ? String((err as { name?: unknown }).name) : '';
+      const isChunkLoadError =
+        name === 'ChunkLoadError' ||
+        /ChunkLoadError|Loading chunk .* failed|CSS chunk load failed/i.test(message);
+
+      if (isChunkLoadError && typeof window !== 'undefined') {
+        window.location.href = url;
+        return;
+      }
+
+      handleDone();
+    };
+
     router.events.on("routeChangeStart", handleStart);
     router.events.on("routeChangeComplete", handleDone);
-    router.events.on("routeChangeError", handleDone);
+    router.events.on("routeChangeError", handleError);
 
     return () => {
       router.events.off("routeChangeStart", handleStart);
       router.events.off("routeChangeComplete", handleDone);
-      router.events.off("routeChangeError", handleDone);
-      // Clear timer on cleanup
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
+      router.events.off("routeChangeError", handleError);
+      clearTimer();
     };
-  }, [router]);
+  }, [router.events]);
 
   if (!loading) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[100] h-0.5" role="progressbar" aria-label="Loading page">
+    <div
+      className="fixed top-0 left-0 right-0 z-[100] h-0.5"
+      role="progressbar"
+      aria-label="Loading page"
+    >
       <div className="h-full bg-gradient-to-r from-orange-500 to-violet-500 animate-route-progress" />
     </div>
   );
 };
 
-/**
- * Wrapper that applies a subtle fade-in on every page mount.
- * Keeps transitions fast (150ms) so navigation feels instant but polished.
- */
-const PageTransition = ({ children }: { children: React.ReactNode }) => {
-  const router = useRouter();
-  const [transitionStage, setTransitionStage] = useState<"enter" | "visible">("enter");
-
-  useEffect(() => {
-    // Reset to enter state on route change
-    setTransitionStage("enter");
-
-    // Trigger visible on next frame so the CSS transition activates
-    const raf = requestAnimationFrame(() => {
-      setTransitionStage("visible");
-    });
-
-    return () => cancelAnimationFrame(raf);
-  }, [router.asPath]);
-
-  return (
-    <div
-      className={
-        transitionStage === "enter"
-          ? "opacity-0 transition-none"
-          : "opacity-100 transition-opacity duration-150 ease-out"
-      }
-    >
-      {children}
-    </div>
-  );
-};
-
 export default function App({ Component, pageProps }: AppProps) {
-  const hasReloadedForUpdateRef = useRef(false);
+  const router = useRouter();
 
+  // #region agent log
+  useEffect(() => { fetch('http://127.0.0.1:7245/ingest/d1dd910a-8a0d-4999-8cd8-1087cab3ca13',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'_app.tsx:render',message:'App render',data:{componentName:Component.displayName||Component.name||'Unknown',pathname:typeof window!=='undefined'?window.location.pathname:'ssr',routerPathname:router.pathname},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{}); });
+  // #endregion
+
+  // Detect Android WebView / standalone PWA for CSS adjustments
   useEffect(() => {
     if (typeof window === "undefined") return;
     const ua = navigator.userAgent || "";
@@ -113,60 +103,17 @@ export default function App({ Component, pageProps }: AppProps) {
     }
   }, []);
 
+  // Unregister stale service workers in development to prevent cached
+  // page chunks from interfering with client-side navigation.
   useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
 
-    const updateRegistration = async (registration: ServiceWorkerRegistration | null) => {
-      if (!registration) return;
-      try {
-        await registration.update();
-      } catch (error) {
-        console.error("Service worker update failed", error);
-      }
-    };
-
-    const handleControllerChange = () => {
-      if (hasReloadedForUpdateRef.current) return;
-      hasReloadedForUpdateRef.current = true;
-      window.location.reload();
-    };
-
-    let registration: ServiceWorkerRegistration | null = null;
-    let visibilityHandler: (() => void) | null = null;
-    let intervalId: number | null = null;
-
     navigator.serviceWorker
-      .ready
-      .then((readyRegistration) => {
-        registration = readyRegistration;
-        updateRegistration(registration);
-
-        visibilityHandler = () => {
-          if (document.visibilityState !== "visible") return;
-          updateRegistration(registration);
-        };
-        document.addEventListener("visibilitychange", visibilityHandler);
-
-        intervalId = window.setInterval(() => {
-          updateRegistration(registration);
-        }, 1000 * 60 * 10);
-      })
-      .catch((error) => {
-        console.error("Service worker readiness failed", error);
-      });
-
-    navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
-
-    return () => {
-      navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
-      if (visibilityHandler) {
-        document.removeEventListener("visibilitychange", visibilityHandler);
-      }
-      if (intervalId) {
-        window.clearInterval(intervalId);
-      }
-    };
+      .getRegistrations()
+      .then((regs) => regs.forEach((r) => r.unregister()))
+      .catch(() => {});
   }, []);
 
   return (
@@ -183,9 +130,7 @@ export default function App({ Component, pageProps }: AppProps) {
             <ThemeProvider>
               <div className={`${inter.className} ${fontVariables}`} style={{ minHeight: "100vh" }}>
                 <RouteProgressBar />
-                <PageTransition>
-                  <Component {...pageProps} />
-                </PageTransition>
+                <Component key={router.pathname} {...pageProps} />
                 <MobileBottomNav />
                 <Toaster />
               </div>

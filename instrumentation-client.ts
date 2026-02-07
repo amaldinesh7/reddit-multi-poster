@@ -92,17 +92,20 @@ const initClientSentry = () => {
     attachStacktrace: true,
     maxBreadcrumbs: 50,
 
-    // Ignore specific errors
-    ignoreErrors: [
-      "top.GLOBALS",
-      "chrome-extension://",
-      "moz-extension://",
-      "safari-extension://",
-      "Network request failed",
-      "Failed to fetch",
-      "Load failed",
-      "AbortError",
-    ],
+  // Ignore specific errors
+  ignoreErrors: [
+    "top.GLOBALS",
+    "chrome-extension://",
+    "moz-extension://",
+    "safari-extension://",
+    "Network request failed",
+    "Failed to fetch",
+    "Load failed",
+    "AbortError",
+    // Ad-blocker errors - don't let these affect navigation or be reported
+    "ERR_BLOCKED_BY_CLIENT",
+    "net::ERR_BLOCKED_BY_CLIENT",
+  ],
 
     // Deny URLs
     denyUrls: [
@@ -118,18 +121,17 @@ const initClientSentry = () => {
   });
 };
 
-if (typeof window !== "undefined") {
-  const idleInit = () => {
-    initClientSentry();
-  };
-  if ("requestIdleCallback" in window) {
-    (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout?: number }) => void }).requestIdleCallback(idleInit, { timeout: 2000 });
-  } else {
-    setTimeout(idleInit, 500);
+// Wrap router transition tracking to prevent ad-blocker errors from breaking navigation
+// When ad blockers block /monitoring, the network error could interrupt client-side navigation
+export const onRouterTransitionStart = (
+  ...args: Parameters<typeof Sentry.captureRouterTransitionStart>
+) => {
+  try {
+    return Sentry.captureRouterTransitionStart(...args);
+  } catch {
+    // Silently ignore - don't let Sentry failures break navigation
   }
-}
-
-export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+};
 
 // Helper: Set user context after authentication
 export const setSentryUser = (user: { id: string; name?: string } | null) => {

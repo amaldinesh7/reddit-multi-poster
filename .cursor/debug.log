@@ -1,0 +1,53 @@
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Home","pathname":"/admin"},"timestamp":1770472968785,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Home","pathname":"/admin"},"timestamp":1770472968813,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"AdminPanel","pathname":"/admin"},"timestamp":1770472968857,"hypothesisId":"B"}
+{"location":"admin.tsx:authEffect","message":"Admin auth check","data":{"authLoading":false,"isAuthenticated":true,"meName":"Far_Mycologist_3915"},"timestamp":1770472970846,"hypothesisId":"C,E"}
+{"location":"admin.tsx:authEffect","message":"Admin auth check","data":{"authLoading":false,"isAuthenticated":true,"meName":"Far_Mycologist_3915"},"timestamp":1770472971173,"hypothesisId":"C,E"}
+{"location":"admin.tsx:fetchAnalytics","message":"Analytics API response","data":{"status":200,"ok":true},"timestamp":1770472972297,"hypothesisId":"C"}
+{"location":"admin.tsx:authEffect","message":"Admin auth check","data":{"authLoading":false,"isAuthenticated":true,"meName":"Far_Mycologist_3915"},"timestamp":1770472973136,"hypothesisId":"C,E"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"AdminPanel","pathname":"/settings","routerPathname":"/admin"},"timestamp":1770472973137,"hypothesisId":"B"}
+{"location":"admin.tsx:authEffect","message":"Admin auth check","data":{"authLoading":false,"isAuthenticated":true,"meName":"Far_Mycologist_3915"},"timestamp":1770472973138,"hypothesisId":"C,E"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"AdminPanel","pathname":"/settings","routerPathname":"/admin"},"timestamp":1770472973142,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Settings","pathname":"/settings","routerPathname":"/settings"},"timestamp":1770472973402,"hypothesisId":"B"}
+{"location":"admin.tsx:fetchAnalytics","message":"Analytics API response","data":{"status":200,"ok":true},"timestamp":1770472973753,"hypothesisId":"C"}
+{"location":"admin.tsx:fetchAnalytics","message":"Analytics API response","data":{"status":200,"ok":true},"timestamp":1770472974203,"hypothesisId":"C"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Home","pathname":"/","routerPathname":"/"},"timestamp":1770472978589,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Settings","pathname":"/settings","routerPathname":"/settings"},"timestamp":1770473083673,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Settings","pathname":"/settings","routerPathname":"/settings"},"timestamp":1770473083677,"hypothesisId":"B"}
+{"location":"admin.tsx:authEffect","message":"Admin auth check","data":{"authLoading":true,"isAuthenticated":false,"meName":null},"timestamp":1770473083949,"hypothesisId":"C,E"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"AdminPanel","pathname":"/admin","routerPathname":"/admin"},"timestamp":1770473083950,"hypothesisId":"B"}
+{"location":"admin.tsx:authEffect","message":"Admin auth check","data":{"authLoading":true,"isAuthenticated":false,"meName":null},"timestamp":1770473083953,"hypothesisId":"C,E"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"AdminPanel","pathname":"/admin","routerPathname":"/admin"},"timestamp":1770473083953,"hypothesisId":"B"}
+{"location":"admin.tsx:authEffect","message":"Admin auth check","data":{"authLoading":false,"isAuthenticated":true,"meName":"Far_Mycologist_3915"},"timestamp":1770473086024,"hypothesisId":"C,E"}
+{"location":"admin.tsx:fetchAnalytics","message":"Analytics API response","data":{"status":200,"ok":true},"timestamp":1770473087023,"hypothesisId":"C"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Home","pathname":"/","routerPathname":"/"},"timestamp":1770473129357,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Settings","pathname":"/settings","routerPathname":"/settings"},"timestamp":1770473154109,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Settings","pathname":"/settings","routerPathname":"/settings"},"timestamp":1770473154113,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Home","pathname":"/","routerPathname":"/"},"timestamp":1770473166187,"hypothesisId":"B"}
+{"location":"admin.tsx:authEffect","message":"Admin auth check","data":{"authLoading":true,"isAuthenticated":false,"meName":null},"timestamp":1770473188573,"hypothesisId":"C,E"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"AdminPanel","pathname":"/admin","routerPathname":"/admin"},"timestamp":1770473188576,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"AdminPanel","pathname":"/admin","routerPathname":"/admin"},"timestamp":1770473188574,"hypothesisId":"B"}
+{"location":"admin.tsx:authEffect","message":"Admin auth check","data":{"authLoading":true,"isAuthenticated":false,"meName":null},"timestamp":1770473188576,"hypothesisId":"C,E"}
+{"location":"admin.tsx:authEffect","message":"Admin auth check","data":{"authLoading":false,"isAuthenticated":true,"meName":"Far_Mycologist_3915"},"timestamp":1770473189140,"hypothesisId":"C,E"}
+{"location":"admin.tsx:fetchAnalytics","message":"Analytics API response","data":{"status":200,"ok":true},"timestamp":1770473190294,"hypothesisId":"C"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"HelpPage","pathname":"/help","routerPathname":"/help"},"timestamp":1770473200323,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Home","pathname":"/","routerPathname":"/"},"timestamp":1770473201967,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Home","pathname":"/","routerPathname":"/"},"timestamp":1770473243990,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Home","pathname":"/","routerPathname":"/"},"timestamp":1770473243994,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"AdminPanel","pathname":"/admin","routerPathname":"/admin"},"timestamp":1770473733835,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Home","pathname":"/settings","routerPathname":"/"},"timestamp":1770473735079,"hypothesisId":"B"}
+{"location":"admin.tsx:authEffect","message":"Admin auth check","data":{"authLoading":false,"isAuthenticated":true,"meName":"Far_Mycologist_3915"},"timestamp":1770473736690,"hypothesisId":"C,E"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"AdminPanel","pathname":"/admin","routerPathname":"/admin"},"timestamp":1770473736691,"hypothesisId":"B"}
+{"location":"admin.tsx:fetchAnalytics","message":"Analytics API response","data":{"status":200,"ok":true},"timestamp":1770473738202,"hypothesisId":"C"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Settings","pathname":"/settings","routerPathname":"/settings"},"timestamp":1770473821595,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Settings","pathname":"/settings","routerPathname":"/settings"},"timestamp":1770473821598,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Home","pathname":"/","routerPathname":"/"},"timestamp":1770473841621,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Settings","pathname":"/settings","routerPathname":"/settings"},"timestamp":1770473864328,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Settings","pathname":"/settings","routerPathname":"/settings"},"timestamp":1770473864333,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Home","pathname":"/","routerPathname":"/"},"timestamp":1770473872973,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"HelpPage","pathname":"/help","routerPathname":"/help"},"timestamp":1770474976345,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"HelpPage","pathname":"/help","routerPathname":"/help"},"timestamp":1770474976347,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Home","pathname":"/","routerPathname":"/"},"timestamp":1770474980938,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"HelpPage","pathname":"/help","routerPathname":"/help"},"timestamp":1770475200003,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"HelpPage","pathname":"/help","routerPathname":"/help"},"timestamp":1770475200004,"hypothesisId":"B"}
+{"location":"_app.tsx:render","message":"App render","data":{"componentName":"Home","pathname":"/","routerPathname":"/"},"timestamp":1770475204174,"hypothesisId":"B"}
