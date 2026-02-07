@@ -20,8 +20,13 @@ test.describe('Settings Page - Navigation', () => {
   test('can navigate to settings from home page', async ({ authenticatedPage }) => {
     await authenticatedPage.goto('/');
     
-    // Click the Manage button
-    await authenticatedPage.getByRole('button', { name: /manage/i }).click();
+    // Click the Manage control to go to settings (link preferred; fallback to button)
+    const manageLink = authenticatedPage.getByRole('link', { name: /manage/i });
+    if (await manageLink.count()) {
+      await manageLink.first().click();
+    } else {
+      await authenticatedPage.getByRole('button', { name: /manage/i }).click();
+    }
     
     // Should be on settings page
     await expect(authenticatedPage).toHaveURL('/settings');
