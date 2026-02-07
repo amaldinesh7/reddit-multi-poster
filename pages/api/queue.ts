@@ -7,7 +7,8 @@ import {
   formatFileSize,
 } from '../../lib/queueLimits';
 import { getUserId } from '../../lib/apiAuth';
-import { logPostAttempt, classifyPostError } from '../../lib/supabase';
+import { logPostAttempt, classifyPostError, isUserFirstPost } from '../../lib/supabase';
+import { trackServerEvent } from '../../lib/posthog';
 import { addApiBreadcrumb } from '../../lib/apiErrorHandler';
 import formidable from 'formidable';
 import fs from 'fs';
@@ -196,10 +197,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   
   // Get user ID for analytics logging (non-blocking)
   let userId: string | null = null;
+  let isFirstPost = false;
   try {
     userId = await getUserId(req, res);
     if (userId) {
       Sentry.setUser({ id: userId });
+      // Check if this is the user's first post (for activation tracking)
+      isFirstPost = await isUserFirstPost(userId);
     }
   } catch {
     // Don't block posting if user ID lookup fails
@@ -341,6 +345,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             reddit_post_url: result.url || null,
             status: 'success',
           }).catch(() => {}); // Fire and forget
+          
+          // Track first post for activation funnel (only on first successful post in batch)
+          if (isFirstPost) {
+            trackServerEvent(userId, 'first_post_created', {
+              subreddit_count: items.length,
+              post_kind: postKind,
+            });
+            isFirstPost = false; // Only track once per batch
+          }
         }
         
         write({ 

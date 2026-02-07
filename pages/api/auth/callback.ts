@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import * as Sentry from '@sentry/nextjs';
 import { exchangeCodeForToken, redditClient, getIdentity } from '../../../utils/reddit';
-import { upsertUser } from '../../../lib/supabase';
+import { upsertUser, getUserByRedditId } from '../../../lib/supabase';
 import { serialize } from 'cookie';
 import { applyRateLimit, authRateLimit } from '../../../lib/rateLimit';
+import { trackServerEvent, identifyServerUser } from '../../../lib/posthog';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -82,7 +83,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Set Sentry user context
     Sentry.setUser({ id: redditUser.id, username: redditUser.name });
     
-    // 3. Sync user to Supabase
+    // 3. Check if this is a new user (for analytics)
+    let isNewUser = false;
+    try {
+      const existingUser = await getUserByRedditId(redditUser.id);
+      isNewUser = !existingUser;
+    } catch {
+      // Don't block auth if this check fails
+    }
+    
+    // 4. Sync user to Supabase
     addOAuthBreadcrumb('Syncing user to Supabase');
     let userId: string | undefined;
     try {
@@ -93,6 +103,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
       userId = supabaseUser.id;
       addOAuthBreadcrumb('User synced to Supabase', { userId });
+      
+      // Track signup or login completion for funnel analytics
+      if (userId) {
+        // Identify the user in PostHog
+        identifyServerUser(userId, {
+          reddit_username: redditUser.name,
+          created_at: supabaseUser.created_at,
+        });
+        
+        // Track the appropriate event
+        if (isNewUser) {
+          trackServerEvent(userId, 'signup_completed', {
+            reddit_username: redditUser.name,
+            is_new_user: true,
+          });
+        } else {
+          trackServerEvent(userId, 'login_completed', {
+            reddit_username: redditUser.name,
+            is_new_user: false,
+          });
+        }
+      }
     } catch (supabaseError) {
       // Log but don't fail - user can still use the app without Supabase features
       addOAuthBreadcrumb('Failed to sync user to Supabase', undefined, 'warning');
@@ -102,7 +134,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
     
-    // 4. Set cookies
+    // 5. Set cookies
     addOAuthBreadcrumb('Setting cookies');
     const cookieOptions = {
       path: '/',

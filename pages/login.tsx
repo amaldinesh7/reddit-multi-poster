@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import { Upload, Layers } from 'lucide-react';
+import { trackEvent } from '@/lib/posthog';
 
 interface MeResponse {
   authenticated: boolean;
@@ -38,6 +39,8 @@ export default function Login() {
   }, [router]);
 
   const handleLogin = () => {
+    // Track login button click for funnel analytics
+    trackEvent('login_clicked', { source: 'login_page' });
     setIsRedirecting(true);
     window.location.href = '/api/auth/login';
   };
