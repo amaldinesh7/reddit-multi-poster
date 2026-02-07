@@ -1,18 +1,8 @@
 const { withSentryConfig } = require("@sentry/nextjs");
-const withPWA = require("next-pwa")({
-  dest: "public",
-  register: true,
-  skipWaiting: true,
-  clientsClaim: true,
-  cleanupOutdatedCaches: true,
-  disable: process.env.NODE_ENV === "development",
-});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
-  productionBrowserSourceMaps: true,
   
   // Compiler optimizations
   compiler: {
@@ -45,7 +35,6 @@ const nextConfig = {
     ],
     // Use modern formats for better compression
     formats: ['image/avif', 'image/webp'],
-    minimumCacheTTL: 31536000,
   },
   
   // Headers for caching static assets
@@ -82,7 +71,7 @@ const nextConfig = {
   },
 };
 
-module.exports = withSentryConfig(withPWA(nextConfig), {
+module.exports = withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
@@ -100,7 +89,7 @@ module.exports = withSentryConfig(withPWA(nextConfig), {
   widenClientFileUpload: true,
 
   // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers
-  tunnelRoute: process.env.NEXT_PUBLIC_SENTRY_TUNNEL || undefined,
+  tunnelRoute: "/monitoring",
 
   // Hides source maps from generated client bundles
   hideSourceMaps: true,

@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
 import { Avatar } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuItemPrimitive, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { ChevronDown, User, Settings, LogOut, Shield, Sun, Moon, Monitor, Infinity, ArrowLeft, HelpCircle } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { Theme } from '@/contexts/ThemeContext';
@@ -135,6 +133,26 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     window.open(`https://reddit.com/user/${trimmedUserName}`, '_blank');
   };
 
+  const handleSettings = () => {
+    window.location.href = '/settings';
+  };
+
+  const handleHelp = () => {
+    window.location.href = '/help';
+  };
+
+  const handleAdminPanel = () => {
+    window.location.href = '/admin';
+  };
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+    window.history.back();
+  };
+
   return (
     <header 
       className={cn(
@@ -152,41 +170,24 @@ const AppHeader: React.FC<AppHeaderProps> = ({
       <div className="app-container">
         <div className="flex h-14 min-h-[44px] items-center gap-2">
           {showBackButton && (
-            onBack ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onBack}
-                className="hidden md:inline-flex min-h-[44px] min-w-[44px] p-2 cursor-pointer"
-                aria-label="Go back"
-              >
-                <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-              </Button>
-            ) : (
-              <Link
-                href="/"
-                className="hidden md:inline-flex min-h-[44px] min-w-[44px] p-2 items-center justify-center rounded-md hover:bg-secondary transition-colors cursor-pointer"
-                aria-label="Go back"
-              >
-                <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-              </Link>
-            )
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="hidden md:inline-flex min-h-[44px] min-w-[44px] p-2 cursor-pointer"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+            </Button>
           )}
           <div className="flex min-w-0 shrink-0 items-center gap-2.5">
-            <Link
-              href="/"
-              aria-label="Go to home"
-              className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg flex items-center justify-center cursor-pointer"
-            >
-              <Image
-                src="/logo.png"
-                alt="Reddit Multi Poster"
-                fill
-                sizes="36px"
-                priority
-                className="object-contain"
+            <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg flex items-center justify-center">
+              <img 
+                src="/logo.png" 
+                alt="Reddit Multi Poster" 
+                className="h-full w-full object-contain" 
               />
-            </Link>
+            </div>
             {pageTitle ? (
               <div className="flex items-center gap-2 min-w-0">
                 {showAdminIcon && <Shield className="w-4 h-4 text-cyan-400" aria-hidden="true" />}
@@ -320,35 +321,31 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               }
             >
               {/* User actions */}
-              <DropdownMenuItemPrimitive onClick={handleViewProfile}>
+              <DropdownMenuItem onClick={handleViewProfile}>
                 <User className="h-4 w-4 mr-2" aria-hidden="true" />
                 View Profile
-              </DropdownMenuItemPrimitive>
-              <DropdownMenuItemPrimitive asChild>
-                <Link href="/settings">
-                  <Settings className="h-4 w-4 mr-2" aria-hidden="true" />
-                  Settings
-                </Link>
-              </DropdownMenuItemPrimitive>
-              <DropdownMenuItemPrimitive asChild>
-                <Link href="/help">
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSettings}>
+                <Settings className="h-4 w-4 mr-2" aria-hidden="true" />
+                Settings
+              </DropdownMenuItem>
+              {isAdmin && (
+                <DropdownMenuItem onClick={handleHelp}>
                   <HelpCircle className="h-4 w-4 mr-2" aria-hidden="true" />
                   Help & Feedback
-                </Link>
-              </DropdownMenuItemPrimitive>
+                </DropdownMenuItem>
+              )}
               {isAdmin && (
-                <DropdownMenuItemPrimitive asChild>
-                  <Link href="/admin">
-                    <Shield className="h-4 w-4 mr-2" aria-hidden="true" />
-                    Admin Panel
-                  </Link>
-                </DropdownMenuItemPrimitive>
+                <DropdownMenuItem onClick={handleAdminPanel}>
+                  <Shield className="h-4 w-4 mr-2" aria-hidden="true" />
+                  Admin Panel
+                </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItemPrimitive onClick={onLogout} className="text-red-400">
+              <DropdownMenuItem onClick={onLogout} className="text-red-400">
                 <LogOut className="h-4 w-4 mr-2" aria-hidden="true" />
                 Logout
-              </DropdownMenuItemPrimitive>
+              </DropdownMenuItem>
             </DropdownMenu>
             </div>
           </div>

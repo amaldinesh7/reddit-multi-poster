@@ -25,9 +25,6 @@ export default function Login() {
     const checkAuth = async () => {
       try {
         const { data } = await axios.get<MeResponse>('/api/me');
-        // #region agent log
-        fetch('http://127.0.0.1:7245/ingest/d1dd910a-8a0d-4999-8cd8-1087cab3ca13',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'login.tsx:checkAuth',message:'Login auth check result',data:{authenticated:data.authenticated},timestamp:Date.now(),hypothesisId:'C,D'})}).catch(()=>{});
-        // #endregion
         if (data.authenticated) {
           router.replace('/');
         } else {

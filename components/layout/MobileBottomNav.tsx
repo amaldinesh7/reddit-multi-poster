@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { LogOut, ExternalLink, Shield } from 'lucide-react';
 import { House, GearSix, Question, UserCircle } from 'phosphor-react';
@@ -206,9 +205,10 @@ const MobileBottomNav: React.FC = () => {
               );
             }
 
-            // Navigation tabs use <Link> for proper Next.js client-side routing
+            // Navigation tabs use anchor tags for full page loads
+            // (avoiding client-side routing issues with stale service worker caches)
             return (
-              <Link
+              <a
                 key={tab.id}
                 href={tab.href ?? '/'}
                 className={getButtonClassName(active)}
@@ -217,7 +217,7 @@ const MobileBottomNav: React.FC = () => {
               >
                 <span className={getIconWrapClassName(active)}>{tab.icon(active)}</span>
                 <span className={getLabelClassName(active)}>{tab.label}</span>
-              </Link>
+              </a>
             );
           })}
           </div>
@@ -281,14 +281,14 @@ const MobileBottomNav: React.FC = () => {
 
               {/* Admin Panel - Only for admins */}
               {isAdmin && (
-                <Link
+                <a
                   href="/admin"
                   onClick={() => setProfileOpen(false)}
                   className="flex items-center gap-3 w-full py-3 px-1 rounded-lg text-sm font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer active:opacity-70"
                 >
                   <Shield className="w-4 h-4 text-muted-foreground" />
                   Admin Panel
-                </Link>
+                </a>
               )}
 
               {/* Logout */}
