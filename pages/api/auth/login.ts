@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getAuthUrl } from '../../../utils/reddit';
 import { serialize } from 'cookie';
 import { applyRateLimit, authRateLimit } from '../../../lib/rateLimit';
-import { trackServerEvent } from '../../../lib/posthog';
+import { trackServerEvent } from '../../../lib/posthog-server';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).end();

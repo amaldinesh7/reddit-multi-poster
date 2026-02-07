@@ -3,7 +3,6 @@ import type { GetServerSideProps } from 'next';
 import dynamic from 'next/dynamic';
 import { Lightbulb, Settings } from 'lucide-react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import { checkAuthCookies, redirectToLogin } from '@/lib/serverAuth';
@@ -32,6 +31,7 @@ import { captureClientError, addActionBreadcrumb } from '@/lib/clientErrorHandle
 import type { ValidationIssue, PreflightResult } from '@/lib/preflightValidation';
 import { cn } from '@/lib/utils';
 import type { PerSubredditOverride } from '../components/subreddit-picker';
+import { trackEvent } from '@/lib/posthog';
 
 // Skeleton loader for SubredditFlairPicker
 const SubredditPickerSkeleton = () => (
@@ -223,6 +223,8 @@ export default function Home() {
   // Handle customize button click
   const handleCustomize = React.useCallback((subredditName: string) => {
     setCustomizingSubreddit(subredditName);
+    // Track customize post click for feature discovery analytics (PRO feature interest)
+    trackEvent('customize_post_clicked', { source: 'subreddit_row' });
   }, []);
 
   // Handle save override from customize dialog
@@ -497,6 +499,11 @@ export default function Home() {
     const maxPostItems = limits.maxPostItems ?? 5;
     // Check if free user is trying to post to more subreddits than their limit
     if (entitlement === 'free' && selectedSubs.length > maxPostItems) {
+      // Track free limit reached for funnel analytics
+      trackEvent('free_limit_reached', {
+        source: 'post_attempt',
+        subreddit_count: selectedSubs.length,
+      });
       setUpgradeModalContext({
         title: `You picked ${selectedSubs.length} communities`,
         message: `Free: up to ${maxPostItems} per post. Go Pro for unlimited.`,
@@ -697,12 +704,10 @@ export default function Home() {
                         size="sm"
                         className="h-9 px-3 text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground rounded-md transition-colors hover:bg-secondary"
                         aria-label="Manage communities and flairs"
-                        asChild
+                        onClick={() => { window.location.href = '/settings'; }}
                       >
-                        <Link href="/settings">
-                          <Settings className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" />
-                          Manage
-                        </Link>
+                        <Settings className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" />
+                        Manage
                       </Button>
                     </div>
                   </div>

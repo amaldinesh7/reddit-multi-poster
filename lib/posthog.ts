@@ -1,5 +1,4 @@
 import posthog from 'posthog-js';
-import { PostHog } from 'posthog-node';
 
 // ============================================================================
 // Configuration
@@ -7,6 +6,20 @@ import { PostHog } from 'posthog-node';
 
 const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY || '';
 const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
+
+// Environment detection for filtering dev vs prod events
+const getEnvironment = (): 'production' | 'development' | 'preview' => {
+  // Vercel provides NEXT_PUBLIC_VERCEL_ENV
+  const vercelEnv = process.env.NEXT_PUBLIC_VERCEL_ENV;
+  if (vercelEnv === 'production') return 'production';
+  if (vercelEnv === 'preview') return 'preview';
+  
+  // Fallback to NODE_ENV
+  if (process.env.NODE_ENV === 'production') return 'production';
+  return 'development';
+};
+
+export const ANALYTICS_ENVIRONMENT = getEnvironment();
 
 // Check if PostHog is configured
 export const isPostHogEnabled = (): boolean => {
@@ -60,42 +73,33 @@ export const getPostHogClient = () => {
 };
 
 // ============================================================================
-// Server-side PostHog (Node.js)
-// ============================================================================
-
-let serverClient: PostHog | null = null;
-
-/**
- * Get the server-side PostHog client.
- * Creates a singleton instance.
- */
-export const getPostHogServer = (): PostHog | null => {
-  if (typeof window !== 'undefined') return null; // Only server-side
-  if (!isPostHogEnabled()) return null;
-  
-  if (!serverClient) {
-    serverClient = new PostHog(POSTHOG_KEY, {
-      host: POSTHOG_HOST,
-      // Flush events in batches
-      flushAt: 20,
-      flushInterval: 10000, // 10 seconds
-    });
-  }
-  
-  return serverClient;
-};
-
-// ============================================================================
-// Event Types
+// Event Types (shared)
 // ============================================================================
 
 export type AnalyticsEvent = 
+  // Auth events
   | 'login_clicked'
   | 'oauth_started'
   | 'signup_completed'
   | 'login_completed'
+  | 'logout'
+  // Tier 1: Revenue & Conversion
+  | 'upgrade_modal_opened'
+  | 'upgrade_clicked'
+  | 'checkout_started'
+  | 'checkout_completed'
+  | 'free_limit_reached'
+  // Tier 2: Core Engagement
   | 'first_post_created'
-  | 'logout';
+  | 'post_submitted'
+  | 'post_success'
+  | 'post_failed'
+  | 'media_uploaded'
+  // Tier 3: Feature Discovery
+  | 'settings_visited'
+  | 'category_created'
+  | 'subreddit_search_used'
+  | 'customize_post_clicked';
 
 export interface EventProperties {
   // Common properties
@@ -108,6 +112,22 @@ export interface EventProperties {
   // Post properties
   subreddit_count?: number;
   post_kind?: string;
+  success_count?: number;
+  failed_count?: number;
+  error_category?: string;
+  
+  // Media properties
+  media_type?: 'image' | 'video' | 'gallery';
+  file_count?: number;
+  
+  // Upgrade/Checkout properties
+  plan?: string;
+  amount?: number;
+  currency?: string;
+  
+  // Feature properties
+  category_name?: string;
+  search_query?: string;
 }
 
 // ============================================================================
@@ -116,6 +136,7 @@ export interface EventProperties {
 
 /**
  * Track an analytics event on the client side.
+ * Automatically adds environment property for filtering.
  */
 export const trackEvent = (
   event: AnalyticsEvent,
@@ -124,17 +145,24 @@ export const trackEvent = (
   const client = getPostHogClient();
   if (!client) return;
   
-  client.capture(event, properties);
+  client.capture(event, {
+    ...properties,
+    environment: ANALYTICS_ENVIRONMENT,
+  });
 };
 
 /**
  * Track a page view on the client side.
+ * Automatically adds environment property for filtering.
  */
 export const trackPageView = (url?: string): void => {
   const client = getPostHogClient();
   if (!client) return;
   
-  client.capture('$pageview', url ? { $current_url: url } : undefined);
+  client.capture('$pageview', {
+    ...(url ? { $current_url: url } : {}),
+    environment: ANALYTICS_ENVIRONMENT,
+  });
 };
 
 /**
@@ -162,56 +190,4 @@ export const resetUser = (): void => {
   if (!client) return;
   
   client.reset();
-};
-
-// ============================================================================
-// Server-side Event Tracking
-// ============================================================================
-
-/**
- * Track an analytics event on the server side.
- * Use this in API routes.
- */
-export const trackServerEvent = (
-  distinctId: string,
-  event: AnalyticsEvent,
-  properties?: EventProperties
-): void => {
-  const client = getPostHogServer();
-  if (!client) return;
-  
-  client.capture({
-    distinctId,
-    event,
-    properties,
-  });
-};
-
-/**
- * Identify a user on the server side.
- */
-export const identifyServerUser = (
-  distinctId: string,
-  properties?: {
-    reddit_username?: string;
-    created_at?: string;
-  }
-): void => {
-  const client = getPostHogServer();
-  if (!client) return;
-  
-  client.identify({
-    distinctId,
-    properties,
-  });
-};
-
-/**
- * Shutdown server client gracefully.
- * Call this on process exit if needed.
- */
-export const shutdownPostHogServer = async (): Promise<void> => {
-  if (serverClient) {
-    await serverClient.shutdown();
-  }
 };

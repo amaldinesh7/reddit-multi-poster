@@ -4,7 +4,7 @@ import { exchangeCodeForToken, redditClient, getIdentity } from '../../../utils/
 import { upsertUser, getUserByRedditId } from '../../../lib/supabase';
 import { serialize } from 'cookie';
 import { applyRateLimit, authRateLimit } from '../../../lib/rateLimit';
-import { trackServerEvent, identifyServerUser } from '../../../lib/posthog';
+import { trackServerEvent, identifyServerUser } from '../../../lib/posthog-server';
 
 const isProduction = process.env.NODE_ENV === 'production';
 

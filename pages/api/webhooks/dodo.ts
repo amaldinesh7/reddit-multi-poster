@@ -10,6 +10,7 @@ import { Webhook } from 'standardwebhooks';
 import { createServerSupabaseClient } from '../../../lib/supabase';
 import { invalidateEntitlementCache } from '../../../lib/entitlement';
 import { addApiBreadcrumb } from '../../../lib/apiErrorHandler';
+import { trackServerEvent } from '../../../lib/posthog-server';
 
 export const config = {
   api: { bodyParser: false },
@@ -155,6 +156,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   invalidateEntitlementCache(userId);
   addApiBreadcrumb('Dodo webhook: user entitlement updated to paid', { userId, paymentId });
+  
+  // Track checkout completion for funnel analytics
+  trackServerEvent(userId, 'checkout_completed', {
+    plan: 'pro',
+    amount: 199,
+    currency: 'INR',
+  });
 
   return res.status(200).json({ received: true });
 }
