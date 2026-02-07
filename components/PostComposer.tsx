@@ -20,6 +20,7 @@ export default function PostComposer({ value, onChange, body, onBodyChange, pref
   const count = value.length;
   const limit = 300;
   const bodyLimit = 40000;
+  const hasBody = (body?.length ?? 0) > 0;
 
   // Auto-expand title textarea based on content
   useEffect(() => {
@@ -45,6 +46,12 @@ export default function PostComposer({ value, onChange, body, onBodyChange, pref
     }
   }, [resetSignal, setShowBody]);
 
+  useEffect(() => {
+    if (hasBody && !showBody) {
+      setShowBody(true);
+    }
+  }, [hasBody, showBody, setShowBody]);
+
   const handleChange = (newValue: string) => {
     if (newValue.length <= limit) {
       onChange(newValue);
@@ -55,6 +62,15 @@ export default function PostComposer({ value, onChange, body, onBodyChange, pref
     if (onBodyChange && newValue.length <= bodyLimit) {
       onBodyChange(newValue);
     }
+  };
+
+  const handleBodyToggle = () => {
+    if (hasBody) {
+      setShowBody(true);
+      return;
+    }
+
+    setShowBody(!showBody);
   };
 
   return (
@@ -80,15 +96,17 @@ export default function PostComposer({ value, onChange, body, onBodyChange, pref
       <div>
         <button
           type="button"
-          onClick={() => setShowBody(!showBody)}
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          onClick={handleBodyToggle}
+          aria-expanded={showBody}
+          aria-controls="post-composer-body"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
           {showBody ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           <span>Add description{body && body.length > 0 ? ` (${body.length} chars)` : ''}</span>
         </button>
         
         {showBody && onBodyChange && (
-          <div className="mt-2">
+          <div className="mt-2" id="post-composer-body">
             <Textarea
               ref={bodyRef}
               placeholder="Description (optional)"
