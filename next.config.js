@@ -10,6 +10,8 @@ const withPWA = require("next-pwa")({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  swcMinify: true,
+  productionBrowserSourceMaps: true,
   
   // Compiler optimizations
   compiler: {
@@ -42,6 +44,7 @@ const nextConfig = {
     ],
     // Use modern formats for better compression
     formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 31536000,
   },
   
   // Headers for caching static assets
@@ -96,7 +99,7 @@ module.exports = withSentryConfig(withPWA(nextConfig), {
   widenClientFileUpload: true,
 
   // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers
-  tunnelRoute: "/monitoring",
+  tunnelRoute: process.env.NEXT_PUBLIC_SENTRY_TUNNEL || undefined,
 
   // Hides source maps from generated client bundles
   hideSourceMaps: true,

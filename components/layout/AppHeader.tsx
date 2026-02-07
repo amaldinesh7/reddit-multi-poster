@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -175,7 +176,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
       onBack();
       return;
     }
-    router.back();
+    router.push('/');
   };
 
   return (
@@ -211,10 +212,13 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               aria-label="Go to home"
               className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg flex items-center justify-center cursor-pointer"
             >
-              <img 
-                src="/logo.png" 
-                alt="Reddit Multi Poster" 
-                className="h-full w-full object-contain" 
+              <Image
+                src="/logo.png"
+                alt="Reddit Multi Poster"
+                fill
+                sizes="36px"
+                priority
+                className="object-contain"
               />
             </Link>
             {pageTitle ? (
@@ -358,12 +362,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <Settings className="h-4 w-4 mr-2" aria-hidden="true" />
                 Settings
               </DropdownMenuItem>
-              {isAdmin && (
-                <DropdownMenuItem onClick={handleHelp}>
-                  <HelpCircle className="h-4 w-4 mr-2" aria-hidden="true" />
-                  Help & Feedback
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem onClick={handleHelp}>
+                <HelpCircle className="h-4 w-4 mr-2" aria-hidden="true" />
+                Help & Feedback
+              </DropdownMenuItem>
               {isAdmin && (
                 <DropdownMenuItem onClick={handleAdminPanel}>
                   <Shield className="h-4 w-4 mr-2" aria-hidden="true" />

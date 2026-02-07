@@ -67,6 +67,7 @@ export default function Settings() {
   const [upgradeLoading, setUpgradeLoading] = React.useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
+  const [isAdmin, setIsAdmin] = React.useState(false);
 
   // Use limits from auth (for paid users, maxSubreddits is MAX_SAFE_INTEGER)
   const maxSubreddits = limits.maxSubreddits;
@@ -97,6 +98,22 @@ export default function Settings() {
       router.replace('/login');
     }
   }, [authLoading, isAuthenticated, router]);
+
+  // Check admin status (non-blocking)
+  React.useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const checkAdmin = async () => {
+      try {
+        const adminRes = await axios.get<{ isAdmin: boolean }>('/api/admin-check');
+        setIsAdmin(adminRes.data.isAdmin);
+      } catch {
+        // ignore admin failures
+      }
+    };
+
+    checkAdmin();
+  }, [isAuthenticated]);
 
   // Calculate current subreddit count
   const currentSubredditCount = data.categories.reduce((sum, c) => sum + c.user_subreddits.length, 0);
@@ -304,6 +321,7 @@ export default function Settings() {
               userName={me?.name}
               userAvatar={me?.icon_img}
               onLogout={logout}
+              isAdmin={isAdmin}
               entitlement={entitlement}
               pageTitle="Settings"
               showBackButton

@@ -37,6 +37,8 @@ export interface QueueJobState {
   isProcessing: boolean;
   isConnected: boolean;
   waitingSeconds: number | null;
+  startedAtMs: number | null;
+  endedAtMs: number | null;
 }
 
 export interface QueueJobSubmission {
@@ -53,6 +55,13 @@ export interface QueueJobSubmission {
   }>;
   caption: string;
   prefixes: { f?: boolean; c?: boolean };
+}
+
+export interface SubmitOptions {
+  /** Show toast notification to user (default: true) */
+  showToast?: boolean;
+  /** Custom toast title (default: "Submission Failed") */
+  toastTitle?: string;
 }
 
 /**
@@ -73,7 +82,7 @@ export interface RetryItemInput {
 
 export interface UseQueueJobReturn {
   state: QueueJobState;
-  submit: (submission: QueueJobSubmission) => Promise<string | null>;
+  submit: (submission: QueueJobSubmission, options?: SubmitOptions) => Promise<string | null>;
   /** Submit a single item for retry. Returns job ID if successful. */
   retryItem: (
     item: RetryItemInput,
@@ -106,6 +115,36 @@ const initialState: QueueJobState = {
   isProcessing: false,
   isConnected: false,
   waitingSeconds: null,
+  startedAtMs: null,
+  endedAtMs: null,
+};
+
+const isTerminalStatus = (status: QueueJobStatus | null): boolean =>
+  status === 'completed' || status === 'failed' || status === 'cancelled';
+
+const mergeResultsByIndex = (
+  prev: QueueJobResult[],
+  next: QueueJobResult[]
+): QueueJobResult[] => {
+  const merged = new Map<number, QueueJobResult>();
+  prev.forEach((result) => {
+    merged.set(result.index, result);
+  });
+  next.forEach((result) => {
+    const existing = merged.get(result.index);
+    if (!existing) {
+      merged.set(result.index, result);
+      return;
+    }
+    merged.set(result.index, {
+      ...existing,
+      ...result,
+      url: result.url ?? existing.url,
+      error: result.error ?? existing.error,
+      postedAt: result.postedAt ?? existing.postedAt,
+    });
+  });
+  return Array.from(merged.values()).sort((a, b) => a.index - b.index);
 };
 
 // ============================================================================
@@ -147,9 +186,13 @@ export function useQueueJob(): UseQueueJobReturn {
             ...prev,
             status: job.status,
             currentIndex: job.current_index,
-            results: job.results,
+            results: mergeResultsByIndex(prev.results, job.results || []),
             error: job.error,
             isProcessing: job.status === 'processing',
+            startedAtMs: prev.startedAtMs ?? (job.started_at ? Date.parse(job.started_at) : null),
+            endedAtMs: isTerminalStatus(job.status)
+              ? (job.completed_at ? Date.parse(job.completed_at) : Date.now())
+              : prev.endedAtMs,
           }));
 
           // Stop polling if job is done
@@ -255,7 +298,7 @@ export function useQueueJob(): UseQueueJobReturn {
                 if (update.result) {
                   setState(prev => ({
                     ...prev,
-                    results: [...prev.results, update.result!],
+                    results: mergeResultsByIndex(prev.results, [update.result!]),
                     currentIndex: (update.result!.index || 0) + 1,
                     waitingSeconds: null,
                   }));
@@ -275,6 +318,7 @@ export function useQueueJob(): UseQueueJobReturn {
                   status: 'completed',
                   isProcessing: false,
                   waitingSeconds: null,
+                  endedAtMs: prev.endedAtMs ?? Date.now(),
                 }));
                 stopPolling();
                 break;
@@ -284,6 +328,7 @@ export function useQueueJob(): UseQueueJobReturn {
                   ...prev,
                   error: update.error || 'Unknown error',
                   isProcessing: false,
+                  endedAtMs: prev.endedAtMs ?? Date.now(),
                 }));
                 break;
             }
@@ -309,6 +354,7 @@ export function useQueueJob(): UseQueueJobReturn {
         ...prev,
         error: errorMessage,
         isProcessing: false,
+        endedAtMs: prev.endedAtMs ?? Date.now(),
       }));
     } finally {
       isProcessingRef.current = false;
@@ -332,8 +378,19 @@ export function useQueueJob(): UseQueueJobReturn {
   // Submit Job
   // ============================================================================
 
-  const submit = useCallback(async (submission: QueueJobSubmission): Promise<string | null> => {
-    setState(prev => ({ ...prev, isSubmitting: true, error: null }));
+  const submit = useCallback(async (
+    submission: QueueJobSubmission,
+    options: SubmitOptions = {}
+  ): Promise<string | null> => {
+    const { showToast = true, toastTitle = 'Submission Failed' } = options;
+
+    setState(prev => ({
+      ...prev,
+      isSubmitting: true,
+      error: null,
+      startedAtMs: Date.now(),
+      endedAtMs: null,
+    }));
 
     try {
       // Build FormData
@@ -397,6 +454,8 @@ export function useQueueJob(): UseQueueJobReturn {
         currentIndex: 0,
         isSubmitting: false,
         error: null,
+        startedAtMs: Date.now(),
+        endedAtMs: null,
       }));
 
       // Subscribe to updates and start processing
@@ -406,13 +465,15 @@ export function useQueueJob(): UseQueueJobReturn {
       return jobId;
     } catch (error) {
       const errorMessage = captureClientError(error, 'useQueueJob.submit', {
-        toastTitle: 'Submission Failed',
+        showToast,
+        toastTitle,
         context: { itemCount: submission.items.length },
       });
       setState(prev => ({
         ...prev,
         isSubmitting: false,
         error: errorMessage,
+        endedAtMs: prev.endedAtMs ?? Date.now(),
       }));
       return null;
     }
@@ -436,7 +497,7 @@ export function useQueueJob(): UseQueueJobReturn {
       items: [item],
       caption,
       prefixes,
-    });
+    }, { showToast: false, toastTitle: 'Retry Failed' });
   }, [submit]);
 
   // ============================================================================
@@ -461,7 +522,7 @@ export function useQueueJob(): UseQueueJobReturn {
       items,
       caption,
       prefixes,
-    });
+    }, { showToast: false, toastTitle: 'Retry Failed' });
   }, [submit]);
 
   // ============================================================================
@@ -490,6 +551,7 @@ export function useQueueJob(): UseQueueJobReturn {
         ...prev,
         status: 'cancelled',
         isProcessing: false,
+        endedAtMs: prev.endedAtMs ?? Date.now(),
       }));
 
       return true;
@@ -501,6 +563,7 @@ export function useQueueJob(): UseQueueJobReturn {
       setState(prev => ({
         ...prev,
         error: errorMessage,
+        endedAtMs: prev.endedAtMs ?? Date.now(),
       }));
       return false;
     }
@@ -532,6 +595,10 @@ export function useQueueJob(): UseQueueJobReturn {
         isProcessing: job.status === 'processing',
         isConnected: false,
         waitingSeconds: null,
+        startedAtMs: job.started_at ? Date.parse(job.started_at) : null,
+        endedAtMs: isTerminalStatus(job.status)
+          ? (job.completed_at ? Date.parse(job.completed_at) : Date.now())
+          : null,
       });
 
       // If job is still active, subscribe and start polling
