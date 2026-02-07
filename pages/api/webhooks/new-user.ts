@@ -98,7 +98,19 @@ export default async function handler(
       return res.status(400).json({ error: 'Missing record in payload' });
     }
 
-    const { id, reddit_username, reddit_avatar_url, created_at } = payload.record;
+    // Validate required fields exist and are of expected types
+    const record = payload.record;
+    if (
+      typeof record.id !== 'string' ||
+      typeof record.reddit_username !== 'string' ||
+      typeof record.created_at !== 'string'
+    ) {
+      return res.status(400).json({ 
+        error: 'Invalid record: missing or invalid required fields (id, reddit_username, created_at)' 
+      });
+    }
+
+    const { id, reddit_username, reddit_avatar_url, created_at } = record;
 
     console.log(`New user signup webhook received: u/${reddit_username}`);
 
@@ -110,7 +122,8 @@ export default async function handler(
       created_at,
     };
 
-    // Send notifications (non-blocking)
+    // Send notifications (awaited - will block webhook response until complete)
+    // This ensures notifications are sent before returning success to Supabase
     await notifyNewUserSignup(userData);
 
     console.log(`Notifications sent for new user: u/${reddit_username}`);
