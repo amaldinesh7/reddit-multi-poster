@@ -63,8 +63,8 @@ export const AppFooter: React.FC = () => {
       <div className="h-px bg-border/60" />
       <div className="relative overflow-hidden app-container py-3 sm:py-4">
         <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-6">
-          {/* Left side - Privacy / Terms */}
-          <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-muted-foreground">
+          {/* Left side - Privacy / Terms (hidden on mobile) */}
+          <div className="hidden md:flex items-center gap-1.5 text-[11px] sm:text-xs text-muted-foreground">
             <Link 
               href="/privacy" 
               className="hover:text-foreground transition-colors duration-200 cursor-pointer"
