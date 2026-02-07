@@ -223,7 +223,7 @@ const MobileBottomNav: React.FC = () => {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-[2px] md:hidden animate-in fade-in duration-200"
+            className="fixed inset-0 z-[110] bg-black/40 backdrop-blur-[2px] md:hidden animate-in fade-in duration-200 cursor-pointer"
             onClick={() => setProfileOpen(false)}
             aria-hidden="true"
           />

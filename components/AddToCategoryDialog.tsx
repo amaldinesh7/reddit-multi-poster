@@ -65,7 +65,7 @@ const AddToCategoryDialog: React.FC<AddToCategoryDialogProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm cursor-pointer"
                 onClick={onClose}
                 aria-hidden="true"
             />
@@ -113,7 +113,7 @@ const AddToCategoryDialog: React.FC<AddToCategoryDialogProps> = ({
                                 <button
                                     key={category.id}
                                     onClick={() => setSelectedCategory(category.id)}
-                                    className={`w-full flex items-center justify-between p-3 rounded-md border transition-all ${selectedCategory === category.id
+                                    className={`w-full flex items-center justify-between p-3 rounded-md border transition-all cursor-pointer ${selectedCategory === category.id
                                             ? 'border-primary bg-primary/5 ring-1 ring-primary'
                                             : 'border-border hover:border-primary/50 hover:bg-secondary/50'
                                         }`}

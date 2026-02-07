@@ -304,7 +304,7 @@ const SubredditRow = React.memo(({
       >
         {/* Left Side: Checkbox + Name + Badges */}
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center justify-center w-6 h-6 flex-shrink-0" onClick={handleCheckboxContainerClick}>
+          <div className="flex items-center justify-center w-6 h-6 flex-shrink-0 cursor-pointer" onClick={handleCheckboxContainerClick}>
             <Checkbox
               id={checkboxId}
               checked={isSelected}
@@ -367,7 +367,7 @@ const SubredditRow = React.memo(({
 
         {/* Right Side: Customize Button + Error/Warning Indicators */}
         {isSelected && (customizationEnabled || hasValidationIssues || failedPost) && (
-          <div className="flex items-center gap-1.5 flex-shrink-0" onClick={handleControlsClick}>
+          <div className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer" onClick={handleControlsClick}>
             {/* Customize Button (PRO feature) */}
             {customizationEnabled && onCustomize && (
               <Tooltip content="Customize title & description for this community" side="left">
