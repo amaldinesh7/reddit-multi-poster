@@ -306,11 +306,12 @@ export default function Settings() {
               onLogout={logout}
               entitlement={entitlement}
               pageTitle="Settings"
+              showBackButton
             />
           )}
 
           {/* Main Content */}
-          <main className="app-container py-4 sm:py-6 max-w-3xl safe-bottom">
+          <main className="app-container py-4 sm:py-6 md:max-w-4xl safe-bottom">
             <div className="space-y-6">
               {/* Actions */}
               <div className="flex flex-row flex-nowrap items-center gap-3 overflow-x-auto">

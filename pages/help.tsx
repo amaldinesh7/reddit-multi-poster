@@ -76,6 +76,7 @@ const HelpPage: React.FC = () => {
             entitlement={entitlement}
             isAdmin={isAdmin}
             pageTitle="Help & Feedback"
+            showBackButton
           />
         )}
         <div className="app-container max-w-2xl py-8">
