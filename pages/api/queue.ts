@@ -8,7 +8,7 @@ import {
 } from '../../lib/queueLimits';
 import { getUserId } from '../../lib/apiAuth';
 import { logPostAttempt, classifyPostError, isUserFirstPost } from '../../lib/supabase';
-import { trackServerEvent } from '../../lib/posthog-server';
+import { trackServerEvent, flushPostHogServer } from '../../lib/posthog-server';
 import { addApiBreadcrumb } from '../../lib/apiErrorHandler';
 import formidable from 'formidable';
 import fs from 'fs';
@@ -447,6 +447,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Send completion message
     write({ status: 'completed' });
+    
+    // Flush PostHog events before ending response to ensure they're sent
+    await flushPostHogServer();
+    
     res.end();
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Error';

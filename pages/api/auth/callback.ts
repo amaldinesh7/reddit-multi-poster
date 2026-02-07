@@ -4,7 +4,7 @@ import { exchangeCodeForToken, redditClient, getIdentity } from '../../../utils/
 import { upsertUser, getUserByRedditId } from '../../../lib/supabase';
 import { serialize } from 'cookie';
 import { applyRateLimit, authRateLimit } from '../../../lib/rateLimit';
-import { trackServerEvent, identifyServerUser } from '../../../lib/posthog-server';
+import { trackServerEvent, identifyServerUser, aliasServerUser, flushPostHogServer } from '../../../lib/posthog-server';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -106,6 +106,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       // Track signup or login completion for funnel analytics
       if (userId) {
+        // Alias the oauth state to the user ID so oauth_started links to signup/login
+        // This ensures the funnel: oauth_started -> signup_completed works correctly
+        if (state) {
+          aliasServerUser(userId, state);
+        }
+        
         // Identify the user in PostHog
         identifyServerUser(userId, {
           reddit_username: redditUser.name,
@@ -165,6 +171,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     res.setHeader('Set-Cookie', cookies);
     addOAuthBreadcrumb('OAuth callback completed successfully');
+    
+    // Flush PostHog events before redirecting to ensure they're sent
+    await flushPostHogServer();
+    
     res.redirect(302, '/');
   } catch (e) {
     // Capture error to Sentry with full context

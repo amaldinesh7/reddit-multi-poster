@@ -1,30 +1,22 @@
-import posthog from 'posthog-js';
+/**
+ * Client-side PostHog tracking utilities.
+ * 
+ * IMPORTANT: Only import this file in client-side components and pages.
+ * For API routes, use lib/posthog-server.ts instead.
+ */
+import posthog, { PostHog } from 'posthog-js';
+import {
+  POSTHOG_KEY,
+  POSTHOG_HOST,
+  ANALYTICS_ENVIRONMENT,
+  isPostHogEnabled,
+  type AnalyticsEvent,
+  type EventProperties,
+} from './posthog-types';
 
-// ============================================================================
-// Configuration
-// ============================================================================
-
-const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY || '';
-const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
-
-// Environment detection for filtering dev vs prod events
-const getEnvironment = (): 'production' | 'development' | 'preview' => {
-  // Vercel provides NEXT_PUBLIC_VERCEL_ENV
-  const vercelEnv = process.env.NEXT_PUBLIC_VERCEL_ENV;
-  if (vercelEnv === 'production') return 'production';
-  if (vercelEnv === 'preview') return 'preview';
-  
-  // Fallback to NODE_ENV
-  if (process.env.NODE_ENV === 'production') return 'production';
-  return 'development';
-};
-
-export const ANALYTICS_ENVIRONMENT = getEnvironment();
-
-// Check if PostHog is configured
-export const isPostHogEnabled = (): boolean => {
-  return Boolean(POSTHOG_KEY);
-};
+// Re-export types and utilities for convenience
+export { isPostHogEnabled, ANALYTICS_ENVIRONMENT };
+export type { AnalyticsEvent, EventProperties };
 
 // ============================================================================
 // Client-side PostHog (Browser)
@@ -66,69 +58,11 @@ export const initPostHogClient = (): void => {
  * Get the PostHog client instance.
  * Returns null if not initialized or not in browser.
  */
-export const getPostHogClient = () => {
+export const getPostHogClient = (): PostHog | null => {
   if (typeof window === 'undefined') return null;
   if (!clientInitialized) return null;
   return posthog;
 };
-
-// ============================================================================
-// Event Types (shared)
-// ============================================================================
-
-export type AnalyticsEvent = 
-  // Auth events
-  | 'login_clicked'
-  | 'oauth_started'
-  | 'signup_completed'
-  | 'login_completed'
-  | 'logout'
-  // Tier 1: Revenue & Conversion
-  | 'upgrade_modal_opened'
-  | 'upgrade_clicked'
-  | 'checkout_started'
-  | 'checkout_completed'
-  | 'free_limit_reached'
-  // Tier 2: Core Engagement
-  | 'first_post_created'
-  | 'post_submitted'
-  | 'post_success'
-  | 'post_failed'
-  | 'media_uploaded'
-  // Tier 3: Feature Discovery
-  | 'settings_visited'
-  | 'category_created'
-  | 'subreddit_search_used'
-  | 'customize_post_clicked';
-
-export interface EventProperties {
-  // Common properties
-  source?: string;
-  
-  // User properties (for signup/login)
-  reddit_username?: string;
-  is_new_user?: boolean;
-  
-  // Post properties
-  subreddit_count?: number;
-  post_kind?: string;
-  success_count?: number;
-  failed_count?: number;
-  error_category?: string;
-  
-  // Media properties
-  media_type?: 'image' | 'video' | 'gallery';
-  file_count?: number;
-  
-  // Upgrade/Checkout properties
-  plan?: string;
-  amount?: number;
-  currency?: string;
-  
-  // Feature properties
-  category_name?: string;
-  search_query?: string;
-}
 
 // ============================================================================
 // Client-side Event Tracking

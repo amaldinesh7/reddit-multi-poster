@@ -5,33 +5,14 @@
  * Do NOT import in client-side components or pages.
  */
 import { PostHog } from 'posthog-node';
-import type { AnalyticsEvent, EventProperties } from './posthog';
-
-// ============================================================================
-// Configuration
-// ============================================================================
-
-const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY || '';
-const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
-
-// Environment detection for filtering dev vs prod events
-const getEnvironment = (): 'production' | 'development' | 'preview' => {
-  // Vercel provides VERCEL_ENV on server-side
-  const vercelEnv = process.env.VERCEL_ENV;
-  if (vercelEnv === 'production') return 'production';
-  if (vercelEnv === 'preview') return 'preview';
-  
-  // Fallback to NODE_ENV
-  if (process.env.NODE_ENV === 'production') return 'production';
-  return 'development';
-};
-
-const ANALYTICS_ENVIRONMENT = getEnvironment();
-
-// Check if PostHog is configured
-const isPostHogEnabled = (): boolean => {
-  return Boolean(POSTHOG_KEY);
-};
+import {
+  POSTHOG_KEY,
+  POSTHOG_HOST,
+  ANALYTICS_ENVIRONMENT,
+  isPostHogEnabled,
+  type AnalyticsEvent,
+  type EventProperties,
+} from './posthog-types';
 
 // ============================================================================
 // Server-side PostHog (Node.js)
@@ -87,6 +68,25 @@ export const trackServerEvent = (
 };
 
 /**
+ * Alias an anonymous ID to a user ID.
+ * Use this to link pre-login events (like oauth_started) to the authenticated user.
+ * @param userId - The authenticated user's ID
+ * @param anonymousId - The anonymous ID used before authentication (e.g., oauth state)
+ */
+export const aliasServerUser = (
+  userId: string,
+  anonymousId: string
+): void => {
+  const client = getPostHogServer();
+  if (!client) return;
+  
+  client.alias({
+    distinctId: userId,
+    alias: anonymousId,
+  });
+};
+
+/**
  * Identify a user on the server side.
  */
 export const identifyServerUser = (
@@ -103,6 +103,16 @@ export const identifyServerUser = (
     distinctId,
     properties,
   });
+};
+
+/**
+ * Flush all pending events immediately.
+ * Call this before ending API responses to ensure events are sent.
+ */
+export const flushPostHogServer = async (): Promise<void> => {
+  if (serverClient) {
+    await serverClient.flush();
+  }
 };
 
 /**
