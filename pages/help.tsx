@@ -2,18 +2,104 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/hooks/useAuth';
-import { MessageSquare, Bug, HelpCircle, Loader2 } from 'lucide-react';
+import { MessageSquare, Bug, HelpCircle, Loader2, ChevronDown, Mail } from 'lucide-react';
 import { AppHeader } from '@/components/layout';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 // Board tokens from environment variables
 const BOARD_TOKENS = {
   bugs: process.env.NEXT_PUBLIC_CANNY_BUGS_BOARD_TOKEN || '',
   features: process.env.NEXT_PUBLIC_CANNY_FEATURES_BOARD_TOKEN || '',
-  help: process.env.NEXT_PUBLIC_CANNY_HELP_BOARD_TOKEN || '',
 };
 
-type BoardType = 'bugs' | 'features' | 'help';
+const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@example.com';
+
+type TabType = 'features' | 'bugs' | 'faq';
+
+// FAQ Data - Ordered by user journey and common questions
+const FAQ_ITEMS = [
+  {
+    category: 'Getting Started',
+    questions: [
+      {
+        q: 'How do I get started with Reddit Multi Poster?',
+        a: `Getting started is simple:\n\n**1. Connect your Reddit account** — Click "Login with Reddit" and authorize the app. We only request permissions needed to post on your behalf.\n\n**2. Add subreddits** — Go to Settings and search for subreddits you want to post to. Add them to your list.\n\n**3. Create your post** — Write your title and content, select your subreddits, and hit "Review & Post".\n\nThat's it! Your post will be submitted to all selected subreddits.`,
+      },
+      {
+        q: 'What subreddits can I post to?',
+        a: 'You can post to any subreddit where your Reddit account has posting permissions. This includes subreddits you\'re a member of and public subreddits that accept posts from your account. Some subreddits may have karma requirements or other restrictions set by their moderators.',
+      },
+      {
+        q: 'Is my Reddit account safe?',
+        a: 'Yes. We use Reddit\'s official OAuth system — we never see or store your Reddit password. You can revoke access anytime from your Reddit account settings under "Apps".',
+      },
+    ],
+  },
+  {
+    category: 'Posting to Multiple Subreddits',
+    questions: [
+      {
+        q: 'How do I post to multiple subreddits at once?',
+        a: `Here's how to cross-post efficiently:\n\n**Step 1: Set up your subreddits (one-time)**\n• Go to **Settings** from the menu\n• Search for subreddits using the search bar\n• Click **+** to add them to your list\n• Organize into categories if needed (e.g., "Tech", "Marketing")\n\n**Step 2: Create your post**\n• On the main page, write your **title** and **content**\n• Add images or videos if needed\n\n**Step 3: Select where to post**\n• Check the subreddits you want to post to\n• Set flairs if required by the subreddit\n\n**Step 4: Review and post**\n• Click **"Review & Post"**\n• Verify everything looks correct\n• Confirm to submit\n\nWe'll post to each subreddit one by one and show you the status of each submission.`,
+      },
+      {
+        q: 'Can I customize my post for each subreddit?',
+        a: 'Yes! Click the **edit icon** next to any selected subreddit to customize the title, body text, or flair specifically for that community. Your main post stays as the default for other subreddits. This is useful when different communities have different title formats or content preferences.',
+      },
+      {
+        q: 'What happens if a post fails to submit?',
+        a: 'If a post fails (due to subreddit rules, rate limits, etc.), we\'ll show you which ones failed and why. You can then fix the issue and retry just the failed posts without affecting the successful ones.',
+      },
+    ],
+  },
+  {
+    category: 'Flairs & Media',
+    questions: [
+      {
+        q: 'What are flairs and how do I set them?',
+        a: 'Flairs are labels that subreddits use to categorize posts (e.g., "Question", "Discussion", "News"). Some subreddits **require** a flair before posting. When you select a subreddit that uses flairs, you\'ll see a dropdown to choose one. Pick the most relevant flair for your content.',
+      },
+      {
+        q: 'Can I add images or videos?',
+        a: 'Yes! Click the **media upload area** to add images or videos. Supported formats include JPG, PNG, GIF, and MP4. Keep in mind that some subreddits restrict media posts or have specific rules about image content.',
+      },
+    ],
+  },
+  {
+    category: 'Managing Your Subreddits',
+    questions: [
+      {
+        q: 'How do I organize my subreddits?',
+        a: 'In **Settings**, you can create categories to group related subreddits. Click **"New Category"** to create one, then drag and drop subreddits between categories. This makes it faster to select multiple related subreddits when posting.',
+      },
+      {
+        q: 'How do I remove a subreddit from my list?',
+        a: 'In **Settings**, click the **trash icon** next to any subreddit to remove it from your list. This won\'t affect any posts you\'ve already made to that subreddit.',
+      },
+    ],
+  },
+  {
+    category: 'Plans & Limits',
+    questions: [
+      {
+        q: 'Is Reddit Multi Poster free?',
+        a: 'Yes! The free plan lets you:\n• Save up to **5 subreddits**\n• Post to up to **5 subreddits** at a time\n\nThis is perfect for getting started and testing the app.',
+      },
+      {
+        q: 'What do I get with the paid plan?',
+        a: 'The paid plan unlocks the full power of Reddit Multi Poster:\n\n• **Unlimited saved subreddits** — Add as many as you need\n• **Unlimited subreddits per post** — Post to all your subreddits at once\n• **Per-subreddit customization** — Customize title, content, and flair for each subreddit individually\n• **Category organization** — Group subreddits into custom categories\n• **Priority support** — Get help faster when you need it\n\nIt\'s a **one-time payment of ₹199** — no recurring subscription fees, ever.',
+      },
+      {
+        q: 'How do I upgrade?',
+        a: 'Click the **"Upgrade"** button in the header or go to Settings. You\'ll be taken to a secure checkout page. Once payment is complete, your account is upgraded instantly.',
+      },
+      {
+        q: 'What if my Reddit account gets suspended?',
+        a: 'If your Reddit account gets suspended or banned, don\'t worry — your Pro plan isn\'t lost. Simply email us at the support address below with your old Reddit username and new account details. We\'ll transfer your Pro plan to your new account at no extra cost.',
+      },
+    ],
+  },
+];
 
 // Declare Canny global type
 declare global {
@@ -25,8 +111,96 @@ declare global {
   }
 }
 
+// FAQ Item Component with markdown-like formatting
+const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, answer }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Simple markdown-like formatting for bold text and line breaks
+  const formatAnswer = (text: string) => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={index} className="font-semibold text-foreground">{part.slice(2, -2)}</strong>;
+      }
+      // Handle line breaks
+      const lines = part.split('\n');
+      return lines.map((line, lineIndex) => (
+        <React.Fragment key={`${index}-${lineIndex}`}>
+          {line}
+          {lineIndex < lines.length - 1 && <br />}
+        </React.Fragment>
+      ));
+    });
+  };
+
+  return (
+    <div className="border-b border-border/50 last:border-b-0">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex w-full items-center justify-between py-4 text-left cursor-pointer hover:text-foreground transition-colors"
+        aria-expanded={isOpen}
+      >
+        <span className="text-sm font-medium pr-4">{question}</span>
+        <ChevronDown
+          className={cn(
+            'w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-200',
+            isOpen && 'rotate-180'
+          )}
+        />
+      </button>
+      <div
+        className={cn(
+          'overflow-hidden transition-all duration-200',
+          isOpen ? 'max-h-[800px] pb-4' : 'max-h-0'
+        )}
+      >
+        <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+          {formatAnswer(answer)}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Tab Button Component using brand colors
+const TabButton: React.FC<{
+  value: TabType;
+  activeTab: TabType;
+  onClick: (value: TabType) => void;
+  icon: React.ReactNode;
+  label: string;
+  shortLabel?: string;
+}> = ({ value, activeTab, onClick, icon, label, shortLabel }) => {
+  const isActive = activeTab === value;
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(value)}
+      className={cn(
+        'inline-flex items-center justify-center whitespace-nowrap rounded-lg px-3 h-full text-sm font-medium transition-all duration-200 gap-2 cursor-pointer',
+        isActive
+          ? 'bg-primary/15 text-primary'
+          : 'hover:bg-secondary/80 hover:text-foreground text-muted-foreground'
+      )}
+      aria-label={label}
+      tabIndex={0}
+    >
+      {icon}
+      {shortLabel ? (
+        <>
+          <span className="hidden sm:inline">{label}</span>
+          <span className="sm:hidden">{shortLabel}</span>
+        </>
+      ) : (
+        <span>{label}</span>
+      )}
+    </button>
+  );
+};
+
 /**
- * Help & Feedback page with Canny integration.
+ * Help & Feedback page with Canny integration and FAQ.
  * Accessible to all authenticated users.
  */
 const HelpPage: React.FC = () => {
@@ -35,7 +209,7 @@ const HelpPage: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [ssoToken, setSsoToken] = useState<string | null>(null);
   const [cannyLoaded, setCannyLoaded] = useState(false);
-  const [activeBoard, setActiveBoard] = useState<BoardType>('features');
+  const [activeTab, setActiveTab] = useState<TabType>('faq');
   const [loadingToken, setLoadingToken] = useState(true);
 
   // Redirect to login if not authenticated
@@ -146,11 +320,12 @@ const HelpPage: React.FC = () => {
     }
   }, []);
 
-  // Render Canny widget when SDK is loaded and board changes
+  // Render Canny widget when SDK is loaded and tab changes to a Canny board
   const renderCannyWidget = useCallback(() => {
     if (!cannyLoaded || !window.Canny || loadingToken) return;
+    if (activeTab === 'faq') return; // Don't render Canny for FAQ tab
 
-    const boardToken = BOARD_TOKENS[activeBoard];
+    const boardToken = BOARD_TOKENS[activeTab as keyof typeof BOARD_TOKENS];
     if (!boardToken) return;
 
     // Clear previous widget
@@ -166,7 +341,7 @@ const HelpPage: React.FC = () => {
       ssoToken: ssoToken || undefined,
       theme: 'auto',
     });
-  }, [cannyLoaded, activeBoard, ssoToken, loadingToken]);
+  }, [cannyLoaded, activeTab, ssoToken, loadingToken]);
 
   useEffect(() => {
     renderCannyWidget();
@@ -182,7 +357,7 @@ const HelpPage: React.FC = () => {
   return (
     <>
       <Head>
-        <title>Help & Feedback | Poststation</title>
+        <title>Help & Feedback | Reddit Multi Poster</title>
       </Head>
       <div className="min-h-viewport bg-background safe-bottom flex flex-col">
         {isAuthenticated && (
@@ -197,83 +372,86 @@ const HelpPage: React.FC = () => {
           />
         )}
         <div className="app-container max-w-4xl py-6">
-          {!isCannyConfigured ? (
-            // Fallback UI when Canny is not configured
-            <div className="space-y-4">
-              <div className="rounded-xl border border-border/50 bg-card p-5">
-                <div className="flex items-start gap-3">
-                  <MessageSquare className="w-5 h-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <h2 className="text-sm font-semibold">Send Feedback</h2>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Have a suggestion or general feedback? This feature is being set up.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border/50 bg-card p-5">
-                <div className="flex items-start gap-3">
-                  <Bug className="w-5 h-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <h2 className="text-sm font-semibold">Report a Bug</h2>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Found something broken? Bug reporting is being set up.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border/50 bg-card p-5">
-                <div className="flex items-start gap-3">
-                  <HelpCircle className="w-5 h-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <h2 className="text-sm font-semibold">Get Help</h2>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Need assistance? Help section is being set up.
-                    </p>
-                  </div>
-                </div>
-              </div>
+          <div className="w-full">
+            {/* Tab selector - using brand colors */}
+            <div className="grid grid-cols-3 h-12 items-center justify-center rounded-xl bg-secondary/50 p-1.5 text-muted-foreground backdrop-blur-sm border border-border/50 w-full">
+              <TabButton
+                value="faq"
+                activeTab={activeTab}
+                onClick={setActiveTab}
+                icon={<HelpCircle className="w-4 h-4" />}
+                label="FAQ"
+              />
+              <TabButton
+                value="features"
+                activeTab={activeTab}
+                onClick={setActiveTab}
+                icon={<MessageSquare className="w-4 h-4" />}
+                label="Feature Requests"
+                shortLabel="Features"
+              />
+              <TabButton
+                value="bugs"
+                activeTab={activeTab}
+                onClick={setActiveTab}
+                icon={<Bug className="w-4 h-4" />}
+                label="Bugs"
+              />
             </div>
-          ) : (
-            // Canny widget with tabs
-            <div className="w-full">
-              {/* Board selector tabs */}
-              <Tabs
-                value={activeBoard}
-                onValueChange={(value) => setActiveBoard(value as BoardType)}
-                className="w-full"
-              >
-                <TabsList className="w-full grid grid-cols-3">
-                  <TabsTrigger value="features">
-                    <MessageSquare className="w-4 h-4" />
-                    <span className="hidden sm:inline">Feature Requests</span>
-                    <span className="sm:hidden">Features</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="bugs">
-                    <Bug className="w-4 h-4" />
-                    <span>Bugs</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="help">
-                    <HelpCircle className="w-4 h-4" />
-                    <span>Help</span>
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
 
-              {/* Single Canny widget container */}
-              <div className="mt-6">
-                {loadingToken || !cannyLoaded ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            {/* Content area */}
+            <div className="mt-6">
+              {activeTab === 'faq' ? (
+                // FAQ Content
+                <div className="space-y-6">
+                  {FAQ_ITEMS.map((category) => (
+                    <div key={category.category} className="rounded-xl border border-border/50 bg-card overflow-hidden">
+                      <div className="px-5 py-3 bg-secondary/30 border-b border-border/50">
+                        <h2 className="text-sm font-semibold">{category.category}</h2>
+                      </div>
+                      <div className="px-5">
+                        {category.questions.map((item) => (
+                          <FAQItem key={item.q} question={item.q} answer={item.a} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Contact Support */}
+                  <div className="rounded-xl border border-border/50 bg-card p-5">
+                    <h2 className="text-sm font-semibold mb-1">Still need help?</h2>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Can&apos;t find what you&apos;re looking for? Reach out and we&apos;ll get back to you as soon as possible.
+                    </p>
+                    <a
+                      href={`mailto:${SUPPORT_EMAIL}?subject=Reddit Multi Poster - Support Request`}
+                      className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer"
+                      tabIndex={0}
+                      aria-label={`Email support at ${SUPPORT_EMAIL}`}
+                    >
+                      <Mail className="w-4 h-4" />
+                      {SUPPORT_EMAIL}
+                    </a>
                   </div>
-                ) : (
-                  <div data-canny className="min-h-[500px]" />
-                )}
-              </div>
+                </div>
+              ) : !isCannyConfigured ? (
+                // Fallback when Canny not configured
+                <div className="rounded-xl border border-border/50 bg-card p-5 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    {activeTab === 'features' ? 'Feature requests' : 'Bug reporting'} is being set up. Check back soon!
+                  </p>
+                </div>
+              ) : loadingToken || !cannyLoaded ? (
+                // Loading state for Canny
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                // Canny widget container
+                <div data-canny className="min-h-[500px]" />
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </>

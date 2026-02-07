@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
 import {
   Send,
@@ -197,6 +198,7 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
   onReviewRequest,
   hideMobileBar = false,
 }, ref) => {
+  const router = useRouter();
   const maxItems = maxItemsProp ?? QUEUE_LIMITS.MAX_TOTAL_ITEMS;
   const {
     state,
@@ -808,7 +810,7 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
             <div className="flex flex-col sm:flex-row gap-2">
               {error.code === 'AUTH_ERROR' ? (
                 <Button
-                  onClick={() => window.location.href = '/login'}
+                  onClick={() => router.push('/login')}
                   variant="outline"
                   size="sm"
                   className="cursor-pointer border-red-600/50 text-red-400 hover:bg-red-600/20"

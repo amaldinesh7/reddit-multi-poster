@@ -14,6 +14,13 @@ export interface SubredditRulesData {
   submitText?: string;
 }
 
+interface UseSubredditFlairDataOptions {
+  /** Subreddits that should be fetched immediately (e.g., selected or visible) */
+  eagerSubreddits?: string[];
+  /** Fetch every known subreddit on mount (previous default). Default: true */
+  loadAllOnMount?: boolean;
+}
+
 interface UseSubredditFlairDataReturn {
   allSubreddits: string[];
   categorizedSubreddits: { categoryName: string; subreddits: string[] }[];
@@ -31,7 +38,8 @@ interface UseSubredditFlairDataReturn {
   addSubreddit: (categoryId: string, subredditName: string) => Promise<{ id: string; subreddit_name: string; display_name?: string | null; category_id: string; position: number } | null>;
 }
 
-export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
+export const useSubredditFlairData = (options: UseSubredditFlairDataOptions = {}): UseSubredditFlairDataReturn => {
+  const { eagerSubreddits = [], loadAllOnMount = true } = options;
   const { getSubredditsByCategory, getAllSubreddits, isLoaded, refresh, addSubreddit } = useSubreddits();
   const { getCachedData, fetchAndCache, loading: cacheLoading } = useSubredditCache();
 
@@ -62,14 +70,14 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
   useEffect(() => {
     if (!isLoaded) return;
 
-    const loadFlairData = async () => {
+    const loadFlairData = async (subredditsToLoad: string[]) => {
       const newFlairOptions: Record<string, { id: string; text: string }[]> = {};
       const newFlairRequired: Record<string, boolean> = {};
       const newSubredditRules: Record<string, SubredditRulesData> = {};
       const newPostRequirements: Record<string, PostRequirements> = {};
       const newEligibilityData: Record<string, SubredditEligibility> = {};
 
-      for (const subreddit of allSubreddits) {
+      for (const subreddit of subredditsToLoad) {
         const cached = getCachedDataRef.current(subreddit);
         if (cached) {
           newFlairOptions[subreddit] = cached.flairs;
@@ -92,16 +100,14 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
         setEligibilityData(prev => ({ ...prev, ...newEligibilityData }));
       }
 
-      const needsFetching = allSubreddits.filter(name => 
+      const needsFetching = subredditsToLoad.filter(name => 
         !getCachedDataRef.current(name) && !loadingStartedRef.current.has(name.toLowerCase())
       );
 
       if (needsFetching.length === 0) {
-        setIsInitialLoad(false);
         return;
       }
 
-      // Mark all as loading started
       needsFetching.forEach(name => loadingStartedRef.current.add(name.toLowerCase()));
 
       const batchSize = 3;
@@ -169,12 +175,25 @@ export const useSubredditFlairData = (): UseSubredditFlairDataReturn => {
           await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
-
-      setIsInitialLoad(false);
     };
 
-    loadFlairData();
-  }, [isLoaded, allSubreddits]);
+    const initialTargets = loadAllOnMount ? allSubreddits : Array.from(new Set([...(eagerSubreddits || [])]));
+    loadFlairData(initialTargets).finally(() => setIsInitialLoad(false));
+
+    if (!loadAllOnMount) {
+      const remaining = allSubreddits.filter(
+        (name) => !initialTargets.includes(name)
+      );
+      if (remaining.length > 0) {
+        const run = () => loadFlairData(remaining);
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          (window as unknown as { requestIdleCallback: (cb: () => void) => void }).requestIdleCallback(run);
+        } else {
+          setTimeout(run, 500);
+        }
+      }
+    }
+  }, [isLoaded, allSubreddits, eagerSubreddits, loadAllOnMount]);
 
   // Reload flair data for selected subreddits
   const reloadSelectedData = useCallback(async (selected: string[]) => {

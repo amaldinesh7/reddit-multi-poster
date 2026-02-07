@@ -81,10 +81,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Generate Canny SSO token
-    // Note: Reddit doesn't expose email, so we omit it
+    // Reddit doesn't expose email, so we generate a pseudo-email for Canny identification
     const userData = {
       id: me.id,
       name: me.name,
+      email: `${me.name.toLowerCase()}@users.poststation.app`,
       avatarURL: me.icon_img || undefined,
     };
 
