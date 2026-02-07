@@ -159,6 +159,36 @@ html.theme-transitioning *::after {
   transition-delay: 0s !important;
 }
 
+/* Theme wipe overlay (manual toggles only) */
+html.theme-transitioning.theme-wipe::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, var(--theme-wipe-from, #0f172a), var(--theme-wipe-to, #f8fafc));
+  opacity: 0.08;
+  transform: translateY(-100%);
+  animation: theme-wipe 450ms ease-out forwards;
+  z-index: 9999;
+}
+
+@keyframes theme-wipe {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-transitioning.theme-wipe::before {
+    animation: none;
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
 /* Drag and Drop Styles */
 @layer utilities {
   .dragging {

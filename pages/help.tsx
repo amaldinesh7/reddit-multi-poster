@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/hooks/useAuth';
 import { MessageSquare, Bug, HelpCircle, Loader2, ChevronDown, Mail } from 'lucide-react';
-import { AppHeader } from '@/components/layout';
+import { AppHeader, AppFooter } from '@/components/layout';
 import { cn } from '@/lib/utils';
 
 // Board tokens from environment variables
@@ -209,8 +209,19 @@ const HelpPage: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [ssoToken, setSsoToken] = useState<string | null>(null);
   const [cannyLoaded, setCannyLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>('faq');
   const [loadingToken, setLoadingToken] = useState(true);
+
+  // Get active tab from URL query parameter, default to 'faq'
+  // Use router.isReady to ensure query params are available
+  const tabFromQuery = router.isReady ? (router.query.tab as string | undefined) : undefined;
+  const activeTab: TabType = tabFromQuery && (['faq', 'features', 'bugs'] as const).includes(tabFromQuery as TabType)
+    ? (tabFromQuery as TabType)
+    : 'faq';
+
+  // Handle tab change - update URL
+  const handleTabChange = useCallback((tab: TabType) => {
+    router.push({ pathname: '/help', query: { tab } }, undefined, { shallow: true });
+  }, [router]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -322,25 +333,30 @@ const HelpPage: React.FC = () => {
 
   // Render Canny widget when SDK is loaded and tab changes to a Canny board
   const renderCannyWidget = useCallback(() => {
+    // Don't render Canny for FAQ tab
+    if (activeTab === 'faq') return;
+
     if (!cannyLoaded || !window.Canny || loadingToken) return;
-    if (activeTab === 'faq') return; // Don't render Canny for FAQ tab
 
     const boardToken = BOARD_TOKENS[activeTab as keyof typeof BOARD_TOKENS];
     if (!boardToken) return;
 
-    // Clear previous widget
-    const container = document.querySelector('[data-canny]');
-    if (container) {
-      container.innerHTML = '';
-    }
+    // Wait a tick for the container to be in the DOM after tab switch
+    setTimeout(() => {
+      const container = document.querySelector('[data-canny]');
+      if (!container || !window.Canny) return;
 
-    // Render new widget
-    window.Canny('render', {
-      boardToken,
-      basePath: '/help',
-      ssoToken: ssoToken || undefined,
-      theme: 'auto',
-    });
+      // Clear previous widget content
+      container.innerHTML = '';
+
+      // Render new widget
+      window.Canny('render', {
+        boardToken,
+        basePath: '/help',
+        ssoToken: ssoToken || undefined,
+        theme: 'auto',
+      });
+    }, 0);
   }, [cannyLoaded, activeTab, ssoToken, loadingToken]);
 
   useEffect(() => {
@@ -378,14 +394,14 @@ const HelpPage: React.FC = () => {
               <TabButton
                 value="faq"
                 activeTab={activeTab}
-                onClick={setActiveTab}
+                onClick={handleTabChange}
                 icon={<HelpCircle className="w-4 h-4" />}
                 label="FAQ"
               />
               <TabButton
                 value="features"
                 activeTab={activeTab}
-                onClick={setActiveTab}
+                onClick={handleTabChange}
                 icon={<MessageSquare className="w-4 h-4" />}
                 label="Feature Requests"
                 shortLabel="Features"
@@ -393,7 +409,7 @@ const HelpPage: React.FC = () => {
               <TabButton
                 value="bugs"
                 activeTab={activeTab}
-                onClick={setActiveTab}
+                onClick={handleTabChange}
                 icon={<Bug className="w-4 h-4" />}
                 label="Bugs"
               />
@@ -401,8 +417,8 @@ const HelpPage: React.FC = () => {
 
             {/* Content area */}
             <div className="mt-6">
-              {activeTab === 'faq' ? (
-                // FAQ Content
+              {/* FAQ Content - shown when FAQ tab is active */}
+              {activeTab === 'faq' && (
                 <div className="space-y-6">
                   {FAQ_ITEMS.map((category) => (
                     <div key={category.category} className="rounded-xl border border-border/50 bg-card overflow-hidden">
@@ -434,25 +450,35 @@ const HelpPage: React.FC = () => {
                     </a>
                   </div>
                 </div>
-              ) : !isCannyConfigured ? (
-                // Fallback when Canny not configured
-                <div className="rounded-xl border border-border/50 bg-card p-5 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    {activeTab === 'features' ? 'Feature requests' : 'Bug reporting'} is being set up. Check back soon!
-                  </p>
-                </div>
-              ) : loadingToken || !cannyLoaded ? (
-                // Loading state for Canny
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                // Canny widget container
-                <div data-canny className="min-h-[500px]" />
+              )}
+
+              {/* Canny boards - shown when features or bugs tab is active */}
+              {activeTab !== 'faq' && (
+                <>
+                  {!isCannyConfigured ? (
+                    // Fallback when Canny not configured
+                    <div className="rounded-xl border border-border/50 bg-card p-5 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        {activeTab === 'features' ? 'Feature requests' : 'Bug reporting'} is being set up. Check back soon!
+                      </p>
+                    </div>
+                  ) : loadingToken || !cannyLoaded ? (
+                    // Loading state for Canny
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    // Canny widget container
+                    <div data-canny className="min-h-[500px]" />
+                  )}
+                </>
               )}
             </div>
           </div>
         </div>
+
+        {/* Footer */}
+        <AppFooter />
       </div>
     </>
   );

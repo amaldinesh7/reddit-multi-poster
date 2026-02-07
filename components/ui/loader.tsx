@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 /**
@@ -45,10 +46,14 @@ export function LogoLoader({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
           "animate-logo-pulse"
         )}
       >
-        <img 
-          src="/logo.png" 
-          alt="Loading" 
-          className="w-full h-full object-contain"
+        <Image
+          src="/logo.png"
+          alt="Loading"
+          fill
+          sizes={
+            size === 'sm' ? '32px' : size === 'lg' ? '64px' : '48px'
+          }
+          className="object-contain"
         />
       </div>
       {/* Orbiting dot */}

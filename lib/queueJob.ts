@@ -196,6 +196,8 @@ export interface QueueJobState {
   isSubmitting: boolean;
   isProcessing: boolean;
   isConnected: boolean; // Realtime connection status
+  startedAtMs: number | null;
+  endedAtMs: number | null;
 }
 
 /**

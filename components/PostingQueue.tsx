@@ -667,9 +667,14 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
     }
   };
 
+  const handleResetJobState = useCallback(() => {
+    reset();
+    failedPostsHook.clearAll();
+  }, [reset, failedPostsHook]);
+
   const handleButtonClick = async () => {
     if (completed || failed || error) {
-      reset();
+      handleResetJobState();
     } else if (!running) {
       // Check if onPostAttempt allows proceeding (returns false to block)
       if (onPostAttempt) {
@@ -722,18 +727,18 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
   }, [reset, onResetMedia]);
 
   const handleMobileResetAll = useCallback(() => {
-    reset();
+    handleResetJobState();
     if (onClearAll) {
       onClearAll();
     }
-  }, [reset, onClearAll]);
+  }, [handleResetJobState, onClearAll]);
 
   const handleDesktopResetAll = useCallback(() => {
-    reset();
+    handleResetJobState();
     if (onClearAll) {
       onClearAll();
     }
-  }, [reset, onClearAll]);
+  }, [handleResetJobState, onClearAll]);
 
   // Get the appropriate error icon based on error type
   const getErrorIcon = () => {
@@ -832,7 +837,7 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
                 </Button>
               ) : null}
               <Button
-                onClick={reset}
+                onClick={handleResetJobState}
                 variant="ghost"
                 size="sm"
                 className="cursor-pointer text-red-400/70 hover:text-red-400 hover:bg-red-600/10"
@@ -962,6 +967,8 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
           running={running}
           itemsCount={items.length}
           currentWait={currentWait}
+          startedAtMs={state.startedAtMs}
+          endedAtMs={state.endedAtMs}
           onUnselectSuccess={onUnselectSuccessItems ? handleUnselectSuccess : undefined}
         />
       )}

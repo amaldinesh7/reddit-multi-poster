@@ -1,7 +1,7 @@
 import React from 'react';
 import type { GetServerSideProps } from 'next';
 import dynamic from 'next/dynamic';
-import { Info, Settings } from 'lucide-react';
+import { Lightbulb, Settings } from 'lucide-react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import axios from 'axios';
@@ -181,11 +181,15 @@ export default function Home() {
     setMediaType('image');
   }, [mediaType, resetMedia, setMediaType]);
 
+  // Failed posts tracking for inline error display
+  const failedPostsHook = useFailedPosts();
+
   const handleClearAll = React.useCallback(() => {
     clearAllState();
+    failedPostsHook.clearAll();
     setMediaResetCounter((prev) => prev + 1);
     setBenchResetCounter((prev) => prev + 1);
-  }, [clearAllState]);
+  }, [clearAllState, failedPostsHook]);
 
   const hasTitle = caption.trim().length > 0;
   const hasDestinations = selectedSubs.length > 0 || postToProfile;
@@ -198,9 +202,6 @@ export default function Home() {
       setIsMoreActionsOpen(false);
     }
   }, [isReviewDisabled, isMoreActionsOpen]);
-
-  // Failed posts tracking for inline error display
-  const failedPostsHook = useFailedPosts();
 
   // Flair data for edit dialog
   const { flairOptions, flairRequired, postRequirements, cacheLoading: flairLoading } = useSubredditFlairData();
@@ -334,6 +335,7 @@ export default function Home() {
       }
     } catch (error) {
       captureClientError(error, 'index.handleRetryPost', {
+        showToast: false,
         toastTitle: 'Retry Failed',
         context: { subreddit: postToRetry.subreddit },
       });
@@ -387,6 +389,7 @@ export default function Home() {
       }
     } catch (error) {
       captureClientError(error, 'index.handleEditDialogSubmit', {
+        showToast: false,
         toastTitle: 'Retry Failed',
         context: { subreddit: post.subreddit },
       });
@@ -571,11 +574,11 @@ export default function Home() {
                 {/* Media Section - No card wrapper, flowing layout */}
                 <section className="space-y-4 mb-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-baseline gap-2">
                       <h3 className="text-base lg:text-lg font-semibold tracking-tight pt-1 lg:pt-2">Media</h3>
-                      <Tooltip content="Upload videos to Imgur, Redgif, or GIPHY and paste the link in the URL tab.">
+                      <Tooltip content="For uploading videos, use Imgur, Redgif, or GIPHY and paste the link in the URL tab.">
                         <span className="inline-flex items-center gap-1 rounded-full bg-secondary/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground cursor-pointer">
-                          <Info className="h-3 w-3" aria-hidden="true" />
+                          <Lightbulb className="h-3 w-3" aria-hidden="true" />
                           Pro tip
                         </span>
                       </Tooltip>
