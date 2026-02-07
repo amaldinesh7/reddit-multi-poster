@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo, useImperativeHandle } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Send,
@@ -68,6 +68,9 @@ interface Props {
     issuesBySubreddit: Record<string, ValidationIssue[]>;
   }) => void;
   mode?: 'inline' | 'review-entry';
+  onPostActionReady?: (handler: () => void) => void;
+  onReviewRequest?: () => void;
+  hideMobileBar?: boolean;
 }
 
 export interface PostingQueueHandle {
@@ -190,6 +193,9 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
   onValidationChange,
   onValidationStateChange,
   mode = 'inline',
+  onPostActionReady,
+  onReviewRequest,
+  hideMobileBar = false,
 }, ref) => {
   const maxItems = maxItemsProp ?? QUEUE_LIMITS.MAX_TOTAL_ITEMS;
   const {
@@ -712,6 +718,20 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
     }
   }, [reset, onResetMedia]);
 
+  const handleMobileResetAll = useCallback(() => {
+    reset();
+    if (onClearAll) {
+      onClearAll();
+    }
+  }, [reset, onClearAll]);
+
+  const handleDesktopResetAll = useCallback(() => {
+    reset();
+    if (onClearAll) {
+      onClearAll();
+    }
+  }, [reset, onClearAll]);
+
   // Get the appropriate error icon based on error type
   const getErrorIcon = () => {
     if (error?.message?.includes('network') || error?.message?.includes('connect')) {
@@ -730,10 +750,13 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
   const isRecoverable = error?.recoverable !== false;
 
   const isReviewEntry = mode === 'review-entry';
+  const handleMobilePost = onReviewRequest ?? handleButtonClick;
 
-  useImperativeHandle(ref, () => ({
-    triggerPost: handleButtonClick,
-  }), [handleButtonClick]);
+  useEffect(() => {
+    if (onPostActionReady) {
+      onPostActionReady(handleButtonClick);
+    }
+  }, [onPostActionReady, handleButtonClick]);
 
   return (
     <div className="space-y-4" ref={queueRef} tabIndex={-1}>
@@ -741,7 +764,7 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
       {(running || logs.length > 0) && (
         <div className="flex flex-col gap-2 mb-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-base lg:text-lg font-semibold tracking-tight">Ready to post</h3>
+            <h3 className="text-base lg:text-lg font-semibold tracking-tight pt-1 lg:pt-2">Ready to post</h3>
             {items.length > 0 && (
               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
                 {items.length}
@@ -943,9 +966,21 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
       {/* Success Message */}
       {completed && failedPostsHook.state.posts.length === 0 && (
         <div className="rounder-md bg-green-600/20 border border-green-600/30 p-3 text-green-500 hidden lg:block">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5" aria-hidden="true" />
-            <span className="font-medium">All done!</span>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5" aria-hidden="true" />
+              <span className="font-medium">All done!</span>
+            </div>
+            <Button
+              onClick={handleDesktopResetAll}
+              variant="outline"
+              size="sm"
+              className="cursor-pointer border-green-600/40 text-green-200 hover:text-green-100 hover:bg-green-600/20"
+              aria-label="Reset post"
+            >
+              <RotateCcw className="h-4 w-4 mr-1.5" />
+              Reset
+            </Button>
           </div>
         </div>
       )}
@@ -1002,14 +1037,14 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
       {/* <div className="min-h-[calc(2rem+env(safe-area-inset-bottom,0px))] lg:min-h-0 lg:h-0" aria-hidden="true" /> */}
 
       {/* Mobile Sticky Queue Footer */}
-      {!isReviewEntry && (
+      {!hideMobileBar && (
         <MobileStickyQueue
           items={items}
           isPosting={running}
           isCompleted={completed}
           hasErrors={hasFlairErrors || !batchInfo.canProceed || !validation.canSubmit}
-          onPostClick={handleButtonClick}
-          onResetClick={handleMobileReset}
+          onPostClick={handleMobilePost}
+          onResetClick={handleMobileResetAll}
           onStopClick={handleCancel}
           onClearClick={onClearAll}
         />

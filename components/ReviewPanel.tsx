@@ -1,19 +1,17 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerTitle, DrawerClose } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import ValidationWarnings from '@/components/posting-queue/ValidationWarnings';
-import type { PreflightResult } from '@/lib/preflightValidation';
-import { Link as LinkIcon, FileText } from 'lucide-react';
+import { Link as LinkIcon } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface ReviewPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   body?: string;
-  mediaType: 'image' | 'video' | 'url';
-  mediaUrl?: string;
   mediaFiles?: File[];
+  mediaUrl?: string;
   selectedSubs: string[];
   postToProfile: boolean;
   userName?: string;
@@ -21,10 +19,8 @@ interface ReviewPanelProps {
   flairValue: Record<string, string | undefined>;
   flairOptions: Record<string, { id: string; text: string }[]>;
   titleSuffixes: Record<string, string | undefined>;
-  validationResult?: PreflightResult | null;
   canPost: boolean;
   onPostNow: () => void;
-  onBack: () => void;
   onResetSelection: () => void;
 }
 
@@ -33,9 +29,8 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({
   onOpenChange,
   title,
   body,
-  mediaType,
-  mediaUrl,
   mediaFiles,
+  mediaUrl,
   selectedSubs,
   postToProfile,
   userName,
@@ -43,13 +38,10 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({
   flairValue,
   flairOptions,
   titleSuffixes,
-  validationResult,
   canPost,
   onPostNow,
-  onBack,
   onResetSelection,
 }) => {
-  const hasValidation = !!validationResult && validationResult.issues.length > 0;
   const [mediaPreviews, setMediaPreviews] = React.useState<Array<{ url: string; type: string }>>([]);
 
   const selectedTargets = React.useMemo(() => {
@@ -73,87 +65,68 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({
   }, [mediaFiles]);
 
   const renderMediaPreview = () => {
-    if (mediaPreviews.length > 0) {
-      return (
-        <div className="flex flex-wrap gap-2">
-          {mediaPreviews.slice(0, 6).map((preview, index) => (
+    if (mediaPreviews.length === 0) return null;
+    return (
+      <div className="w-full">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {mediaPreviews.map((preview, index) => (
             preview.type.startsWith('image/') ? (
               <img
                 key={`${preview.url}-${index}`}
                 src={preview.url}
                 alt="Selected media"
-                className="h-9 w-9 sm:h-10 sm:w-10 rounded-md object-cover border border-border/50"
+                className="h-16 w-16 sm:h-20 sm:w-20 rounded-md object-cover border border-border/60 shadow-sm flex-shrink-0"
               />
             ) : (
               <div
                 key={`${preview.url}-${index}`}
-                className="h-9 w-9 sm:h-10 sm:w-10 rounded-md border border-border/50 bg-secondary/60 flex items-center justify-center text-[10px] text-muted-foreground"
+                className="h-16 w-16 sm:h-20 sm:w-20 rounded-md border border-border/60 bg-secondary/60 flex items-center justify-center text-[10px] text-muted-foreground flex-shrink-0"
               >
                 file
               </div>
             )
           ))}
-          {mediaPreviews.length > 6 && (
-            <span className="text-xs text-muted-foreground">+{mediaPreviews.length - 6} more</span>
-          )}
         </div>
-      );
-    }
-    if (mediaUrl) {
-      return (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <LinkIcon className="h-4 w-4" />
-          <span className="truncate">{mediaUrl}</span>
-        </div>
-      );
-    }
-    return (
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <FileText className="h-4 w-4" />
-        <span>Text post</span>
       </div>
     );
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="fixed bottom-0 left-0 right-0 z-50 h-auto w-full max-w-full translate-x-0 translate-y-0 rounded-t-2xl border-t border-border/50 bg-background p-0 max-h-[60dvh]"
-      >
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="max-h-[60dvh] w-full">
         <div className="flex h-full flex-col">
           <div className="flex justify-center pt-3 pb-1">
             <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
           </div>
 
-          <div className="border-b border-border/60 px-4 py-3 sm:px-6 sm:py-4">
-            <div className="max-w-3xl mx-auto w-full">
-              <DialogTitle className="text-lg font-semibold tracking-tight">Review &amp; post</DialogTitle>
+          <div className="border-b border-border/40 px-4 py-3 sm:px-8 sm:py-4">
+            <div className="max-w-3xl mx-auto w-full flex items-center justify-between gap-2">
+              <DrawerTitle className="text-lg font-semibold tracking-tight">Review &amp; post</DrawerTitle>
+              <DrawerClose className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer">
+                <X className="h-4 w-4" />
+              </DrawerClose>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4 space-y-4 max-h-[calc(60dvh-120px)]">
+          <div className="flex-1 overflow-y-auto px-4 py-3 sm:px-8 sm:py-4 space-y-4 max-h-[calc(60dvh-120px)]">
             <div className="max-w-3xl mx-auto w-full space-y-4">
-              <section className="rounded-lg border border-border/60 bg-card/50 p-3">
-                <div className="grid grid-cols-[auto,1fr] gap-3 items-start">
-                  <div className="flex flex-wrap gap-2">
-                    {renderMediaPreview()}
+              <section className="space-y-2 border-b border-border/40 pb-3">
+                {mediaUrl && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <LinkIcon className="h-4 w-4" />
+                    <span className="truncate">{mediaUrl}</span>
                   </div>
-                  <div className="min-w-0 space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-xs text-muted-foreground">Preview</div>
-                      <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-                        {mediaType}
-                      </Badge>
-                    </div>
-                    <div className="text-sm font-medium truncate">{title || 'Untitled post'}</div>
-                    {body && (
-                      <div className="text-xs text-muted-foreground line-clamp-2">{body}</div>
-                    )}
+                )}
+                {mediaPreviews.length > 0 && renderMediaPreview()}
+                <div className="text-sm font-semibold">{title || 'Untitled post'}</div>
+                {body && (
+                  <div className="text-xs text-muted-foreground whitespace-pre-wrap break-words">
+                    {body}
                   </div>
-                </div>
+                )}
               </section>
 
-              <section className="space-y-2">
+              <section className="space-y-2 border-b border-border/40 pb-3">
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-medium text-muted-foreground">Selected</div>
                   <span className="text-xs text-muted-foreground">{selectedTargets.length}</span>
@@ -169,7 +142,7 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({
                     const flairMissing = !isProfile && flairRequired[subredditKey] && !flairValue[subredditKey];
 
                     return (
-                      <div key={target} className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-card/50 px-3 py-2">
+                      <div key={target} className="flex items-center justify-between gap-2 py-1.5">
                         <div className="min-w-0">
                           <div className="text-sm font-medium truncate">{target}</div>
                         </div>
@@ -193,20 +166,10 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({
                 </div>
               </section>
 
-              {validationResult && (
-                <section className="space-y-2">
-                  <div className="text-xs font-medium text-muted-foreground">Validation</div>
-                  {hasValidation ? (
-                    <ValidationWarnings result={validationResult} />
-                  ) : (
-                    <div className="text-xs text-muted-foreground">No validation issues found.</div>
-                  )}
-                </section>
-              )}
             </div>
           </div>
 
-          <div className="border-t border-border/60 px-4 py-3 sm:px-6 sm:py-4 bg-background/95 sticky bottom-0">
+          <div className="border-t border-border/40 px-4 py-3 sm:px-8 sm:py-4 bg-background/95 sticky bottom-0">
             <div className="max-w-3xl mx-auto w-full">
               <div className="flex items-center gap-2">
                 <Button
@@ -215,13 +178,6 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({
                   className="flex-1 cursor-pointer"
                 >
                   Post now
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={onBack}
-                  className="h-10 cursor-pointer"
-                >
-                  Back to edit
                 </Button>
                 <Button
                   variant="ghost"
@@ -239,8 +195,8 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   );
 };
 
