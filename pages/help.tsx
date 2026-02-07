@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/hooks/useAuth';
-import { MessageSquare, Bug, HelpCircle, Loader2, ChevronDown, Mail } from 'lucide-react';
+import { MessageSquare, Bug, HelpCircle, Loader2, ChevronDown, Mail, ArrowLeft } from 'lucide-react';
 import { AppHeader, AppFooter } from '@/components/layout';
 import { cn } from '@/lib/utils';
 
@@ -201,7 +202,9 @@ const TabButton: React.FC<{
 
 /**
  * Help & Feedback page with Canny integration and FAQ.
- * Accessible to all authenticated users.
+ * Accessible to ALL users (authenticated and unauthenticated) in both dev and prod.
+ * - FAQ: Always available to everyone
+ * - Feature Requests / Bugs: Works anonymously for non-authenticated users
  */
 const HelpPage: React.FC = () => {
   const router = useRouter();
@@ -223,16 +226,12 @@ const HelpPage: React.FC = () => {
     router.push({ pathname: '/help', query: { tab } }, undefined, { shallow: true });
   }, [router]);
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!isAuthenticated && !isLoading) {
-      router.replace('/login');
-    }
-  }, [isAuthenticated, isLoading, router]);
+  // No authentication redirect - help page is public
 
   // Check admin status (for header display only, not for access control)
+  // Only check if user is authenticated
   useEffect(() => {
-    if (!me?.name) return;
+    if (!isAuthenticated || !me?.name) return;
     const checkAdmin = async () => {
       try {
         const res = await fetch('/api/admin-check');
@@ -252,11 +251,18 @@ const HelpPage: React.FC = () => {
       }
     };
     checkAdmin();
-  }, [me?.name]);
+  }, [isAuthenticated, me?.name]);
 
-  // Fetch Canny SSO token
+  // Fetch Canny SSO token for authenticated users
+  // Unauthenticated users can still use Canny boards anonymously
   useEffect(() => {
-    if (!isAuthenticated || !me?.name) return;
+    // If not authenticated, skip SSO token fetch but still allow loading to complete
+    if (!isAuthenticated) {
+      setLoadingToken(false);
+      return;
+    }
+    
+    if (!me?.name) return;
 
     const fetchSsoToken = async () => {
       try {
@@ -374,9 +380,11 @@ const HelpPage: React.FC = () => {
     <>
       <Head>
         <title>Help & Feedback | Reddit Multi Poster</title>
+        <meta name="description" content="Get help with Reddit Multi Poster. Browse FAQs, request features, or report bugs." />
       </Head>
       <div className="min-h-viewport bg-background safe-bottom flex flex-col">
-        {isAuthenticated && (
+        {/* Show full AppHeader for authenticated users, simple header for guests */}
+        {isAuthenticated ? (
           <AppHeader
             userName={me?.name}
             userAvatar={me?.icon_img}
@@ -386,6 +394,19 @@ const HelpPage: React.FC = () => {
             pageTitle="Help & Feedback"
             showBackButton
           />
+        ) : (
+          <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
+            <div className="app-container py-4 max-w-4xl flex items-center justify-between">
+              <Link 
+                href="/login" 
+                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to login
+              </Link>
+              <h1 className="text-sm font-medium">Help & Feedback</h1>
+            </div>
+          </header>
         )}
         <div className="app-container max-w-4xl py-6">
           <div className="w-full">

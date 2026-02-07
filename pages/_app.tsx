@@ -98,8 +98,6 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
 };
 
 export default function App({ Component, pageProps }: AppProps) {
-  const hasReloadedForUpdateRef = useRef(false);
-
   useEffect(() => {
     if (typeof window === "undefined") return;
     const ua = navigator.userAgent || "";
@@ -111,62 +109,6 @@ export default function App({ Component, pageProps }: AppProps) {
     if (isAndroid && (isWebView || isStandalone)) {
       document.documentElement.classList.add("android-webview");
     }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!("serviceWorker" in navigator)) return;
-
-    const updateRegistration = async (registration: ServiceWorkerRegistration | null) => {
-      if (!registration) return;
-      try {
-        await registration.update();
-      } catch (error) {
-        console.error("Service worker update failed", error);
-      }
-    };
-
-    const handleControllerChange = () => {
-      if (hasReloadedForUpdateRef.current) return;
-      hasReloadedForUpdateRef.current = true;
-      window.location.reload();
-    };
-
-    let registration: ServiceWorkerRegistration | null = null;
-    let visibilityHandler: (() => void) | null = null;
-    let intervalId: number | null = null;
-
-    navigator.serviceWorker
-      .ready
-      .then((readyRegistration) => {
-        registration = readyRegistration;
-        updateRegistration(registration);
-
-        visibilityHandler = () => {
-          if (document.visibilityState !== "visible") return;
-          updateRegistration(registration);
-        };
-        document.addEventListener("visibilitychange", visibilityHandler);
-
-        intervalId = window.setInterval(() => {
-          updateRegistration(registration);
-        }, 1000 * 60 * 10);
-      })
-      .catch((error) => {
-        console.error("Service worker readiness failed", error);
-      });
-
-    navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
-
-    return () => {
-      navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
-      if (visibilityHandler) {
-        document.removeEventListener("visibilitychange", visibilityHandler);
-      }
-      if (intervalId) {
-        window.clearInterval(intervalId);
-      }
-    };
   }, []);
 
   return (

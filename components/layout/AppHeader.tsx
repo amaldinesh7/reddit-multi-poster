@@ -1,7 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { useRouter } from 'next/router';
+import React, { useState, useEffect, useRef } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { ChevronDown, User, Settings, LogOut, Shield, Sun, Moon, Monitor, Infinity, ArrowLeft, HelpCircle } from 'lucide-react';
@@ -114,34 +111,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   showBackButton = false,
   onBack,
 }) => {
-  const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { isVisible, isAtTop } = useScrollDirection();
   const showUpgrade = entitlement !== 'paid' && onUpgrade;
   const trimmedUserName = userName?.trim() || '';
   const showAdminIcon = isAdmin && pageTitle === 'Admin Panel';
-
-  // Schedule prefetch without blocking initial render
-  const schedulePrefetch = useCallback((href: string) => {
-    if (typeof window === 'undefined') return;
-    const runner = () => {
-      router.prefetch(href).catch(() => {});
-    };
-    if ('requestIdleCallback' in window) {
-      (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout?: number }) => void }).requestIdleCallback(runner, { timeout: 1500 });
-    } else {
-      setTimeout(runner, 200);
-    }
-  }, [router]);
-
-  useEffect(() => {
-    schedulePrefetch('/settings');
-    schedulePrefetch('/help');
-    schedulePrefetch('/analytics');
-    if (isAdmin) {
-      schedulePrefetch('/admin');
-    }
-  }, [schedulePrefetch, isAdmin]);
 
   // Theme cycle for mobile tap-to-switch button
   const THEME_CYCLE: Theme[] = ['light', 'dark', 'system'];
@@ -160,15 +134,15 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   const handleSettings = () => {
-    router.push('/settings');
+    window.location.href = '/settings';
   };
 
   const handleHelp = () => {
-    router.push('/help');
+    window.location.href = '/help';
   };
 
   const handleAdminPanel = () => {
-    router.push('/admin');
+    window.location.href = '/admin';
   };
 
   const handleBack = () => {
@@ -176,7 +150,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
       onBack();
       return;
     }
-    router.push('/');
+    window.history.back();
   };
 
   return (
@@ -207,20 +181,13 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             </Button>
           )}
           <div className="flex min-w-0 shrink-0 items-center gap-2.5">
-            <Link
-              href="/"
-              aria-label="Go to home"
-              className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg flex items-center justify-center cursor-pointer"
-            >
-              <Image
-                src="/logo.png"
-                alt="Reddit Multi Poster"
-                fill
-                sizes="36px"
-                priority
-                className="object-contain"
+            <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg flex items-center justify-center">
+              <img 
+                src="/logo.png" 
+                alt="Reddit Multi Poster" 
+                className="h-full w-full object-contain" 
               />
-            </Link>
+            </div>
             {pageTitle ? (
               <div className="flex items-center gap-2 min-w-0">
                 {showAdminIcon && <Shield className="w-4 h-4 text-cyan-400" aria-hidden="true" />}
@@ -362,10 +329,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <Settings className="h-4 w-4 mr-2" aria-hidden="true" />
                 Settings
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleHelp}>
-                <HelpCircle className="h-4 w-4 mr-2" aria-hidden="true" />
-                Help & Feedback
-              </DropdownMenuItem>
+              {isAdmin && (
+                <DropdownMenuItem onClick={handleHelp}>
+                  <HelpCircle className="h-4 w-4 mr-2" aria-hidden="true" />
+                  Help & Feedback
+                </DropdownMenuItem>
+              )}
               {isAdmin && (
                 <DropdownMenuItem onClick={handleAdminPanel}>
                   <Shield className="h-4 w-4 mr-2" aria-hidden="true" />

@@ -179,7 +179,7 @@ export default function Login() {
             </div>
 
             {/* Footer */}
-            <div className="mt-6 text-center">
+            <div className="mt-6 text-center space-y-2">
               <p className="text-gray-600 text-xs">
                 By continuing, you agree to Reddit&apos;s{' '}
                 <a
@@ -189,6 +189,14 @@ export default function Login() {
                   className="text-gray-500 hover:text-orange-400 transition-colors cursor-pointer"
                 >
                   Terms of Service
+                </a>
+              </p>
+              <p className="text-gray-600 text-xs">
+                <a
+                  href="/help"
+                  className="text-gray-500 hover:text-orange-400 transition-colors cursor-pointer"
+                >
+                  Need help?
                 </a>
               </p>
             </div>
