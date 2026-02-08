@@ -484,7 +484,6 @@ const SubredditFlairPicker: React.FC<Props> = ({
                       onCustomize={onCustomize}
                       customizationEnabled={customizationEnabled}
                       eligibility={eligibilityData[name]}
-                      parsedRequirements={parsedRequirements[name]}
                       userData={userData}
                       postKind={postKind}
                     />
@@ -531,7 +530,6 @@ const SubredditFlairPicker: React.FC<Props> = ({
                 onCustomize={onCustomize}
                 customizationEnabled={customizationEnabled}
                 eligibility={eligibilityData[name]}
-                parsedRequirements={parsedRequirements[name]}
                 userData={userData}
                 postKind={postKind}
               />
@@ -550,7 +548,6 @@ const SubredditFlairPicker: React.FC<Props> = ({
           subredditRules={subredditRules}
           postRequirements={postRequirements}
           eligibilityData={eligibilityData}
-          parsedRequirements={parsedRequirements}
           userData={userData}
           postKind={postKind}
           cacheLoading={cacheLoading}

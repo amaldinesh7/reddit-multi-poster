@@ -158,17 +158,21 @@ export const useSubredditFlairData = (options: UseSubredditFlairDataOptions = {}
   const processData = useCallback((subreddit: string, data: UnifiedSubredditData) => {
     setFlairOptions(prev => ({ ...prev, [subreddit]: data.flairs }));
     setFlairRequired(prev => ({ ...prev, [subreddit]: data.flairRequired }));
-    setSubredditRules(prev => ({ 
-      ...prev, 
-      [subreddit]: {
-        requiresGenderTag: data.rules.requiresGenderTag,
-        requiresContentTag: data.rules.requiresContentTag,
-        genderTags: data.rules.genderTags,
-        contentTags: data.rules.contentTags,
-        titleTags: data.titleTags,
-        submitText: data.rules.submitText,
-      }
-    }));
+    
+    // Safely handle missing rules data (can happen with old cached data or API errors)
+    if (data.rules) {
+      setSubredditRules(prev => ({ 
+        ...prev, 
+        [subreddit]: {
+          requiresGenderTag: data.rules.requiresGenderTag ?? false,
+          requiresContentTag: data.rules.requiresContentTag ?? false,
+          genderTags: data.rules.genderTags ?? [],
+          contentTags: data.rules.contentTags ?? [],
+          titleTags: data.titleTags,
+          submitText: data.rules.submitText,
+        }
+      }));
+    }
     
     if (data.postRequirements) {
       setPostRequirements(prev => ({ ...prev, [subreddit]: data.postRequirements! }));
