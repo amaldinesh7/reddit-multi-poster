@@ -538,12 +538,16 @@ const SubredditRow = React.memo(({
             {flairOptions.length > 0 && (
               <NativeSelect
                 value={flairValue || ''}
-                onValueChange={(value) => onFlairChange(name, value)}
+                onValueChange={(value) => onFlairChange(name, value === '_none' ? '' : value)}
                 placeholder={flairRequired ? 'Flair (required)' : 'Flair'}
-                options={flairOptions.map((f) => ({
-                  value: f.id,
-                  label: f.text || '—',
-                }))}
+                options={[
+                  // Only show "None" option when flair is not required
+                  ...(!flairRequired ? [{ value: '_none', label: 'No flair' }] : []),
+                  ...flairOptions.map((f) => ({
+                    value: f.id,
+                    label: f.text || '—',
+                  })),
+                ]}
                 className="flex-1 min-w-[100px] sm:max-w-[140px] flex-shrink-0"
                 triggerClassName="h-9 sm:h-8 text-xs font-medium bg-secondary/80 hover:bg-secondary"
                 aria-label={`Pick flair for r/${name}`}
@@ -555,10 +559,11 @@ const SubredditRow = React.memo(({
               <>
                 {!showCustomInput ? (
                   <NativeSelect
-                    value={isCustomSuffix ? '__custom__' : (titleSuffix || '')}
+                    value={isCustomSuffix ? '__custom__' : (titleSuffix || '__none__')}
                     onValueChange={handleSuffixSelectChange}
                     placeholder="Title tag"
                     options={[
+                      { value: '__none__', label: 'None' },
                       ...suffixOptions.map((opt) => ({ value: opt, label: opt })),
                       { value: '__custom__', label: 'Custom tag…' },
                     ]}

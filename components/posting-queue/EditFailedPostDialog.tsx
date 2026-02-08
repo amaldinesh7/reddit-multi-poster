@@ -77,7 +77,8 @@ const EditFailedPostDialog: React.FC<EditFailedPostDialogProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(post, {
-      flairId: flairId || undefined,
+      // Map '_none' sentinel value to undefined so API receives no flair
+      flairId: flairId === '_none' ? undefined : (flairId || undefined),
       titleSuffix: titleSuffix || undefined,
       customTitle: customTitle || undefined,
       customBody: customBody || undefined,
