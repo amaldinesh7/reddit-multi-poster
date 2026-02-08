@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import axios from 'axios';
-import AddToCategoryDialog from './AddToCategoryDialog';
+import SaveToCategoryDropdown from './SaveToCategoryDropdown';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Search, Plus, Save, Loader2, X } from 'lucide-react';
+import { RefreshCw, Search, Plus, Loader2, X } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useSubredditFlairData } from '../hooks/useSubredditFlairData';
 import { SubredditCategoryList } from './subreddit-picker';
@@ -116,9 +116,8 @@ const SubredditFlairPicker: React.FC<Props> = ({
   const [searchResults, setSearchResults] = React.useState<SearchResult[] | null>(null);
   const [hasSearched, setHasSearched] = React.useState(false);
 
-  // Dialog State
-  const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [subredditToSave, setSubredditToSave] = React.useState<string | null>(null);
+  // Save to category state (for tracking saving subreddit name)
+  const [savingSubreddit, setSavingSubreddit] = React.useState<string | null>(null);
 
   // Debounce timer ref
   const searchTimerRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -297,36 +296,25 @@ const SubredditFlairPicker: React.FC<Props> = ({
     setHasSearched(false);
   }, [temporarySubreddits, allSubreddits, selected, onSelectedChange, reloadSelectedData]);
 
-  const handleOpenSaveDialog = useCallback((subredditName: string) => {
-    setSubredditToSave(subredditName);
-    setDialogOpen(true);
-  }, []);
-
-  const handleSaveToCategory = useCallback(async (categoryId: string) => {
-    if (!subredditToSave) return;
-
+  const handleSaveToCategory = useCallback(async (subredditName: string, categoryId: string) => {
     try {
       if (entitlement === 'free' && onRequestUpgrade) {
         onRequestUpgrade({
           title: 'Save communities',
           message: 'Saving communities from search is a Pro feature. Upgrade to save unlimited lists.',
         });
-        setDialogOpen(false);
-        setSubredditToSave(null);
         return;
       }
 
-      await addSubreddit(categoryId, subredditToSave);
+      setSavingSubreddit(subredditName);
+      await addSubreddit(categoryId, subredditName);
 
       // Remove from temporary if it was there
-      setTemporarySubreddits(prev => prev.filter(s => s !== subredditToSave));
+      setTemporarySubreddits(prev => prev.filter(s => s !== subredditName));
 
-      if (!selected.includes(subredditToSave)) {
-        onSelectedChange([...selected, subredditToSave]);
+      if (!selected.includes(subredditName)) {
+        onSelectedChange([...selected, subredditName]);
       }
-
-      setDialogOpen(false);
-      setSubredditToSave(null);
 
       // Reset search after saving
       setQuery('');
@@ -334,8 +322,11 @@ const SubredditFlairPicker: React.FC<Props> = ({
       setHasSearched(false);
     } catch (error) {
       console.error('Failed to save subreddit', error);
+      throw error; // Re-throw so dropdown can handle error state
+    } finally {
+      setSavingSubreddit(null);
     }
-  }, [subredditToSave, addSubreddit, selected, onSelectedChange, entitlement, onRequestUpgrade]);
+  }, [addSubreddit, selected, onSelectedChange, entitlement, onRequestUpgrade]);
 
   const handleClearSearch = useCallback(() => {
     setQuery('');
@@ -439,15 +430,11 @@ const SubredditFlairPicker: React.FC<Props> = ({
                           <Plus className="w-3 h-3 mr-1" />
                           Add
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenSaveDialog(sub.name)}
-                          className="h-8 text-xs whitespace-nowrap cursor-pointer"
-                        >
-                          <Save className="w-3 h-3 mr-1" />
-                          Save
-                        </Button>
+                        <SaveToCategoryDropdown
+                          subredditName={sub.name}
+                          onSave={(categoryId) => handleSaveToCategory(sub.name, categoryId)}
+                          disabled={savingSubreddit === sub.name}
+                        />
                       </div>
                     </div>
                   ))}
@@ -585,15 +572,6 @@ const SubredditFlairPicker: React.FC<Props> = ({
         />
       )}
 
-      {/* Add To Category Dialog */}
-      {subredditToSave && (
-        <AddToCategoryDialog
-          isOpen={dialogOpen}
-          onClose={() => setDialogOpen(false)}
-          onSave={handleSaveToCategory}
-          subredditName={subredditToSave}
-        />
-      )}
     </div>
   );
 };

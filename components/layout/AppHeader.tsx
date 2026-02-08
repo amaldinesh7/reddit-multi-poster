@@ -174,7 +174,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               variant="ghost"
               size="sm"
               onClick={handleBack}
-              className="hidden md:inline-flex min-h-[44px] min-w-[44px] p-2 cursor-pointer"
+              className="inline-flex min-h-[44px] min-w-[44px] p-2 cursor-pointer"
               aria-label="Go back"
             >
               <ArrowLeft className="w-4 h-4" aria-hidden="true" />
@@ -231,7 +231,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     )}
                     aria-label="Go Unlimited"
                   >
-                    <Infinity className="h-3.5 w-3.5" aria-hidden="true" />
+                    <Infinity className="h-4 w-4" aria-hidden="true" />
                     <span>{upgradeLoading ? 'Opening checkout…' : 'Go Unlimited'}</span>
                   </button>
                 )}
@@ -307,7 +307,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               trigger={
                 <button
                   className={cn(
-                    "flex min-h-[44px] min-w-[44px] sm:min-w-0 items-center justify-center gap-2",
+                    "group flex min-h-[44px] min-w-[44px] sm:min-w-0 items-center justify-center gap-2",
                     "rounded-md px-2.5 sm:px-3 py-1.5",
                     "transition-colors",
                     "hover:bg-secondary",
@@ -337,12 +337,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <Settings className="h-4 w-4 mr-2" aria-hidden="true" />
                 Settings
               </DropdownMenuItem>
-              {isAdmin && (
-                <DropdownMenuItem onClick={handleHelp}>
-                  <HelpCircle className="h-4 w-4 mr-2" aria-hidden="true" />
-                  Help & Feedback
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem onClick={handleHelp}>
+                <HelpCircle className="h-4 w-4 mr-2" aria-hidden="true" />
+                Help & Feedback
+              </DropdownMenuItem>
               {isAdmin && (
                 <DropdownMenuItem onClick={handleAdminPanel}>
                   <Shield className="h-4 w-4 mr-2" aria-hidden="true" />
