@@ -18,9 +18,10 @@ import { FailedPost } from '@/hooks/useFailedPosts';
 import { ClassifiedError } from '@/lib/errorClassification';
 import { ValidationIssue, getEligibilityForSubreddit, EligibilityResult } from '@/lib/preflightValidation';
 import { PerSubredditOverride } from './CustomizePostDialog';
-import { EligibilityBadge } from '../UserEligibilityIndicator';
-import { EligibilityDetails } from '../EligibilityDetails';
-import { ParsedRequirements, UserRequirementComparison, compareUserToRequirements } from '@/lib/parseSubredditRequirements';
+// TODO: Re-enable eligibility features when ready
+// import { EligibilityBadge } from '../UserEligibilityIndicator';
+// import { EligibilityDetails } from '../EligibilityDetails';
+// import { ParsedRequirements, UserRequirementComparison, compareUserToRequirements } from '@/lib/parseSubredditRequirements';
 
 export interface SubredditRules {
   requiresGenderTag: boolean;
@@ -67,8 +68,9 @@ export interface SubredditRowProps {
   userData?: RedditUser;
   /** Post kind for eligibility checks */
   postKind?: 'self' | 'link' | 'image' | 'video' | 'gallery';
-  /** Parsed requirements from subreddit rules (optional - for enhanced eligibility) */
-  parsedRequirements?: ParsedRequirements;
+  // TODO: Re-enable when eligibility features are ready
+  // /** Parsed requirements from subreddit rules (optional - for enhanced eligibility) */
+  // parsedRequirements?: ParsedRequirements;
 }
 
 // Helper to get icon for error type
@@ -150,7 +152,7 @@ const SubredditRow = React.memo(({
   eligibility,
   userData,
   postKind = 'self',
-  parsedRequirements,
+  // parsedRequirements,
 }: SubredditRowProps) => {
   const checkboxId = `checkbox-${name}`;
   
@@ -234,30 +236,31 @@ const SubredditRow = React.memo(({
   }, [name, eligibility, userData, postKind, isSelected]);
 
 
-  // Compute user stats for eligibility details
-  const userStats = useMemo(() => {
-    if (!userData) return null;
-    const createdUtc = userData.created_utc ?? 0;
-    const now = Date.now() / 1000;
-    const accountAgeDays = Math.floor((now - createdUtc) / (60 * 60 * 24));
-    
-    return {
-      totalKarma: userData.total_karma ?? 0,
-      commentKarma: userData.comment_karma ?? 0,
-      linkKarma: userData.link_karma ?? 0,
-      accountAgeDays,
-      hasVerifiedEmail: userData.has_verified_email ?? false,
-    };
-  }, [userData]);
+  // TODO: Re-enable eligibility features when ready
+  // // Compute user stats for eligibility details
+  // const userStats = useMemo(() => {
+  //   if (!userData) return null;
+  //   const createdUtc = userData.created_utc ?? 0;
+  //   const now = Date.now() / 1000;
+  //   const accountAgeDays = Math.floor((now - createdUtc) / (60 * 60 * 24));
+  //   
+  //   return {
+  //     totalKarma: userData.total_karma ?? 0,
+  //     commentKarma: userData.comment_karma ?? 0,
+  //     linkKarma: userData.link_karma ?? 0,
+  //     accountAgeDays,
+  //     hasVerifiedEmail: userData.has_verified_email ?? false,
+  //   };
+  // }, [userData]);
 
-  // Compute comparison result if we have both user stats and parsed requirements
-  const requirementComparison = useMemo((): UserRequirementComparison | null => {
-    if (!userStats || !parsedRequirements) return null;
-    return compareUserToRequirements(userStats, parsedRequirements);
-  }, [userStats, parsedRequirements]);
+  // // Compute comparison result if we have both user stats and parsed requirements
+  // const requirementComparison = useMemo((): UserRequirementComparison | null => {
+  //   if (!userStats || !parsedRequirements) return null;
+  //   return compareUserToRequirements(userStats, parsedRequirements);
+  // }, [userStats, parsedRequirements]);
 
-  // Determine if we should show eligibility details section
-  const showEligibilityDetails = isSelected && userStats && (parsedRequirements || eligibilityResult);
+  // // Determine if we should show eligibility details section
+  // const showEligibilityDetails = isSelected && userStats && (parsedRequirements || eligibilityResult);
 
   const handleCheckboxContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
@@ -349,25 +352,22 @@ const SubredditRow = React.memo(({
               </Badge>
             )}
 
+            {/* TODO: Re-enable eligibility badges when ready */}
             {/* Eligibility Badges - Always show for selected subreddits */}
-            {!isLoading && isSelected && (
+            {/* {!isLoading && isSelected && (
               <>
-                {/* Moderator Badge */}
                 {eligibility?.userIsModerator && (
                   <EligibilityBadge status="moderator" reason="You are a moderator" compact />
                 )}
                 
-                {/* Verified/Approved Badge - only when userIsContributor key exists and is true */}
                 {eligibility?.userIsContributor === true && (
                   <EligibilityBadge status="verified" reason="You are verified to post" compact />
                 )}
                 
-                {/* Needs Verification Badge - when userIsContributor key exists and is explicitly false */}
                 {eligibility && 'userIsContributor' in eligibility && eligibility.userIsContributor === false && !eligibility.userIsModerator && (
                   <EligibilityBadge status="needs_verification" reason="Verification required to post" compact />
                 )}
                 
-                {/* Karma Warning Badge - from parsed requirements */}
                 {requirementComparison?.karmaStatus === 'low' && (
                   <EligibilityBadge 
                     status="low_karma" 
@@ -376,7 +376,6 @@ const SubredditRow = React.memo(({
                   />
                 )}
                 
-                {/* Account Age Warning Badge - from parsed requirements */}
                 {requirementComparison?.ageStatus === 'low' && (
                   <EligibilityBadge 
                     status="new_account" 
@@ -385,7 +384,7 @@ const SubredditRow = React.memo(({
                   />
                 )}
               </>
-            )}
+            )} */}
           </div>
         </div>
 
@@ -652,8 +651,8 @@ const SubredditRow = React.memo(({
             </div>
           )}
 
-          {/* Eligibility Details - show when we have user stats */}
-          {showEligibilityDetails && userStats && (
+          {/* TODO: Re-enable eligibility details when ready */}
+          {/* {showEligibilityDetails && userStats && (
             <EligibilityDetails
               userStats={userStats}
               parsedRequirements={parsedRequirements ?? null}
@@ -661,7 +660,7 @@ const SubredditRow = React.memo(({
               defaultExpanded={false}
               className="mt-2 border-t border-border/30 pt-2"
             />
-          )}
+          )} */}
         </div>
       )}
     </div>
