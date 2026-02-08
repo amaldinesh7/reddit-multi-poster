@@ -148,13 +148,12 @@ export default async function handler(
           getEnhancedSubredditInfo(client, subredditName).catch(() => null),
         ]);
 
-        // Parse requirements from enhanced info (wiki + sidebar + submit text)
+        // Parse requirements from enhanced info (sidebar + submit text)
         let parsedRequirements: ParsedRequirements | null = null;
         if (enhancedInfoResult) {
           const textToParse = [
             enhancedInfoResult.submitText,
             enhancedInfoResult.sidebarDescription,
-            enhancedInfoResult.wikiContent,
           ].filter(Boolean).join('\n\n');
           
           if (textToParse.trim()) {
