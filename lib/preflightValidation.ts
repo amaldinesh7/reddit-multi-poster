@@ -665,11 +665,11 @@ export function getEligibilityForSubreddit(
     };
   }
 
-  // Update checks from eligibility data
-  checks.banned = eligibility.userIsBanned;
-  checks.approved = eligibility.userIsContributor;
-  checks.moderator = eligibility.userIsModerator;
-  checks.subscriber = eligibility.userIsSubscriber;
+  // Update checks from eligibility data (use nullish coalescing for optional fields)
+  checks.banned = eligibility.userIsBanned ?? false;
+  checks.approved = eligibility.userIsContributor ?? false;
+  checks.moderator = eligibility.userIsModerator ?? false;
+  checks.subscriber = eligibility.userIsSubscriber ?? false;
   checks.restrictedPosting = eligibility.restrictPosting;
   checks.subredditType = eligibility.subredditType;
 
