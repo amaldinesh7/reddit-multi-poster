@@ -6,6 +6,7 @@ import { PostRequirements, SubredditEligibility, RedditUser } from '@/utils/redd
 import { FailedPost } from '@/hooks/useFailedPosts';
 import { ValidationIssue } from '@/lib/preflightValidation';
 import { PerSubredditOverride } from './CustomizePostDialog';
+import { ParsedRequirements } from '@/lib/parseSubredditRequirements';
 
 interface CategoryData {
   categoryName: string;
@@ -24,8 +25,12 @@ interface SubredditCategoryListProps {
   postRequirements: Record<string, PostRequirements>;
   /** Eligibility data for each subreddit */
   eligibilityData?: Record<string, SubredditEligibility>;
+  /** Parsed requirements data for each subreddit */
+  parsedRequirements?: Record<string, ParsedRequirements>;
   /** User data for eligibility checks */
   userData?: RedditUser;
+  /** Post kind for eligibility checks - determines if submission type is valid */
+  postKind?: 'self' | 'link' | 'image' | 'video' | 'gallery';
   cacheLoading: Record<string, boolean>;
   showValidationErrors?: boolean;
   /** Map of subreddit name to failed post data */
@@ -63,7 +68,9 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
   subredditRules,
   postRequirements,
   eligibilityData,
+  parsedRequirements,
   userData,
+  postKind,
   cacheLoading,
   showValidationErrors,
   failedPostsBySubreddit,
@@ -173,7 +180,9 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
                       onCustomize={onCustomize}
                       customizationEnabled={customizationEnabled}
                       eligibility={eligibilityData?.[name]}
+                      parsedRequirements={parsedRequirements?.[name]}
                       userData={userData}
+                      postKind={postKind}
                     />
                   );
                 })}

@@ -24,11 +24,26 @@ module.exports = {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
+        // Toast animations
+        'toast-enter': {
+          '0%': { transform: 'translateY(100%) scale(0.95)', opacity: '0' },
+          '100%': { transform: 'translateY(0) scale(1)', opacity: '1' },
+        },
+        'toast-exit': {
+          '0%': { transform: 'translateX(0) scale(1)', opacity: '1' },
+          '100%': { transform: 'translateX(100%) scale(0.95)', opacity: '0' },
+        },
+        'toast-progress': {
+          '0%': { width: '100%' },
+          '100%': { width: '0%' },
+        },
       },
       animation: {
         float: 'float 3s ease-in-out infinite',
         'subtle-glow': 'subtleGlow 2.6s ease-in-out infinite',
         fadeIn: 'fadeIn 0.2s ease-out',
+        'toast-enter': 'toast-enter 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards',
+        'toast-exit': 'toast-exit 0.25s cubic-bezier(0.06, 0.71, 0.55, 1) forwards',
       },
       borderRadius: {
         lg: 'var(--radius)',

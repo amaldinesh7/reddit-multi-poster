@@ -24,20 +24,42 @@ export interface RedditUser {
   followers?: number;
 }
 
-// Subreddit eligibility data - user's relationship with a subreddit
-export interface SubredditEligibility {
+// Subreddit settings - globally cacheable, not user-specific
+export interface SubredditSettings {
   subreddit: string;
   subredditType: 'public' | 'private' | 'restricted' | 'gold_restricted' | 'archived' | 'user';
-  userIsBanned: boolean;
-  userIsContributor: boolean;  // "Approved submitter"
-  userIsSubscriber: boolean;
-  userIsModerator: boolean;
   restrictPosting: boolean;
   submissionType: 'any' | 'link' | 'self';
   // Media type allowances
   allowImages: boolean;
   allowVideos: boolean;
   allowGifs: boolean;
+}
+
+// User's relationship with a subreddit - per-user, client-only cache
+export interface UserSubredditStatus {
+  subreddit: string;
+  userIsBanned: boolean;
+  userIsContributor?: boolean;  // "Approved submitter" - optional, only present when Reddit explicitly returns it
+  userIsSubscriber: boolean;
+  userIsModerator: boolean;
+}
+
+// Combined eligibility data - user's relationship with a subreddit (for backward compatibility)
+export interface SubredditEligibility extends SubredditSettings, Omit<UserSubredditStatus, 'subreddit'> {}
+
+// Enhanced subreddit info including text content for parsing requirements
+export interface EnhancedSubredditInfo extends SubredditEligibility {
+  // Text content for parsing requirements
+  publicDescription: string;      // Short description shown in search
+  sidebarDescription: string;     // Full sidebar markdown (may contain rules)
+  submitText: string;             // Text shown when clicking "Submit Post"
+  // Metadata
+  subscribers: number;
+  activeUsers: number;
+  wikiEnabled: boolean;
+  over18: boolean;
+  createdUtc: number;
 }
 
 export interface FlairOption {
@@ -174,8 +196,113 @@ export async function getIdentity(client: AxiosInstance): Promise<RedditUser> {
 }
 
 /**
- * Get user's eligibility status for a specific subreddit
+ * Get subreddit settings (non-user-specific, globally cacheable)
+ * This includes subreddit type, posting restrictions, and media allowances.
+ */
+export async function getSubredditSettings(
+  client: AxiosInstance, 
+  subreddit: string
+): Promise<SubredditSettings> {
+  try {
+    const { data } = await client.get(`/r/${subreddit}/about`, { params: { raw_json: 1 } });
+    const subData = data?.data || {};
+    
+    return {
+      subreddit,
+      subredditType: subData.subreddit_type || 'public',
+      restrictPosting: subData.restrict_posting || false,
+      submissionType: subData.submission_type || 'any',
+      // Media type allowances - default to true if not specified
+      allowImages: subData.allow_images !== false,
+      allowVideos: subData.allow_videos !== false,
+      allowGifs: subData.allow_videogifs !== false,
+    };
+  } catch (error) {
+    // Return safe defaults if we can't fetch settings
+    console.error(`Failed to get settings for r/${subreddit}:`, error);
+    return {
+      subreddit,
+      subredditType: 'public',
+      restrictPosting: false,
+      submissionType: 'any',
+      allowImages: true,
+      allowVideos: true,
+      allowGifs: true,
+    };
+  }
+}
+
+/**
+ * Get user's relationship status with a specific subreddit (per-user, not cacheable globally)
  * This includes banned status, approved submitter status, subscriber status, etc.
+ */
+export async function getUserSubredditStatus(
+  client: AxiosInstance, 
+  subreddit: string
+): Promise<UserSubredditStatus> {
+  try {
+    const { data } = await client.get(`/r/${subreddit}/about`, { params: { raw_json: 1 } });
+    const subData = data?.data || {};
+    
+    return {
+      subreddit,
+      userIsBanned: subData.user_is_banned || false,
+      // Only include userIsContributor if Reddit explicitly returns it
+      ...(subData.user_is_contributor !== undefined && { userIsContributor: subData.user_is_contributor }),
+      userIsSubscriber: subData.user_is_subscriber || false,
+      userIsModerator: subData.user_is_moderator || false,
+    };
+  } catch (error) {
+    // Return safe defaults if we can't fetch status
+    console.error(`Failed to get user status for r/${subreddit}:`, error);
+    return {
+      subreddit,
+      userIsBanned: false,
+      // Don't include userIsContributor - we don't know if verification is required
+      userIsSubscriber: false,
+      userIsModerator: false,
+    };
+  }
+}
+
+/**
+ * Get user's status for multiple subreddits in parallel with rate limiting
+ */
+export async function getUserSubredditStatusBatch(
+  client: AxiosInstance, 
+  subreddits: string[],
+  batchSize: number = 3,
+  delayMs: number = 300
+): Promise<Record<string, UserSubredditStatus>> {
+  const results: Record<string, UserSubredditStatus> = {};
+  
+  for (let i = 0; i < subreddits.length; i += batchSize) {
+    const batch = subreddits.slice(i, i + batchSize);
+    
+    const batchResults = await Promise.all(
+      batch.map(async (subreddit) => {
+        const status = await getUserSubredditStatus(client, subreddit);
+        return { subreddit, status };
+      })
+    );
+    
+    batchResults.forEach(({ subreddit, status }) => {
+      results[subreddit.toLowerCase()] = status;
+    });
+    
+    // Add delay between batches to avoid rate limiting
+    if (i + batchSize < subreddits.length) {
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  
+  return results;
+}
+
+/**
+ * Get user's eligibility status for a specific subreddit (combined settings + user status)
+ * This includes banned status, approved submitter status, subscriber status, etc.
+ * @deprecated Use getSubredditSettings for caching and getUserSubredditStatus for user-specific data
  */
 export async function getSubredditEligibility(
   client: AxiosInstance, 
@@ -189,7 +316,8 @@ export async function getSubredditEligibility(
       subreddit,
       subredditType: subData.subreddit_type || 'public',
       userIsBanned: subData.user_is_banned || false,
-      userIsContributor: subData.user_is_contributor || false,
+      // Only include userIsContributor if Reddit explicitly returns it
+      ...(subData.user_is_contributor !== undefined && { userIsContributor: subData.user_is_contributor }),
       userIsSubscriber: subData.user_is_subscriber || false,
       userIsModerator: subData.user_is_moderator || false,
       restrictPosting: subData.restrict_posting || false,
@@ -206,7 +334,7 @@ export async function getSubredditEligibility(
       subreddit,
       subredditType: 'public',
       userIsBanned: false,
-      userIsContributor: false,
+      // Don't include userIsContributor - we don't know if verification is required
       userIsSubscriber: false,
       userIsModerator: false,
       restrictPosting: false,
@@ -856,5 +984,134 @@ export async function getPostRequirements(client: AxiosInstance, subreddit: stri
   } catch (error) {
     console.error(`Failed to get post requirements for ${subreddit}`, error);
     return {};
+  }
+}
+
+/**
+ * Get list of wiki pages available for a subreddit
+ * @param client - Axios client with Reddit OAuth
+ * @param subreddit - Subreddit name (without r/)
+ * @returns Array of wiki page names, or empty array if wiki is disabled/inaccessible
+ */
+export async function getWikiPages(client: AxiosInstance, subreddit: string): Promise<string[]> {
+  try {
+    const { data } = await client.get(`/r/${subreddit}/wiki/pages.json`, {
+      params: { raw_json: 1 },
+    });
+    return data?.data || [];
+  } catch (error) {
+    // Wiki may be disabled or require special permissions
+    console.log(`Wiki pages not available for r/${subreddit}`);
+    return [];
+  }
+}
+
+/**
+ * Get content of a specific wiki page
+ * @param client - Axios client with Reddit OAuth
+ * @param subreddit - Subreddit name (without r/)
+ * @param page - Wiki page name (e.g., 'index', 'rules', 'faq')
+ * @returns Wiki page content as markdown string, or null if not accessible
+ */
+export async function getWikiPage(client: AxiosInstance, subreddit: string, page: string): Promise<string | null> {
+  try {
+    const { data } = await client.get(`/r/${subreddit}/wiki/${page}.json`, {
+      params: { raw_json: 1 },
+    });
+    return data?.data?.content_md || null;
+  } catch (error) {
+    // Page may not exist or require special permissions
+    console.log(`Wiki page "${page}" not available for r/${subreddit}`);
+    return null;
+  }
+}
+
+/**
+ * Get enhanced subreddit information including text content for parsing requirements
+ * Combines /about endpoint with wiki data for comprehensive eligibility checking
+ * @param client - Axios client with Reddit OAuth  
+ * @param subreddit - Subreddit name (without r/)
+ * @returns Enhanced subreddit info with all text content for requirement parsing
+ */
+export async function getEnhancedSubredditInfo(
+  client: AxiosInstance, 
+  subreddit: string
+): Promise<EnhancedSubredditInfo> {
+  try {
+    // Fetch subreddit about data
+    const { data } = await client.get(`/r/${subreddit}/about.json`, {
+      params: { raw_json: 1 },
+    });
+    const subData = data?.data || {};
+
+    // Also try to fetch wiki rules page if wiki is enabled
+    let wikiRulesContent = '';
+    if (subData.wiki_enabled) {
+      const rulesContent = await getWikiPage(client, subreddit, 'rules');
+      if (rulesContent) {
+        wikiRulesContent = rulesContent;
+      } else {
+        // Try index page as fallback
+        const indexContent = await getWikiPage(client, subreddit, 'index');
+        if (indexContent) {
+          wikiRulesContent = indexContent;
+        }
+      }
+    }
+
+    // Combine submit text with wiki content for comprehensive rules
+    const combinedSubmitText = [
+      subData.submit_text || '',
+      wikiRulesContent,
+    ].filter(Boolean).join('\n\n---\n\n');
+
+    return {
+      subreddit,
+      subredditType: subData.subreddit_type || 'public',
+      userIsBanned: subData.user_is_banned || false,
+      // Only include userIsContributor if Reddit explicitly returns it
+      ...(subData.user_is_contributor !== undefined && { userIsContributor: subData.user_is_contributor }),
+      userIsSubscriber: subData.user_is_subscriber || false,
+      userIsModerator: subData.user_is_moderator || false,
+      restrictPosting: subData.restrict_posting || false,
+      submissionType: subData.submission_type || 'any',
+      allowImages: subData.allow_images !== false,
+      allowVideos: subData.allow_videos !== false,
+      allowGifs: subData.allow_videogifs !== false,
+      // Enhanced text fields
+      publicDescription: subData.public_description || '',
+      sidebarDescription: subData.description || '',
+      submitText: combinedSubmitText,
+      // Metadata
+      subscribers: subData.subscribers || 0,
+      activeUsers: subData.accounts_active || 0,
+      wikiEnabled: subData.wiki_enabled || false,
+      over18: subData.over18 || false,
+      createdUtc: subData.created_utc || 0,
+    };
+  } catch (error) {
+    console.error(`Failed to get enhanced info for r/${subreddit}:`, error);
+    // Return safe defaults
+    return {
+      subreddit,
+      subredditType: 'public',
+      userIsBanned: false,
+      // Don't include userIsContributor - we don't know if verification is required
+      userIsSubscriber: false,
+      userIsModerator: false,
+      restrictPosting: false,
+      submissionType: 'any',
+      allowImages: true,
+      allowVideos: true,
+      allowGifs: true,
+      publicDescription: '',
+      sidebarDescription: '',
+      submitText: '',
+      subscribers: 0,
+      activeUsers: 0,
+      wikiEnabled: false,
+      over18: false,
+      createdUtc: 0,
+    };
   }
 }

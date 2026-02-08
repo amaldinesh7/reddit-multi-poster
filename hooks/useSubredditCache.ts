@@ -1,3 +1,17 @@
+/**
+ * @deprecated This hook is deprecated. Use useLocalSubredditCache instead.
+ * This hook uses sessionStorage which can cause stale data issues.
+ * The new useLocalSubredditCache uses localStorage with proper versioning and TTL.
+ * 
+ * Migration guide:
+ * - Replace: import { useSubredditCache } from '../hooks/useSubredditCache';
+ * - With: import { useLocalSubredditCache } from '../hooks/useLocalSubredditCache';
+ * - Replace: const { getCachedData, fetchAndCache } = useSubredditCache();
+ * - With: const localCache = useLocalSubredditCache();
+ * - Replace: getCachedData(name) with localCache.getCached(name)
+ * - Replace: fetchAndCache(name) with fetch to /api/reddit/subreddit-info and localCache.setCached()
+ */
+
 import { useState, useCallback } from 'react';
 import axios from 'axios';
 
@@ -5,6 +19,9 @@ import { PostRequirements, SubredditRules, FlairOption } from '../utils/reddit';
 import { TitleTag, CachedSubredditData, ApiResponse } from '../types/api';
 import { fetchSubredditCache } from '../lib/api/reddit';
 
+/**
+ * @deprecated Use useLocalSubredditCache instead.
+ */
 interface UseSubredditCacheReturn {
   // Get cached data for a subreddit
   getCachedData: (subredditName: string) => CachedSubredditData | null;

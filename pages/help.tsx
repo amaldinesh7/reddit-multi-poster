@@ -213,6 +213,7 @@ const HelpPage: React.FC = () => {
   const [ssoToken, setSsoToken] = useState<string | null>(null);
   const [cannyLoaded, setCannyLoaded] = useState(false);
   const [loadingToken, setLoadingToken] = useState(true);
+  const [cannyError, setCannyError] = useState<string | null>(null);
 
   // Get active tab from URL query parameter, default to 'faq'
   // Use router.isReady to ensure query params are available
@@ -340,12 +341,21 @@ const HelpPage: React.FC = () => {
   // Render Canny widget when SDK is loaded and tab changes to a Canny board
   const renderCannyWidget = useCallback(() => {
     // Don't render Canny for FAQ tab
-    if (activeTab === 'faq') return;
+    if (activeTab === 'faq') {
+      setCannyError(null);
+      return;
+    }
 
     if (!cannyLoaded || !window.Canny || loadingToken) return;
 
     const boardToken = BOARD_TOKENS[activeTab as keyof typeof BOARD_TOKENS];
-    if (!boardToken) return;
+    if (!boardToken) {
+      setCannyError('This feedback board is not configured yet.');
+      return;
+    }
+
+    // Clear any previous error when attempting to render
+    setCannyError(null);
 
     // Wait a tick for the container to be in the DOM after tab switch
     setTimeout(() => {
@@ -355,13 +365,18 @@ const HelpPage: React.FC = () => {
       // Clear previous widget content
       container.innerHTML = '';
 
-      // Render new widget
-      window.Canny('render', {
-        boardToken,
-        basePath: '/help',
-        ssoToken: ssoToken || undefined,
-        theme: 'auto',
-      });
+      try {
+        // Render new widget
+        window.Canny('render', {
+          boardToken,
+          basePath: '/help',
+          ssoToken: ssoToken || undefined,
+          theme: 'auto',
+        });
+      } catch (error) {
+        console.error('Failed to render Canny widget:', error);
+        setCannyError('Unable to load the feedback widget. Please try refreshing the page.');
+      }
     }, 0);
   }, [cannyLoaded, activeTab, ssoToken, loadingToken]);
 
@@ -411,7 +426,7 @@ const HelpPage: React.FC = () => {
         <div className="app-container max-w-4xl py-6">
           <div className="w-full">
             {/* Tab selector - using brand colors */}
-            <div className="grid grid-cols-3 h-12 items-center justify-center rounded-xl bg-secondary/50 p-1.5 text-muted-foreground backdrop-blur-sm border border-border/50 w-full">
+            <div className="grid grid-cols-2 h-12 items-center justify-center rounded-xl bg-secondary/50 p-1.5 text-muted-foreground backdrop-blur-sm border border-border/50 w-full">
               <TabButton
                 value="faq"
                 activeTab={activeTab}
@@ -427,13 +442,14 @@ const HelpPage: React.FC = () => {
                 label="Feature Requests"
                 shortLabel="Features"
               />
-              <TabButton
+              {/* Bugs tab hidden for now */}
+              {/* <TabButton
                 value="bugs"
                 activeTab={activeTab}
                 onClick={handleTabChange}
                 icon={<Bug className="w-4 h-4" />}
                 label="Bugs"
-              />
+              /> */}
             </div>
 
             {/* Content area */}
@@ -482,6 +498,23 @@ const HelpPage: React.FC = () => {
                       <p className="text-sm text-muted-foreground">
                         {activeTab === 'features' ? 'Feature requests' : 'Bug reporting'} is being set up. Check back soon!
                       </p>
+                    </div>
+                  ) : cannyError ? (
+                    // Error state for Canny
+                    <div className="rounded-xl border border-border/50 bg-card p-5 text-center space-y-3">
+                      <p className="text-sm text-muted-foreground">{cannyError}</p>
+                      <button
+                        type="button"
+                        tabIndex={0}
+                        aria-label="Retry loading Canny widget"
+                        onClick={() => {
+                          setCannyError(null);
+                          renderCannyWidget();
+                        }}
+                        className="text-sm text-primary hover:text-primary/80 transition-colors cursor-pointer"
+                      >
+                        Try again
+                      </button>
                     </div>
                   ) : loadingToken || !cannyLoaded ? (
                     // Loading state for Canny

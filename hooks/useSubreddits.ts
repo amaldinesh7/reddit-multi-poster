@@ -49,13 +49,14 @@ export function useSubreddits() {
     fetchCategories();
   }, [fetchCategories]);
 
-  // Create a new category
+  // Create a new category (adds at the top)
   const createCategory = useCallback(async (name: string): Promise<Category | null> => {
     try {
       const newCategory = await createCategoryAPI(name);
       
+      // Prepend to add at the top of the list
       setData(prev => ({
-        categories: [...prev.categories, newCategory]
+        categories: [newCategory, ...prev.categories]
       }));
       return newCategory;
     } catch (err) {
@@ -125,9 +126,15 @@ export function useSubreddits() {
       }));
       return newSubreddit;
     } catch (err) {
+      // Check if this is a duplicate error (expected, don't send to Sentry)
+      const isDuplicateError = axios.isAxiosError(err) && 
+        (err.response?.status === 409 || 
+         (err.response?.data as { error?: { code?: string } })?.error?.code === 'DUPLICATE_SUBREDDIT');
+      
       captureClientError(err, 'useSubreddits.addSubreddit', {
-        toastTitle: 'Add Subreddit Failed',
+        toastTitle: isDuplicateError ? 'Already Added' : 'Add Subreddit Failed',
         context: { categoryId, subredditName },
+        skipSentry: isDuplicateError, // Don't log expected duplicate errors to Sentry
       });
       return null;
     }

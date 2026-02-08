@@ -3,13 +3,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { NativeSelect } from '@/components/ui/native-select';
 import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
@@ -24,7 +18,10 @@ import { FailedPost } from '@/hooks/useFailedPosts';
 import { ClassifiedError } from '@/lib/errorClassification';
 import { ValidationIssue, getEligibilityForSubreddit, EligibilityResult } from '@/lib/preflightValidation';
 import { PerSubredditOverride } from './CustomizePostDialog';
-import { EligibilityBadge } from '../UserEligibilityIndicator';
+// TODO: Re-enable eligibility features when ready
+// import { EligibilityBadge } from '../UserEligibilityIndicator';
+// import { EligibilityDetails } from '../EligibilityDetails';
+// import { ParsedRequirements, UserRequirementComparison, compareUserToRequirements } from '@/lib/parseSubredditRequirements';
 
 export interface SubredditRules {
   requiresGenderTag: boolean;
@@ -71,6 +68,9 @@ export interface SubredditRowProps {
   userData?: RedditUser;
   /** Post kind for eligibility checks */
   postKind?: 'self' | 'link' | 'image' | 'video' | 'gallery';
+  // TODO: Re-enable when eligibility features are ready
+  // /** Parsed requirements from subreddit rules (optional - for enhanced eligibility) */
+  // parsedRequirements?: ParsedRequirements;
 }
 
 // Helper to get icon for error type
@@ -152,8 +152,17 @@ const SubredditRow = React.memo(({
   eligibility,
   userData,
   postKind = 'self',
+  // parsedRequirements,
 }: SubredditRowProps) => {
   const checkboxId = `checkbox-${name}`;
+  
+  // #region agent log
+  React.useEffect(() => {
+    if (isSelected) {
+      fetch('http://127.0.0.1:7245/ingest/d1dd910a-8a0d-4999-8cd8-1087cab3ca13',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SubredditRow.tsx:156',message:'SubredditRow props for selected subreddit',data:{subredditName:name,hasEligibility:!!eligibility,eligibilityKeys:eligibility?Object.keys(eligibility):[],userIsContributor:eligibility?.userIsContributor,userIsContributorInObj:eligibility?'userIsContributor' in eligibility:false,flairOptionsCount:flairOptions?.length||0,flairRequired:flairRequired},hypothesisId:'A,B,C',timestamp:Date.now()})}).catch(()=>{});
+    }
+  }, [isSelected, name, eligibility, flairOptions, flairRequired]);
+  // #endregion
   const [isExpanded, setIsExpanded] = useState(false);
   const [showCustomInput, setShowCustomInput] = useState(false);
 
@@ -226,24 +235,36 @@ const SubredditRow = React.memo(({
     return getEligibilityForSubreddit(name, eligibility, userData, postKind);
   }, [name, eligibility, userData, postKind, isSelected]);
 
-  const needsVerification = useMemo(() => {
-    if (!eligibilityResult) return false;
-    const { checks } = eligibilityResult;
-    const isRestricted = checks.subredditType === 'restricted' || checks.restrictedPosting;
-    if (!isRestricted) return false;
-    return !checks.approved && !checks.moderator;
-  }, [eligibilityResult]);
 
-  const handleRowClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    if (target.closest('select') || target.closest('input') || target.closest('button') || target.closest('.expand-trigger') || target.closest('[data-radix-select-viewport]') || target.closest('[role="listbox"]')) {
-      return;
-    }
-    onToggle(name);
-  };
+  // TODO: Re-enable eligibility features when ready
+  // // Compute user stats for eligibility details
+  // const userStats = useMemo(() => {
+  //   if (!userData) return null;
+  //   const createdUtc = userData.created_utc ?? 0;
+  //   const now = Date.now() / 1000;
+  //   const accountAgeDays = Math.floor((now - createdUtc) / (60 * 60 * 24));
+  //   
+  //   return {
+  //     totalKarma: userData.total_karma ?? 0,
+  //     commentKarma: userData.comment_karma ?? 0,
+  //     linkKarma: userData.link_karma ?? 0,
+  //     accountAgeDays,
+  //     hasVerifiedEmail: userData.has_verified_email ?? false,
+  //   };
+  // }, [userData]);
+
+  // // Compute comparison result if we have both user stats and parsed requirements
+  // const requirementComparison = useMemo((): UserRequirementComparison | null => {
+  //   if (!userStats || !parsedRequirements) return null;
+  //   return compareUserToRequirements(userStats, parsedRequirements);
+  // }, [userStats, parsedRequirements]);
+
+  // // Determine if we should show eligibility details section
+  // const showEligibilityDetails = isSelected && userStats && (parsedRequirements || eligibilityResult);
 
   const handleCheckboxContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
+    onToggle(name);
   };
 
   const handleControlsClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -279,37 +300,33 @@ const SubredditRow = React.memo(({
 
   return (
     <div
-      className={`
-        rounded-lg border border-border/60 bg-card/50 overflow-hidden
-        ${(hasError || hasValidationErrors) ? 'border-red-500/40' : ''}
-      `}
+      className="rounded-lg border border-border/60 bg-card/50 overflow-hidden"
     >
       {/* Main Row */}
       <div
-        className={`
-          flex items-center justify-between px-3 sm:px-4 py-4 sm:py-3.5 transition-colors cursor-pointer gap-2
-          ${(hasError || hasValidationErrors) ? 'bg-red-500/10' : 'hover:bg-secondary/50 active:bg-secondary/80'}
-          active:scale-[0.99] transition-transform duration-75
-        `}
-        onClick={handleRowClick}
-        role="button"
-        tabIndex={0}
-        aria-label={`Toggle r/${name}`}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onToggle(name);
-          }
-        }}
+        className="flex items-center justify-between px-3 sm:px-4 py-4 sm:py-3.5 transition-all duration-75 gap-2"
       >
         {/* Left Side: Checkbox + Name + Badges */}
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center justify-center w-6 h-6 flex-shrink-0 cursor-pointer" onClick={handleCheckboxContainerClick}>
+          <div 
+            className="flex items-center justify-center w-8 h-8 -m-1 flex-shrink-0 cursor-pointer rounded-md hover:bg-secondary/50 active:bg-secondary/80 transition-colors"
+            onClick={handleCheckboxContainerClick}
+            role="button"
+            tabIndex={0}
+            aria-label={`Toggle r/${name}`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onToggle(name);
+              }
+            }}
+          >
             <Checkbox
               id={checkboxId}
               checked={isSelected}
               onCheckedChange={() => onToggle(name)}
               className="h-5 w-5"
+              tabIndex={-1}
             />
           </div>
 
@@ -328,25 +345,6 @@ const SubredditRow = React.memo(({
               <div className="w-3.5 h-3.5 border-2 border-muted border-t-primary rounded-full animate-spin flex-shrink-0" aria-label="Loading" />
             )}
 
-            {/* Info Trigger */}
-            {!isLoading && isSelected && canExpand && (
-              <button
-                onClick={handleExpandClick}
-                className="bg-secondary/80 hover:bg-secondary text-foreground/70 hover:text-foreground rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0"
-                aria-label="Community rules"
-                title="Community rules"
-              >
-                <span className="font-serif font-bold italic text-[11px]">i</span>
-              </button>
-            )}
-
-            {/* Flair Required Badge - Subtler */}
-            {!isLoading && isSelected && flairRequired && (
-              <Badge variant="secondary" className="h-4.5 px-1.5 text-[9px] uppercase font-bold tracking-wider text-foreground/70 bg-secondary/80 hover:bg-secondary flex-shrink-0" title="This community requires a flair">
-                Flair
-              </Badge>
-            )}
-
             {/* Custom Content Indicator */}
             {!isLoading && isSelected && contentOverride && (contentOverride.title || contentOverride.body) && (
               <Badge variant="secondary" className="h-4.5 px-1.5 text-[9px] uppercase font-bold tracking-wider text-primary bg-primary/10 hover:bg-primary/20 flex-shrink-0" title="Custom content for this community">
@@ -354,36 +352,45 @@ const SubredditRow = React.memo(({
               </Badge>
             )}
 
-            {/* Eligibility Badge */}
-            {!isLoading && isSelected && eligibilityResult && needsVerification && (
-              <EligibilityBadge
-                status="verification"
-                reason={eligibilityResult.reasons[0]}
-                compact={true}
-              />
-            )}
+            {/* TODO: Re-enable eligibility badges when ready */}
+            {/* Eligibility Badges - Always show for selected subreddits */}
+            {/* {!isLoading && isSelected && (
+              <>
+                {eligibility?.userIsModerator && (
+                  <EligibilityBadge status="moderator" reason="You are a moderator" compact />
+                )}
+                
+                {eligibility?.userIsContributor === true && (
+                  <EligibilityBadge status="verified" reason="You are verified to post" compact />
+                )}
+                
+                {eligibility && 'userIsContributor' in eligibility && eligibility.userIsContributor === false && !eligibility.userIsModerator && (
+                  <EligibilityBadge status="needs_verification" reason="Verification required to post" compact />
+                )}
+                
+                {requirementComparison?.karmaStatus === 'low' && (
+                  <EligibilityBadge 
+                    status="low_karma" 
+                    reason={requirementComparison.warnings.find(w => w.includes('karma')) || 'Karma may be too low'} 
+                    compact 
+                  />
+                )}
+                
+                {requirementComparison?.ageStatus === 'low' && (
+                  <EligibilityBadge 
+                    status="new_account" 
+                    reason={requirementComparison.warnings.find(w => w.includes('days old')) || 'Account may be too new'} 
+                    compact 
+                  />
+                )}
+              </>
+            )} */}
           </div>
         </div>
 
-        {/* Right Side: Customize Button + Error/Warning Indicators */}
-        {isSelected && (customizationEnabled || hasValidationIssues || failedPost) && (
-          <div className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer" onClick={handleControlsClick}>
-            {/* Customize Button (PRO feature) */}
-            {customizationEnabled && onCustomize && (
-              <Tooltip content="Customize title & description for this community" side="left">
-                <button
-                  onClick={() => onCustomize(name)}
-                  className={`p-1.5 rounded-md cursor-pointer transition-colors ${
-                    contentOverride && (contentOverride.title || contentOverride.body)
-                      ? 'bg-violet-500/15 text-violet-400 hover:bg-violet-500/25'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
-                  aria-label="Customize content for this community"
-                >
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                </button>
-              </Tooltip>
-            )}
+        {/* Right Side: Error/Warning Indicators + Info Button + Customize Button */}
+        {isSelected && (customizationEnabled || hasValidationIssues || failedPost || canExpand) && (
+          <div className="flex items-center gap-1.5 flex-shrink-0" onClick={handleControlsClick}>
             {/* Validation Issues Alert Icon with Dropdown - Pre-flight validation */}
             {hasValidationIssues && validationSummary && !failedPost && (
               <DropdownMenuRoot>
@@ -488,6 +495,35 @@ const SubredditRow = React.memo(({
                 </DropdownMenuContent>
               </DropdownMenuRoot>
             )}
+
+            {/* Info Button - Community Rules */}
+            {!isLoading && canExpand && (
+              <button
+                onClick={handleExpandClick}
+                className="bg-secondary/80 hover:bg-secondary text-foreground/70 hover:text-foreground rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0"
+                aria-label="Community rules"
+                title="Community rules"
+              >
+                <span className="font-serif font-bold italic text-[11px]">i</span>
+              </button>
+            )}
+
+            {/* Customize Button (PRO feature) - Rightmost */}
+            {customizationEnabled && onCustomize && (
+              <Tooltip content="Customize title & description for this community" side="left">
+                <button
+                  onClick={() => onCustomize(name)}
+                  className={`p-1.5 rounded-md cursor-pointer transition-colors ${
+                    contentOverride && (contentOverride.title || contentOverride.body)
+                      ? 'bg-violet-500/15 text-violet-400 hover:bg-violet-500/25'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  }`}
+                  aria-label="Customize content for this community"
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                </button>
+              </Tooltip>
+            )}
           </div>
         )}
       </div>
@@ -495,58 +531,46 @@ const SubredditRow = React.memo(({
       {/* Row 2: Controls (Flair/Tag Selection) - Only when selected */}
       {isSelected && (showTagControls || flairOptions.length > 0) && (
         <div
-          className={`
-            flex items-center gap-2 px-3 sm:px-4 pb-3 pt-3 border-t border-border/60
-            ${(hasError || hasValidationErrors) ? 'bg-red-500/10 border-red-500/30' : 'bg-secondary/20'}
-          `}
+          className="flex items-center gap-2 px-3 sm:px-4 pb-3 pt-3 border-t border-border/60 bg-secondary/20"
           onClick={handleControlsClick}
         >
             {/* Flair Dropdown - Only show when there are flair options */}
             {flairOptions.length > 0 && (
-              <Select
-                value={flairValue || '__none__'}
-                onValueChange={(value) => onFlairChange(name, value === '__none__' ? '' : value)}
-              >
-                <SelectTrigger
-                  className={`h-9 sm:h-8 flex-1 w-full min-w-[100px] sm:max-w-[140px] text-xs cursor-pointer flex-shrink-0 font-medium ${hasError
-                    ? 'border-red-500 bg-red-500/10 text-red-400'
-                    : 'bg-secondary/80 hover:bg-secondary'
-                    }`}
-                  aria-label={`Pick flair for r/${name}`}
-                >
-                  <SelectValue placeholder={flairRequired ? 'Flair (req)' : 'Flair'} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">{flairRequired ? 'Flair (required)' : 'Flair'}</SelectItem>
-                  {flairOptions.map((f) => (
-                    <SelectItem key={f.id} value={f.id}>{f.text || '—'}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <NativeSelect
+                value={flairValue || ''}
+                onValueChange={(value) => onFlairChange(name, value === '_none' ? '' : value)}
+                placeholder={flairRequired ? 'Flair (required)' : 'Flair'}
+                options={[
+                  // Only show "None" option when flair is not required
+                  ...(!flairRequired ? [{ value: '_none', label: 'No flair' }] : []),
+                  ...flairOptions.map((f) => ({
+                    value: f.id,
+                    label: f.text || '—',
+                  })),
+                ]}
+                className="flex-1 min-w-[100px] sm:max-w-[140px] flex-shrink-0"
+                triggerClassName="h-9 sm:h-8 text-xs font-medium bg-secondary/80 hover:bg-secondary"
+                aria-label={`Pick flair for r/${name}`}
+              />
             )}
 
             {/* Title Suffix - Only show when required strings exist */}
             {showTagControls && (
               <>
                 {!showCustomInput ? (
-                  <Select
+                  <NativeSelect
                     value={isCustomSuffix ? '__custom__' : (titleSuffix || '__none__')}
                     onValueChange={handleSuffixSelectChange}
-                  >
-                    <SelectTrigger
-                      className="h-9 sm:h-8 flex-1 w-full min-w-[90px] sm:min-w-[80px] text-xs cursor-pointer flex-shrink-0 font-medium bg-secondary/80 hover:bg-secondary"
-                      aria-label={`Title tag for r/${name}`}
-                    >
-                      <SelectValue placeholder="Title tag" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Title tag</SelectItem>
-                      {suffixOptions.map((opt) => (
-                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                      ))}
-                      <SelectItem value="__custom__">Custom tag…</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    placeholder="Title tag"
+                    options={[
+                      { value: '__none__', label: 'None' },
+                      ...suffixOptions.map((opt) => ({ value: opt, label: opt })),
+                      { value: '__custom__', label: 'Custom tag…' },
+                    ]}
+                    className="flex-1 min-w-[90px] sm:min-w-[80px] flex-shrink-0"
+                    triggerClassName="h-9 sm:h-8 text-xs font-medium bg-secondary/80 hover:bg-secondary"
+                    aria-label={`Title tag for r/${name}`}
+                  />
                 ) : (
                   <div className="flex items-center gap-1 flex-shrink-0 flex-1">
                     <Input
@@ -631,6 +655,17 @@ const SubredditRow = React.memo(({
               </span>
             </div>
           )}
+
+          {/* TODO: Re-enable eligibility details when ready */}
+          {/* {showEligibilityDetails && userStats && (
+            <EligibilityDetails
+              userStats={userStats}
+              parsedRequirements={parsedRequirements ?? null}
+              comparison={requirementComparison}
+              defaultExpanded={false}
+              className="mt-2 border-t border-border/30 pt-2"
+            />
+          )} */}
         </div>
       )}
     </div>

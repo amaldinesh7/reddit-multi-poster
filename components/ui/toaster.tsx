@@ -1,41 +1,137 @@
+import { useCallback, useEffect, useState, useRef } from "react"
 import {
   Toast,
   ToastDescription,
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast"
-import { useToast } from "@/hooks/useToast"
-import { AlertTriangle, CheckCircle, Info } from "lucide-react"
+import { useToast, Toast as ToastType } from "@/hooks/useToast"
+import { AlertCircle, CheckCircle2, Info } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+const TOAST_REMOVE_DELAY = 4000
+
+interface ToastWithExit extends ToastType {
+  isExiting?: boolean
+}
 
 export function Toaster() {
   const { toasts, dismiss } = useToast()
+  const [localToasts, setLocalToasts] = useState<ToastWithExit[]>([])
+  const dismissTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map())
+
+  // Sync toasts with exit animation support - uses functional state update to avoid stale closure
+  useEffect(() => {
+    const currentIds = new Set(toasts.map(t => t.id))
+    
+    setLocalToasts(prev => {
+      const localIds = new Set(prev.map(t => t.id))
+      
+      // Add new toasts
+      const newToasts = toasts.filter(t => !localIds.has(t.id))
+      
+      // Mark removed toasts as exiting
+      const updatedLocal = prev.map(t => {
+        if (!currentIds.has(t.id) && !t.isExiting) {
+          return { ...t, isExiting: true }
+        }
+        return t
+      })
+      
+      // Remove toasts that have finished exiting (after animation)
+      const withoutExited = updatedLocal.filter(t => {
+        if (t.isExiting) {
+          // Keep it for animation, remove after delay
+          return true
+        }
+        return currentIds.has(t.id)
+      })
+      
+      return [...newToasts.map(t => ({ ...t, isExiting: false })), ...withoutExited]
+    })
+  }, [toasts])
+
+  // Clean up exiting toasts after animation
+  useEffect(() => {
+    const exitingToasts = localToasts.filter(t => t.isExiting)
+    if (exitingToasts.length > 0) {
+      const timer = setTimeout(() => {
+        setLocalToasts(prev => prev.filter(t => !t.isExiting))
+      }, 300) // Match exit animation duration
+      return () => clearTimeout(timer)
+    }
+  }, [localToasts])
+
+  // Cleanup all pending dismiss timeouts on unmount
+  useEffect(() => {
+    const timeouts = dismissTimeoutsRef.current
+    return () => {
+      timeouts.forEach(timeout => clearTimeout(timeout))
+      timeouts.clear()
+    }
+  }, [])
+
+  const handleDismiss = useCallback((id: string) => {
+    // Clear any existing timeout for this toast
+    const existingTimeout = dismissTimeoutsRef.current.get(id)
+    if (existingTimeout) {
+      clearTimeout(existingTimeout)
+    }
+
+    // First mark as exiting for animation
+    setLocalToasts(prev => prev.map(t => 
+      t.id === id ? { ...t, isExiting: true } : t
+    ))
+    
+    // Then actually dismiss after animation, storing the timeout id
+    const timeoutId = setTimeout(() => {
+      dismiss(id)
+      dismissTimeoutsRef.current.delete(id)
+    }, 250)
+    
+    dismissTimeoutsRef.current.set(id, timeoutId)
+  }, [dismiss])
 
   const getIcon = (variant?: string) => {
+    const iconClasses = "h-5 w-5 flex-shrink-0"
     switch (variant) {
       case "destructive":
-        return <AlertTriangle className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+        return <AlertCircle className={cn(iconClasses, "text-red-400")} aria-hidden="true" />
       case "success":
-        return <CheckCircle className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+        return <CheckCircle2 className={cn(iconClasses, "text-emerald-400")} aria-hidden="true" />
       default:
-        return <Info className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+        return <Info className={cn(iconClasses, "text-blue-400")} aria-hidden="true" />
     }
   }
 
   return (
     <ToastViewport>
-      {toasts.map((toast) => (
+      {localToasts.map((toast, index) => (
         <Toast
           key={toast.id}
           variant={toast.variant}
-          onClose={() => dismiss(toast.id)}
-          className="mb-2"
+          onClose={() => handleDismiss(toast.id)}
+          duration={toast.duration ?? TOAST_REMOVE_DELAY}
+          isExiting={toast.isExiting}
+          style={{
+            // Subtle stacking effect
+            transform: `scale(${1 - index * 0.02})`,
+            opacity: 1 - index * 0.1,
+            zIndex: localToasts.length - index,
+          }}
         >
-          <div className="flex gap-3">
-            {getIcon(toast.variant)}
-            <div className="grid gap-1">
-              {toast.title && <ToastTitle>{toast.title}</ToastTitle>}
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5">
+              {getIcon(toast.variant)}
+            </div>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              {toast.title && (
+                <ToastTitle>{toast.title}</ToastTitle>
+              )}
               {toast.description && (
-                <ToastDescription>{toast.description}</ToastDescription>
+                <ToastDescription className="line-clamp-2">
+                  {toast.description}
+                </ToastDescription>
               )}
             </div>
           </div>

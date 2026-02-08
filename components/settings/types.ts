@@ -10,6 +10,8 @@ export interface SettingsContextType {
   loading: Record<string, boolean>;
   errors: Record<string, string>;
   dragOverCategoryId: string | null;
+  newlyCreatedCategoryId: string | null;
+  onClearNewlyCreated: (categoryId: string) => void;
 }
 
 export type { Category, SubredditItem };

@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Loader2, Search, FolderPlus, RefreshCw, GripVertical, FlaskConical, Crown } from 'lucide-react';
 import { useSubreddits } from '../hooks/useSubreddits';
-import { useSubredditCache } from '../hooks/useSubredditCache';
+import { useLocalSubredditCache } from '../hooks/useLocalSubredditCache';
 import { useAuth } from '../hooks/useAuth';
 import { useSettingsDnd } from '../hooks/useSettingsDnd';
 import { searchSubreddits as searchSubredditsAPI } from '../lib/api/reddit';
@@ -53,7 +53,37 @@ export default function Settings() {
     reorderCategories,
     reorderSubreddits,
   } = useSubreddits();
-  const { fetchAndCache, loading: cacheLoading, errors: cacheErrors } = useSubredditCache();
+  const localCache = useLocalSubredditCache();
+  
+  // Cache loading/error states (simplified from old useSubredditCache)
+  const [cacheLoading, setCacheLoading] = React.useState<Record<string, boolean>>({});
+  const [cacheErrors, setCacheErrors] = React.useState<Record<string, string>>({});
+  
+  // Fetch and cache subreddit data
+  const fetchAndCache = React.useCallback(async (subredditName: string) => {
+    const normalized = subredditName.toLowerCase();
+    setCacheLoading(prev => ({ ...prev, [normalized]: true }));
+    setCacheErrors(prev => {
+      const { [normalized]: _, ...rest } = prev;
+      return rest;
+    });
+    
+    try {
+      const response = await fetch(`/api/reddit/subreddit-info?name=${encodeURIComponent(subredditName)}`);
+      const json = await response.json();
+      
+      if (json.success && json.data) {
+        localCache.setCached(subredditName, json.data);
+      } else {
+        throw new Error(json.error?.message || 'Failed to fetch subreddit data');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch subreddit data';
+      setCacheErrors(prev => ({ ...prev, [normalized]: errorMessage }));
+    } finally {
+      setCacheLoading(prev => ({ ...prev, [normalized]: false }));
+    }
+  }, [localCache]);
 
   // Search functionality
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -69,6 +99,7 @@ export default function Settings() {
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [newlyCreatedCategoryId, setNewlyCreatedCategoryId] = React.useState<string | null>(null);
 
   // Use limits from auth (for paid users, maxSubreddits is MAX_SAFE_INTEGER)
   const maxSubreddits = limits.maxSubreddits;
@@ -174,11 +205,21 @@ export default function Settings() {
       ? availableNames[0]
       : `Category ${data.categories.length + 1}`;
 
-    await createCategory(categoryName);
+    const newCategory = await createCategory(categoryName);
+    
+    // Track the newly created category to auto-enable edit mode
+    if (newCategory) {
+      setNewlyCreatedCategoryId(newCategory.id);
+    }
     
     // Track category creation for feature discovery analytics
     trackEvent('category_created', { category_name: categoryName });
   };
+  
+  // Clear newly created category tracking after it has been rendered (for edit mode)
+  const handleClearNewlyCreated = React.useCallback((categoryId: string) => {
+    setNewlyCreatedCategoryId(prev => prev === categoryId ? null : prev);
+  }, []);
 
   // Search subreddits
   const searchSubreddits = async () => {
@@ -326,6 +367,8 @@ export default function Settings() {
       loading: cacheLoading,
       errors: cacheErrors,
       dragOverCategoryId,
+      newlyCreatedCategoryId,
+      onClearNewlyCreated: handleClearNewlyCreated,
     }}>
       <>
         <Head>
@@ -360,8 +403,8 @@ export default function Settings() {
                   <FolderPlus className="w-4 h-4 mr-2" />
                   New list
                 </Button>
-                {/* Dev-only: Load NSFW subreddits */}
-                {isDev && (
+                {/* Dev-only: Load NSFW subreddits - hidden for now */}
+                {/* {isDev && (
                   <Button
                     onClick={handleLoadDevSubreddits}
                     disabled={isLoadingDev}
@@ -376,7 +419,7 @@ export default function Settings() {
                     )}
                     {isLoadingDev ? 'Loading...' : 'Load 20 NSFW (Dev)'}
                   </Button>
-                )}
+                )} */}
                 <Button
                   variant="ghost"
                   size="sm"

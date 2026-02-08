@@ -55,6 +55,8 @@ interface Props {
   customizationEnabled?: boolean;
   /** User data for eligibility checks */
   userData?: RedditUser;
+  /** Post kind for eligibility checks - determines if submission type is valid */
+  postKind?: 'self' | 'link' | 'image' | 'video' | 'gallery';
   /** Trigger upgrade flow for gated actions */
   onRequestUpgrade?: (context?: { title?: string; message: string }) => void;
 }
@@ -80,6 +82,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
   onCustomize,
   customizationEnabled,
   userData,
+  postKind,
   onRequestUpgrade,
 }) => {
   const [query, setQuery] = React.useState('');
@@ -94,6 +97,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
     subredditRules,
     postRequirements,
     eligibilityData,
+    parsedRequirements,
     isLoaded,
     cacheLoading,
     reloadSelectedData,
@@ -102,6 +106,8 @@ const SubredditFlairPicker: React.FC<Props> = ({
   } = useSubredditFlairData({
     eagerSubreddits: selected,
     loadAllOnMount: false,
+    // Pass selected subreddits to auto-fetch user-specific status (userIsBanned, userIsContributor, etc.)
+    selectedSubreddits: selected,
   });
 
   // Search & Temporary State
@@ -238,7 +244,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
     setHasSearched(true);
 
     try {
-      const { data } = await axios.get<{ subreddits: SearchResult[] }>(`/api/search-subreddits?q=${encodeURIComponent(searchQuery)}`);
+      const { data } = await axios.get<{ subreddits: SearchResult[] }>(`/api/search-subreddits?q=${encodeURIComponent(searchQuery)}&limit=5`);
       setSearchResults(data.subreddits);
     } catch (error) {
       console.error('Search failed', error);
@@ -399,47 +405,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
         </div>
       ) : showSearchResults ? (
         <div className="space-y-3">
-          {/* Local Results Section */}
-          {hasLocalResults && (
-            <div>
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
-                Your communities
-              </div>
-              <div className="space-y-2">
-                {localFilteredSubreddits.map((name) => {
-                  const hasError = !!(showValidationErrors && hasMissingFlair(name));
-                  const failedPost = failedPostsBySubreddit[name.toLowerCase()];
-                  return (
-                    <SubredditRow
-                      key={name}
-                      name={name}
-                      hasError={hasError}
-                      isSelected={selected.includes(name)}
-                      isLoading={cacheLoading[name.toLowerCase()]}
-                      flairRequired={flairRequired[name]}
-                      flairOptions={flairOptions[name] || []}
-                      subredditRules={subredditRules[name]}
-                      postRequirements={postRequirements[name]}
-                      titleSuffix={titleSuffixValue[name]}
-                      flairValue={flairValue[name]}
-                      onToggle={handleToggle}
-                      onFlairChange={handleFlairChange}
-                      onTitleSuffixChange={handleTitleSuffixChange}
-                      failedPost={failedPost}
-                      onRetryPost={onRetryPost}
-                      onEditPost={onEditPost}
-                      onRemovePost={onRemovePost}
-                      validationIssues={validationIssuesBySubreddit?.[name]}
-                      eligibility={eligibilityData[name]}
-                      userData={userData}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Reddit Search Results Section */}
+          {/* Reddit Search Results Section - Show first */}
           {query.trim().length >= 2 && (
             <div>
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5 flex items-center gap-2">
@@ -488,11 +454,56 @@ const SubredditFlairPicker: React.FC<Props> = ({
                 </div>
               )}
 
-              {hasSearched && !isSearching && !hasRedditResults && (
+              {hasSearched && !isSearching && !hasRedditResults && !hasLocalResults && (
                 <div className="px-4 py-3 text-sm text-muted-foreground text-center border border-border rounded-md">
                   No communities found for &quot;{query}&quot;
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Local Results Section - Show after Reddit results */}
+          {hasLocalResults && (
+            <div>
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
+                Your communities
+              </div>
+              <div className="space-y-2">
+                {localFilteredSubreddits.map((name) => {
+                  const hasError = !!(showValidationErrors && hasMissingFlair(name));
+                  const failedPost = failedPostsBySubreddit[name.toLowerCase()];
+                  return (
+                    <SubredditRow
+                      key={name}
+                      name={name}
+                      hasError={hasError}
+                      isSelected={selected.includes(name)}
+                      isLoading={cacheLoading[name.toLowerCase()]}
+                      flairRequired={flairRequired[name]}
+                      flairOptions={flairOptions[name] || []}
+                      subredditRules={subredditRules[name]}
+                      postRequirements={postRequirements[name]}
+                      titleSuffix={titleSuffixValue[name]}
+                      flairValue={flairValue[name]}
+                      onToggle={handleToggle}
+                      onFlairChange={handleFlairChange}
+                      onTitleSuffixChange={handleTitleSuffixChange}
+                      failedPost={failedPost}
+                      onRetryPost={onRetryPost}
+                      onEditPost={onEditPost}
+                      onRemovePost={onRemovePost}
+                      validationIssues={validationIssuesBySubreddit?.[name]}
+                      contentOverride={contentOverrides?.[name]}
+                      onCustomize={onCustomize}
+                      customizationEnabled={customizationEnabled}
+                      eligibility={eligibilityData[name]}
+                      parsedRequirements={parsedRequirements[name]}
+                      userData={userData}
+                      postKind={postKind}
+                    />
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -533,7 +544,9 @@ const SubredditFlairPicker: React.FC<Props> = ({
                 onCustomize={onCustomize}
                 customizationEnabled={customizationEnabled}
                 eligibility={eligibilityData[name]}
+                parsedRequirements={parsedRequirements[name]}
                 userData={userData}
+                postKind={postKind}
               />
             );
           })}
@@ -550,7 +563,9 @@ const SubredditFlairPicker: React.FC<Props> = ({
           subredditRules={subredditRules}
           postRequirements={postRequirements}
           eligibilityData={eligibilityData}
+          parsedRequirements={parsedRequirements}
           userData={userData}
+          postKind={postKind}
           cacheLoading={cacheLoading}
           showValidationErrors={showValidationErrors}
           failedPostsBySubreddit={failedPostsBySubreddit}

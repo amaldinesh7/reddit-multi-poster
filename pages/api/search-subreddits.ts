@@ -35,29 +35,61 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let subreddits: any[] = [];
     
+    // Validate and clamp limit
+    const DEFAULT_LIMIT = 25;
+    const MAX_LIMIT = 100;
+    let parsedLimit = parseInt(limit as string, 10);
+    if (Number.isNaN(parsedLimit) || parsedLimit < 1) {
+      parsedLimit = DEFAULT_LIMIT;
+    } else if (parsedLimit > MAX_LIMIT) {
+      parsedLimit = MAX_LIMIT;
+    }
+    
+    // Sanitize search query: trim, validate characters, and prepare for URL usage
+    const rawSearchQuery = q.trim();
+    // Reject queries containing path traversal sequences or invalid characters for subreddit names
+    // Valid subreddit names contain only alphanumeric characters and underscores
+    const sanitizedSearchQuery = rawSearchQuery.replace(/[^a-zA-Z0-9_\s-]/g, '');
+    if (sanitizedSearchQuery.length < 2) {
+      return res.status(400).json({ error: 'Query contains invalid characters' });
+    }
+    const searchQuery = sanitizedSearchQuery;
+    
     try {
       // Try multiple search approaches
       const searchMethods = [
-        // Method 1: Standard subreddit search
+        // Method 1: Standard subreddit search (relevance)
         {
           endpoint: '/subreddits/search',
           params: {
-            q: q.trim(),
+            q: searchQuery,
             type: 'sr',
-            limit: parseInt(limit as string, 10),
+            limit: parsedLimit,
             include_over_18: 'on',
             sort: 'relevance',
             raw_json: 1
           }
         },
-        // Method 2: Search with different parameters
+        // Method 2: Search with activity sort
         {
           endpoint: '/subreddits/search',
           params: {
-            q: q.trim(),
-            limit: parseInt(limit as string, 10),
+            q: searchQuery,
+            limit: parsedLimit,
             include_over_18: 'on',
             sort: 'activity',
+            raw_json: 1
+          }
+        },
+        // Method 3: Autocomplete-style search (prefix matching)
+        {
+          endpoint: '/api/subreddit_autocomplete_v2',
+          params: {
+            query: searchQuery,
+            limit: parsedLimit,
+            include_over_18: true,
+            include_profiles: false,
+            typeahead_active: true,
             raw_json: 1
           }
         }
@@ -67,6 +99,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         try {
           addApiBreadcrumb('Trying search method', { endpoint: method.endpoint });
           const response = await client.get(method.endpoint, { params: method.params });
+          
+          // Handle autocomplete response format (different structure)
+          if (method.endpoint.includes('autocomplete') && response.data?.data?.children?.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            subreddits = response.data.data.children.map((child: any) => ({
+              name: child.data.display_name,
+              title: child.data.title || child.data.display_name,
+              description: child.data.public_description || child.data.description || '',
+              subscribers: child.data.subscribers || 0,
+              over18: child.data.over18 || false,
+              icon: child.data.icon_img || child.data.community_icon || '',
+              url: `https://reddit.com${child.data.url || `/r/${child.data.display_name}`}`
+            }));
+            
+            addApiBreadcrumb('Subreddits found via autocomplete', { count: subreddits.length });
+            break;
+          }
           
           if (response.data?.data?.children?.length > 0) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -92,8 +141,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // If no results found, try direct subreddit check
       if (subreddits.length === 0) {
         try {
-          addApiBreadcrumb('Trying direct subreddit check', { query: q.trim() });
-          const directResponse = await client.get(`/r/${q.trim()}/about`, { params: { raw_json: 1 } });
+          // Use encodeURIComponent to ensure the subreddit name is safely URL-encoded
+          const encodedSubreddit = encodeURIComponent(searchQuery);
+          addApiBreadcrumb('Trying direct subreddit check', { query: searchQuery });
+          const directResponse = await client.get(`/r/${encodedSubreddit}/about`, { params: { raw_json: 1 } });
           
           if (directResponse.data?.data) {
             const subData = directResponse.data.data;
