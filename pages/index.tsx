@@ -22,6 +22,7 @@ import { ChevronDown } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { AppHeader, MobileUserStatsBanner, AppFooter } from '@/components/layout';
 import { useHomePageState } from '@/hooks/useHomePageState';
+import { QuickActions } from '@/components/QuickActions';
 import { useFailedPosts, FailedPost } from '@/hooks/useFailedPosts';
 import { useSubredditFlairData } from '@/hooks/useSubredditFlairData';
 import { useQueueJob } from '@/hooks/useQueueJob';
@@ -167,6 +168,12 @@ export default function Home() {
     handleUnselectSuccessItems,
     clearSelection,
     clearAllState,
+    // Last post settings feature
+    hasLastPostSettings,
+    lastPostSettingsDate,
+    justAppliedLastPost,
+    saveCurrentAsLastPost,
+    applyLastPostSettings,
   } = useHomePageState({ authMe: me ?? undefined });
 
   const resetMedia = React.useCallback(() => {
@@ -197,6 +204,17 @@ export default function Home() {
   const canReview = hasTitle && hasDestinations && (validationState?.canSubmit ?? true);
   const canPost = canReview;
   const isReviewDisabled = !canReview;
+
+  // Compute current post kind based on media state
+  const currentPostKind = React.useMemo((): 'self' | 'link' | 'image' | 'video' | 'gallery' => {
+    if (mediaFiles.length > 1) return 'gallery';
+    if (mediaFiles.length === 1) {
+      const file = mediaFiles[0];
+      return file.type?.startsWith('video/') ? 'video' : 'image';
+    }
+    if (mediaUrl) return 'link';
+    return 'self'; // text post
+  }, [mediaFiles, mediaUrl]);
 
   React.useEffect(() => {
     if (isReviewDisabled && isMoreActionsOpen) {
@@ -304,7 +322,13 @@ export default function Home() {
 
     // Add failed results to the tracker
     failedPostsHook.addFromResults(queueJobResults, queueJobItems, caption, prefixes);
-  }, [caption, prefixes, failedPostsHook]);
+
+    // Save last post settings if there was at least one successful post
+    const hasSuccessfulPost = results.some(r => r.status === 'success');
+    if (hasSuccessfulPost) {
+      saveCurrentAsLastPost();
+    }
+  }, [caption, prefixes, failedPostsHook, saveCurrentAsLastPost]);
 
   // Action handlers for inline error display
   const handleRetryPost = React.useCallback(async (id: string) => {
@@ -576,8 +600,26 @@ export default function Home() {
 
               {/* Left Column: Create Post */}
               <div className="lg:pr-6">
-                {/* Section Header - Desktop only */}
-                <h2 className="text-xl mb-4 font-semibold tracking-tight hidden lg:block ">Your post</h2>
+                {/* Section Header with Quick Actions - Desktop only */}
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold tracking-tight hidden lg:block">Your post</h2>
+                  {/* Quick Actions - Load Last Post Settings */}
+                  <QuickActions
+                    onLoadLastPost={applyLastPostSettings}
+                    hasLastPost={hasLastPostSettings}
+                    lastPostDate={lastPostSettingsDate}
+                    justApplied={justAppliedLastPost}
+                    className="hidden lg:flex"
+                  />
+                </div>
+                {/* Mobile Quick Actions */}
+                <QuickActions
+                  onLoadLastPost={applyLastPostSettings}
+                  hasLastPost={hasLastPostSettings}
+                  lastPostDate={lastPostSettingsDate}
+                  justApplied={justAppliedLastPost}
+                  className="lg:hidden mb-4"
+                />
 
                 {/* Media Section - No card wrapper, flowing layout */}
                 <section className="space-y-4 mb-4">
@@ -733,6 +775,7 @@ export default function Home() {
                     onCustomize={handleCustomize}
                     customizationEnabled={entitlement === 'paid'}
                     userData={me ?? undefined}
+                    postKind={currentPostKind}
                     onRequestUpgrade={(context) => {
                       setUpgradeModalContext(context ?? {
                         title: 'Upgrade to Pro',

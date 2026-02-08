@@ -7,17 +7,7 @@
 
 import { RedditUser } from '../utils/reddit';
 import { Tooltip } from './ui/tooltip';
-import { 
-  CheckCircle2, 
-  AlertTriangle, 
-  XCircle, 
-  Shield, 
-  Clock, 
-  Star,
-  Mail,
-  TrendingUp,
-  Key,
-} from 'lucide-react';
+import { Crown, CircleWavyCheck, LockKey, TrendDown, HourglassLow } from 'phosphor-react';
 
 // ============================================================================
 // Types
@@ -221,42 +211,37 @@ export const UserEligibilityIndicator = ({
 // ============================================================================
 
 interface EligibilityBadgeProps {
-  status: 'ready' | 'warning' | 'blocked' | 'approved' | 'moderator' | 'verification';
+  status: 'moderator' | 'verified' | 'needs_verification' | 'low_karma' | 'new_account';
   reason?: string;
   compact?: boolean;
 }
 
 export const EligibilityBadge = ({ status, reason, compact = false }: EligibilityBadgeProps) => {
   const config = {
-    ready: {
-      icon: <CheckCircle2 className="w-3 h-3" />,
-      label: 'Ready',
-      className: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
-    },
-    warning: {
-      icon: <AlertTriangle className="w-3 h-3" />,
-      label: 'Warning',
-      className: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-    },
-    blocked: {
-      icon: <AlertTriangle className="w-3 h-3" />,
-      label: 'Restricted',
-      className: 'text-red-500 bg-red-500/10 border-red-500/20',
-    },
-    approved: {
-      icon: <CheckCircle2 className="w-3 h-3" />,
-      label: 'Approved',
-      className: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
-    },
     moderator: {
-      icon: <Shield className="w-3 h-3" />,
+      icon: <Crown className="w-4 h-4" />,
       label: 'Moderator',
-      className: 'text-violet-500 bg-violet-500/10 border-violet-500/20',
+      className: 'text-violet-500',
     },
-    verification: {
-      icon: <Key className="w-3 h-3" />,
-      label: 'Need verification',
-      className: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+    verified: {
+      icon: <CircleWavyCheck className="w-4 h-4" />,
+      label: 'Verified',
+      className: 'text-emerald-500',
+    },
+    needs_verification: {
+      icon: <LockKey className="w-4 h-4" />,
+      label: 'Needs verification',
+      className: 'text-amber-500',
+    },
+    low_karma: {
+      icon: <TrendDown className="w-4 h-4" />,
+      label: 'Low karma',
+      className: 'text-amber-500',
+    },
+    new_account: {
+      icon: <HourglassLow className="w-4 h-4" />,
+      label: 'New account',
+      className: 'text-amber-500',
     },
   };
 
@@ -264,10 +249,10 @@ export const EligibilityBadge = ({ status, reason, compact = false }: Eligibilit
 
   const badge = (
     <span
-      className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded border ${className} cursor-default`}
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] ${className} cursor-default`}
     >
       {icon}
-      {(!compact || status === 'blocked') && <span>{label}</span>}
+      {!compact && <span>{label}</span>}
     </span>
   );
 

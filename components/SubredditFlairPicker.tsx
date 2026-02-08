@@ -55,6 +55,8 @@ interface Props {
   customizationEnabled?: boolean;
   /** User data for eligibility checks */
   userData?: RedditUser;
+  /** Post kind for eligibility checks - determines if submission type is valid */
+  postKind?: 'self' | 'link' | 'image' | 'video' | 'gallery';
   /** Trigger upgrade flow for gated actions */
   onRequestUpgrade?: (context?: { title?: string; message: string }) => void;
 }
@@ -80,6 +82,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
   onCustomize,
   customizationEnabled,
   userData,
+  postKind,
   onRequestUpgrade,
 }) => {
   const [query, setQuery] = React.useState('');
@@ -94,6 +97,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
     subredditRules,
     postRequirements,
     eligibilityData,
+    parsedRequirements,
     isLoaded,
     cacheLoading,
     reloadSelectedData,
@@ -102,6 +106,8 @@ const SubredditFlairPicker: React.FC<Props> = ({
   } = useSubredditFlairData({
     eagerSubreddits: selected,
     loadAllOnMount: false,
+    // Pass selected subreddits to auto-fetch user-specific status (userIsBanned, userIsContributor, etc.)
+    selectedSubreddits: selected,
   });
 
   // Search & Temporary State
@@ -488,7 +494,9 @@ const SubredditFlairPicker: React.FC<Props> = ({
                       onRemovePost={onRemovePost}
                       validationIssues={validationIssuesBySubreddit?.[name]}
                       eligibility={eligibilityData[name]}
+                      parsedRequirements={parsedRequirements[name]}
                       userData={userData}
+                      postKind={postKind}
                     />
                   );
                 })}
@@ -533,7 +541,9 @@ const SubredditFlairPicker: React.FC<Props> = ({
                 onCustomize={onCustomize}
                 customizationEnabled={customizationEnabled}
                 eligibility={eligibilityData[name]}
+                parsedRequirements={parsedRequirements[name]}
                 userData={userData}
+                postKind={postKind}
               />
             );
           })}
@@ -550,7 +560,9 @@ const SubredditFlairPicker: React.FC<Props> = ({
           subredditRules={subredditRules}
           postRequirements={postRequirements}
           eligibilityData={eligibilityData}
+          parsedRequirements={parsedRequirements}
           userData={userData}
+          postKind={postKind}
           cacheLoading={cacheLoading}
           showValidationErrors={showValidationErrors}
           failedPostsBySubreddit={failedPostsBySubreddit}

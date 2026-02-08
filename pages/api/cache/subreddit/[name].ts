@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createServerSupabaseClient } from '../../../../lib/supabase';
-import { redditClient, refreshAccessToken, getFlairs, getSubredditRules, getPostRequirements, getSubredditEligibility, PostRequirements, SubredditEligibility } from '../../../../utils/reddit';
+import { redditClient, refreshAccessToken, getFlairs, getSubredditRules, getPostRequirements, getSubredditSettings, getEnhancedSubredditInfo, PostRequirements, SubredditSettings } from '../../../../utils/reddit';
+import { parseRequirementsFromText, ParsedRequirements } from '../../../../lib/parseSubredditRequirements';
 
 interface ApiResponse {
   success: boolean;
@@ -18,7 +19,10 @@ interface CachedData {
   rules: unknown;
   title_tags: unknown[];
   post_requirements: PostRequirements | null;
-  eligibility: SubredditEligibility | null;
+  // Now stores only SubredditSettings (non-user-specific data)
+  // User-specific fields (userIsBanned, userIsContributor, etc.) are fetched separately via /api/user/subreddit-status
+  eligibility: SubredditSettings | null;
+  parsed_requirements: ParsedRequirements | null;
   cached_at: string;
   cache_version: number;
 }
@@ -71,6 +75,7 @@ export default async function handler(
                 title_tags: cached.title_tags,
                 post_requirements: cached.post_requirements,
                 eligibility: cached.eligibility,
+                parsed_requirements: cached.parsed_requirements,
                 cached: true,
                 cached_at: cached.cached_at,
               },
@@ -96,6 +101,7 @@ export default async function handler(
                 title_tags: cached.title_tags,
                 post_requirements: cached.post_requirements,
                 eligibility: cached.eligibility,
+                parsed_requirements: cached.parsed_requirements,
                 cached: true,
                 stale: true,
                 cached_at: cached.cached_at,
@@ -124,8 +130,10 @@ export default async function handler(
 
         const client = redditClient(token);
 
-        // Fetch data from Reddit (including post requirements and eligibility)
-        const [flairsResult, rulesResult, postRequirementsResult, eligibilityResult] = await Promise.all([
+        // Fetch data from Reddit (including post requirements, subreddit settings, and enhanced info)
+        // Note: We use getSubredditSettings instead of getSubredditEligibility to get only non-user-specific data
+        // User-specific data (userIsBanned, userIsContributor, etc.) is fetched separately via /api/user/subreddit-status
+        const [flairsResult, rulesResult, postRequirementsResult, settingsResult, enhancedInfoResult] = await Promise.all([
           getFlairs(client, subredditName).catch(() => ({ flairs: [], required: false })),
           getSubredditRules(client, subredditName).catch(() => ({
             requiresGenderTag: false,
@@ -136,8 +144,26 @@ export default async function handler(
             submitText: '',
           })),
           getPostRequirements(client, subredditName).catch(() => ({} as PostRequirements)),
-          getSubredditEligibility(client, subredditName).catch(() => null),
+          getSubredditSettings(client, subredditName).catch(() => null),
+          getEnhancedSubredditInfo(client, subredditName).catch(() => null),
         ]);
+
+        // Parse requirements from enhanced info (wiki + sidebar + submit text)
+        let parsedRequirements: ParsedRequirements | null = null;
+        if (enhancedInfoResult) {
+          const textToParse = [
+            enhancedInfoResult.submitText,
+            enhancedInfoResult.sidebarDescription,
+            enhancedInfoResult.wikiContent,
+          ].filter(Boolean).join('\n\n');
+          
+          if (textToParse.trim()) {
+            parsedRequirements = parseRequirementsFromText(textToParse, 'wiki');
+          }
+        } else if (rulesResult.submitText) {
+          // Fallback: parse from rules submitText if enhanced info failed
+          parsedRequirements = parseRequirementsFromText(rulesResult.submitText, 'submit_text');
+        }
 
         // Parse title tags from submitText if available
         const titleTags: Array<{ tag: string; label: string; required: boolean }> = [];
@@ -158,6 +184,8 @@ export default async function handler(
         }
 
         // Upsert to cache
+        // Note: eligibility now only contains SubredditSettings (non-user-specific data)
+        // User-specific fields were removed to prevent caching one user's data for all users
         const cacheData = {
           subreddit_name: subredditName,
           flairs: flairsResult.flairs,
@@ -170,9 +198,10 @@ export default async function handler(
           },
           title_tags: titleTags,
           post_requirements: postRequirementsResult,
-          eligibility: eligibilityResult,
+          eligibility: settingsResult,
+          parsed_requirements: parsedRequirements,
           cached_at: new Date().toISOString(),
-          cache_version: 3, // Bumped version for eligibility data
+          cache_version: 5, // Bumped version for user-specific data separation
         };
 
         const { error: upsertError } = await supabase
@@ -180,7 +209,21 @@ export default async function handler(
           .upsert(cacheData as Record<string, unknown>, { onConflict: 'subreddit_name' });
 
         if (upsertError) {
-          console.error('Failed to cache subreddit data:', upsertError);
+          // Handle missing column error gracefully
+          if (upsertError.code === 'PGRST204' && upsertError.message?.includes('parsed_requirements')) {
+            console.warn('parsed_requirements column not found. Please run migration 009_add_parsed_requirements_to_subreddit_cache.sql');
+            // Retry without parsed_requirements if column doesn't exist
+            const { parsed_requirements, ...cacheDataWithoutParsed } = cacheData;
+            const { error: retryError } = await supabase
+              .from('subreddit_cache')
+              .upsert(cacheDataWithoutParsed as Record<string, unknown>, { onConflict: 'subreddit_name' });
+            
+            if (retryError) {
+              console.error('Failed to cache subreddit data (retry without parsed_requirements):', retryError);
+            }
+          } else {
+            console.error('Failed to cache subreddit data:', upsertError);
+          }
         }
 
         return res.status(200).json({

@@ -1,6 +1,5 @@
 import React from 'react';
-import axios from 'axios';
-import { useSubredditCache } from '../hooks/useSubredditCache';
+import { useLocalSubredditCache } from '../hooks/useLocalSubredditCache';
 
 interface Props {
   subreddits: string[];
@@ -9,7 +8,7 @@ interface Props {
 }
 
 export default function FlairManager({ subreddits, value, onChange }: Props) {
-  const { getCachedData, fetchAndCache } = useSubredditCache();
+  const localCache = useLocalSubredditCache();
   const [options, setOptions] = React.useState<Record<string, { id: string; text: string }[]>>({});
   const [open, setOpen] = React.useState<Record<string, boolean>>({});
 
@@ -17,7 +16,7 @@ export default function FlairManager({ subreddits, value, onChange }: Props) {
     if (options[sr]) return;
     
     // Try to get cached data first
-    const cached = getCachedData(sr);
+    const cached = localCache.getCached(sr);
     if (cached) {
       setOptions((prev) => ({ ...prev, [sr]: cached.flairs }));
       return;
@@ -25,8 +24,14 @@ export default function FlairManager({ subreddits, value, onChange }: Props) {
     
     // Fallback to API call and cache the result
     try {
-      const cachedData = await fetchAndCache(sr);
-      setOptions((prev) => ({ ...prev, [sr]: cachedData.flairs }));
+      const response = await fetch(`/api/reddit/subreddit-info?name=${encodeURIComponent(sr)}`);
+      const json = await response.json();
+      if (json.success && json.data) {
+        localCache.setCached(sr, json.data);
+        setOptions((prev) => ({ ...prev, [sr]: json.data.flairs }));
+      } else {
+        setOptions((prev) => ({ ...prev, [sr]: [] }));
+      }
     } catch (error) {
       console.error(`Failed to load flairs for ${sr}:`, error);
       setOptions((prev) => ({ ...prev, [sr]: [] }));

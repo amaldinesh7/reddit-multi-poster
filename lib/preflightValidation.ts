@@ -3,10 +3,15 @@
  * 
  * Validates post parameters before submission to catch errors early.
  * Provides detailed warnings and errors with suggested fixes.
+ * 
+ * Note: SubredditEligibility is a combined type that merges:
+ * - SubredditSettings (globally cacheable subreddit configuration)
+ * - UserSubredditStatus (per-user relationship with subreddit, fetched client-side)
  */
 
-import { PostRequirements, RedditUser, SubredditEligibility } from '../utils/reddit';
+import { PostRequirements, RedditUser, SubredditEligibility, SubredditSettings, UserSubredditStatus } from '../utils/reddit';
 import { ErrorCategory } from './errorClassification';
+import { ParsedRequirements, UserRequirementComparison } from './parseSubredditRequirements';
 
 // ============================================================================
 // Types
@@ -98,6 +103,10 @@ export interface EligibilityResult {
   };
   /** Human-readable reasons */
   reasons: string[];
+  /** Parsed requirements from subreddit rules (optional - from enhanced eligibility) */
+  parsedRequirements?: ParsedRequirements;
+  /** User stats comparison against parsed requirements */
+  userComparison?: UserRequirementComparison;
 }
 
 // ============================================================================
@@ -602,7 +611,32 @@ function getAccountAgeDays(createdUtc: number): number {
 }
 
 /**
+ * Helper to merge SubredditSettings with UserSubredditStatus into SubredditEligibility
+ * Use this when you have the data from separate sources
+ */
+export function mergeSettingsAndUserStatus(
+  settings: SubredditSettings | undefined,
+  userStatus: UserSubredditStatus | undefined
+): SubredditEligibility | undefined {
+  if (!settings) return undefined;
+  
+  return {
+    ...settings,
+    userIsBanned: userStatus?.userIsBanned ?? false,
+    // Only include userIsContributor if it was explicitly returned by Reddit
+    ...(userStatus?.userIsContributor !== undefined && { userIsContributor: userStatus.userIsContributor }),
+    userIsSubscriber: userStatus?.userIsSubscriber ?? false,
+    userIsModerator: userStatus?.userIsModerator ?? false,
+  };
+}
+
+/**
  * Determines eligibility status for a specific subreddit
+ * 
+ * @param subreddit - The subreddit name
+ * @param eligibility - Combined eligibility data (SubredditSettings + UserSubredditStatus)
+ * @param userData - Current user's Reddit data
+ * @param postKind - The type of post being submitted
  */
 export function getEligibilityForSubreddit(
   subreddit: string,
@@ -698,7 +732,7 @@ export function getEligibilityForSubreddit(
     return {
       status: 'blocked',
       checks,
-      reasons: [`r/${subreddit} is restricted - only approved users can post`],
+      reasons: [`You're not verified in r/${subreddit}. Request approval from the mods to post here.`],
     };
   }
 
@@ -716,7 +750,7 @@ export function getEligibilityForSubreddit(
     return {
       status: 'blocked',
       checks,
-      reasons: [`r/${subreddit} has restricted posting - only approved users can submit`],
+      reasons: [`r/${subreddit} requires verification. Visit the subreddit to request posting access.`],
     };
   }
 

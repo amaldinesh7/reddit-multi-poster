@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Loader2, Search, FolderPlus, RefreshCw, GripVertical, FlaskConical, Crown } from 'lucide-react';
 import { useSubreddits } from '../hooks/useSubreddits';
-import { useSubredditCache } from '../hooks/useSubredditCache';
+import { useLocalSubredditCache } from '../hooks/useLocalSubredditCache';
 import { useAuth } from '../hooks/useAuth';
 import { useSettingsDnd } from '../hooks/useSettingsDnd';
 import { searchSubreddits as searchSubredditsAPI } from '../lib/api/reddit';
@@ -53,7 +53,37 @@ export default function Settings() {
     reorderCategories,
     reorderSubreddits,
   } = useSubreddits();
-  const { fetchAndCache, loading: cacheLoading, errors: cacheErrors } = useSubredditCache();
+  const localCache = useLocalSubredditCache();
+  
+  // Cache loading/error states (simplified from old useSubredditCache)
+  const [cacheLoading, setCacheLoading] = React.useState<Record<string, boolean>>({});
+  const [cacheErrors, setCacheErrors] = React.useState<Record<string, string>>({});
+  
+  // Fetch and cache subreddit data
+  const fetchAndCache = React.useCallback(async (subredditName: string) => {
+    const normalized = subredditName.toLowerCase();
+    setCacheLoading(prev => ({ ...prev, [normalized]: true }));
+    setCacheErrors(prev => {
+      const { [normalized]: _, ...rest } = prev;
+      return rest;
+    });
+    
+    try {
+      const response = await fetch(`/api/reddit/subreddit-info?name=${encodeURIComponent(subredditName)}`);
+      const json = await response.json();
+      
+      if (json.success && json.data) {
+        localCache.setCached(subredditName, json.data);
+      } else {
+        throw new Error(json.error?.message || 'Failed to fetch subreddit data');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch subreddit data';
+      setCacheErrors(prev => ({ ...prev, [normalized]: errorMessage }));
+    } finally {
+      setCacheLoading(prev => ({ ...prev, [normalized]: false }));
+    }
+  }, [localCache]);
 
   // Search functionality
   const [searchQuery, setSearchQuery] = React.useState('');

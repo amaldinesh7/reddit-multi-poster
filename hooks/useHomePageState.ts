@@ -1,13 +1,31 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { QueueItem } from '@/types';
 import { usePersistentState } from './usePersistentState';
 import type { PerSubredditOverride } from '@/components/subreddit-picker';
+
+// ============================================================================
+// Types
+// ============================================================================
 
 interface MeData {
   name: string;
   icon_img?: string;
   id?: string;
 }
+
+/**
+ * Settings saved from the last successful post
+ * Used for "Load Last Post Settings" feature
+ */
+export interface SavedPostSettings {
+  subreddits: string[];
+  flairs: Record<string, string | undefined>;
+  titleSuffixes: Record<string, string | undefined>;
+  prefixes: { f: boolean; c: boolean };
+  savedAt: string; // ISO timestamp
+}
+
+const LAST_POST_SETTINGS_KEY = 'rmp_last_post_settings';
 
 interface UseHomePageStateProps {
   authMe?: MeData;
@@ -48,6 +66,12 @@ interface UseHomePageStateReturn {
   handleUnselectSuccessItems: (subreddits: string[]) => void;
   clearSelection: () => void;
   clearAllState: () => void;
+  // Last post settings feature
+  hasLastPostSettings: boolean;
+  lastPostSettingsDate: string | undefined;
+  justAppliedLastPost: boolean;
+  saveCurrentAsLastPost: () => void;
+  applyLastPostSettings: () => void;
 }
 
 export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePageStateReturn => {
@@ -65,6 +89,69 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
   const [customTitles, setCustomTitles] = usePersistentState<Record<string, string>>('rmp_custom_titles', {});
   const [contentOverrides, setContentOverrides] = usePersistentState<Record<string, PerSubredditOverride>>('rmp_content_overrides', {});
   const [showValidationErrors, setShowValidationErrors] = useState(false);
+
+  // Last post settings state
+  const [lastPostSettings, setLastPostSettings] = useState<SavedPostSettings | null>(null);
+  const [justAppliedLastPost, setJustAppliedLastPost] = useState(false);
+
+  // Load last post settings from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LAST_POST_SETTINGS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as SavedPostSettings;
+        // Validate the parsed data has required fields
+        if (parsed.subreddits && Array.isArray(parsed.subreddits) && parsed.savedAt) {
+          setLastPostSettings(parsed);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load last post settings:', error);
+    }
+  }, []);
+
+  /**
+   * Save current subreddit selection, flairs, and title suffixes as "last post settings"
+   * Should be called after a successful post
+   */
+  const saveCurrentAsLastPost = useCallback(() => {
+    // Only save if we have at least one subreddit selected
+    if (selectedSubs.length === 0) return;
+
+    const settings: SavedPostSettings = {
+      subreddits: [...selectedSubs],
+      flairs: { ...flairs },
+      titleSuffixes: { ...titleSuffixes },
+      prefixes: { ...prefixes },
+      savedAt: new Date().toISOString(),
+    };
+
+    try {
+      localStorage.setItem(LAST_POST_SETTINGS_KEY, JSON.stringify(settings));
+      setLastPostSettings(settings);
+    } catch (error) {
+      console.warn('Failed to save last post settings:', error);
+    }
+  }, [selectedSubs, flairs, titleSuffixes, prefixes]);
+
+  /**
+   * Apply saved last post settings to current state
+   */
+  const applyLastPostSettings = useCallback(() => {
+    if (!lastPostSettings) return;
+
+    // Apply the saved settings
+    setSelectedSubs(lastPostSettings.subreddits);
+    setFlairs(lastPostSettings.flairs);
+    setTitleSuffixes(lastPostSettings.titleSuffixes);
+    setPrefixes(lastPostSettings.prefixes);
+
+    // Show feedback
+    setJustAppliedLastPost(true);
+    setTimeout(() => {
+      setJustAppliedLastPost(false);
+    }, 2000);
+  }, [lastPostSettings, setSelectedSubs, setFlairs, setTitleSuffixes, setPrefixes]);
 
   const handleValidationChange = useCallback((hasErrors: boolean) => {
     setHasFlairErrors(hasErrors);
@@ -239,5 +326,11 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
     handleUnselectSuccessItems,
     clearSelection,
     clearAllState,
+    // Last post settings feature
+    hasLastPostSettings: lastPostSettings !== null && lastPostSettings.subreddits.length > 0,
+    lastPostSettingsDate: lastPostSettings?.savedAt,
+    justAppliedLastPost,
+    saveCurrentAsLastPost,
+    applyLastPostSettings,
   };
 };
