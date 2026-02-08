@@ -218,10 +218,8 @@ export default function Settings() {
   
   // Clear newly created category tracking after it has been rendered (for edit mode)
   const handleClearNewlyCreated = React.useCallback((categoryId: string) => {
-    if (newlyCreatedCategoryId === categoryId) {
-      setNewlyCreatedCategoryId(null);
-    }
-  }, [newlyCreatedCategoryId]);
+    setNewlyCreatedCategoryId(prev => prev === categoryId ? null : prev);
+  }, []);
 
   // Search subreddits
   const searchSubreddits = async () => {

@@ -20,6 +20,8 @@ export interface NativeSelectProps
   placeholder?: string
   /** Additional class name for the trigger container */
   triggerClassName?: string
+  /** Accessible label for the select (used when placeholder is not provided) */
+  ariaLabel?: string
 }
 
 /**
@@ -44,6 +46,7 @@ const NativeSelect = React.forwardRef<HTMLSelectElement, NativeSelectProps>(
       onValueChange,
       placeholder,
       disabled,
+      ariaLabel,
       ...props
     },
     ref
@@ -81,7 +84,7 @@ const NativeSelect = React.forwardRef<HTMLSelectElement, NativeSelectProps>(
             "absolute inset-0 w-full h-full opacity-0 cursor-pointer",
             disabled && "cursor-not-allowed"
           )}
-          aria-label={placeholder}
+          aria-label={ariaLabel ?? placeholder ?? "Select an option"}
           {...props}
         >
           {placeholder && (

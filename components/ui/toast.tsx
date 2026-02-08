@@ -46,6 +46,12 @@ interface ToastComponentProps
 
 const Toast = React.forwardRef<HTMLDivElement, ToastComponentProps>(
   ({ className, variant, onClose, duration = 4000, isExiting, children, ...props }, ref) => {
+    // Use role="alert" for destructive toasts (implies assertive), role="status" for others
+    const isDestructive = variant === "destructive"
+    const role = isDestructive ? "alert" : "status"
+    // Only set aria-live for non-destructive toasts (role="alert" already implies assertive)
+    const ariaLive = isDestructive ? undefined : "polite"
+
     return (
       <div
         ref={ref}
@@ -54,8 +60,8 @@ const Toast = React.forwardRef<HTMLDivElement, ToastComponentProps>(
           isExiting ? "animate-toast-exit" : "animate-toast-enter",
           className
         )}
-        role="alert"
-        aria-live="polite"
+        role={role}
+        aria-live={ariaLive}
         {...props}
       >
         {children}
@@ -75,7 +81,7 @@ const Toast = React.forwardRef<HTMLDivElement, ToastComponentProps>(
               "h-full rounded-full",
               variant === "destructive" && "bg-red-400/50",
               variant === "success" && "bg-emerald-400/50",
-              variant === "default" && "bg-white/20"
+              (variant ?? "default") === "default" && "bg-white/20"
             )}
             style={{
               animation: `toast-progress ${duration}ms linear forwards`,

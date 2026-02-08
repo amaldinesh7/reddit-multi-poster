@@ -119,7 +119,7 @@ export default async function handler(
             .in('category_id', userCatIds)
             .ilike('subreddit_name', cleanName)
             .limit(1)
-            .single();
+            .maybeSingle();
 
           if (existingSub) {
             return res.status(409).json({

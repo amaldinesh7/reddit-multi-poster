@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState, useRef } from "react"
 import {
   Toast,
   ToastDescription,
@@ -18,33 +18,37 @@ interface ToastWithExit extends ToastType {
 export function Toaster() {
   const { toasts, dismiss } = useToast()
   const [localToasts, setLocalToasts] = useState<ToastWithExit[]>([])
+  const dismissTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map())
 
-  // Sync toasts with exit animation support
+  // Sync toasts with exit animation support - uses functional state update to avoid stale closure
   useEffect(() => {
     const currentIds = new Set(toasts.map(t => t.id))
-    const localIds = new Set(localToasts.map(t => t.id))
     
-    // Add new toasts
-    const newToasts = toasts.filter(t => !localIds.has(t.id))
-    
-    // Mark removed toasts as exiting
-    const updatedLocal = localToasts.map(t => {
-      if (!currentIds.has(t.id) && !t.isExiting) {
-        return { ...t, isExiting: true }
-      }
-      return t
+    setLocalToasts(prev => {
+      const localIds = new Set(prev.map(t => t.id))
+      
+      // Add new toasts
+      const newToasts = toasts.filter(t => !localIds.has(t.id))
+      
+      // Mark removed toasts as exiting
+      const updatedLocal = prev.map(t => {
+        if (!currentIds.has(t.id) && !t.isExiting) {
+          return { ...t, isExiting: true }
+        }
+        return t
+      })
+      
+      // Remove toasts that have finished exiting (after animation)
+      const withoutExited = updatedLocal.filter(t => {
+        if (t.isExiting) {
+          // Keep it for animation, remove after delay
+          return true
+        }
+        return currentIds.has(t.id)
+      })
+      
+      return [...newToasts.map(t => ({ ...t, isExiting: false })), ...withoutExited]
     })
-    
-    // Remove toasts that have finished exiting (after animation)
-    const withoutExited = updatedLocal.filter(t => {
-      if (t.isExiting) {
-        // Keep it for animation, remove after delay
-        return true
-      }
-      return currentIds.has(t.id)
-    })
-    
-    setLocalToasts([...newToasts.map(t => ({ ...t, isExiting: false })), ...withoutExited])
   }, [toasts])
 
   // Clean up exiting toasts after animation
@@ -58,15 +62,34 @@ export function Toaster() {
     }
   }, [localToasts])
 
+  // Cleanup all pending dismiss timeouts on unmount
+  useEffect(() => {
+    const timeouts = dismissTimeoutsRef.current
+    return () => {
+      timeouts.forEach(timeout => clearTimeout(timeout))
+      timeouts.clear()
+    }
+  }, [])
+
   const handleDismiss = useCallback((id: string) => {
+    // Clear any existing timeout for this toast
+    const existingTimeout = dismissTimeoutsRef.current.get(id)
+    if (existingTimeout) {
+      clearTimeout(existingTimeout)
+    }
+
     // First mark as exiting for animation
     setLocalToasts(prev => prev.map(t => 
       t.id === id ? { ...t, isExiting: true } : t
     ))
-    // Then actually dismiss after animation
-    setTimeout(() => {
+    
+    // Then actually dismiss after animation, storing the timeout id
+    const timeoutId = setTimeout(() => {
       dismiss(id)
+      dismissTimeoutsRef.current.delete(id)
     }, 250)
+    
+    dismissTimeoutsRef.current.set(id, timeoutId)
   }, [dismiss])
 
   const getIcon = (variant?: string) => {

@@ -504,6 +504,9 @@ const HelpPage: React.FC = () => {
                     <div className="rounded-xl border border-border/50 bg-card p-5 text-center space-y-3">
                       <p className="text-sm text-muted-foreground">{cannyError}</p>
                       <button
+                        type="button"
+                        tabIndex={0}
+                        aria-label="Retry loading Canny widget"
                         onClick={() => {
                           setCannyError(null);
                           renderCannyWidget();

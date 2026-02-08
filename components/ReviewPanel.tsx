@@ -4,11 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Link as LinkIcon, Pencil } from 'lucide-react';
 import { X } from 'lucide-react';
-
-interface PerSubredditOverride {
-  title?: string;
-  body?: string;
-}
+import { PerSubredditOverride } from '@/components/subreddit-picker';
 
 interface ReviewPanelProps {
   open: boolean;

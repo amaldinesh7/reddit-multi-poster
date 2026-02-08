@@ -35,8 +35,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let subreddits: any[] = [];
     
-    const parsedLimit = parseInt(limit as string, 10);
-    const searchQuery = q.trim();
+    // Validate and clamp limit
+    const DEFAULT_LIMIT = 25;
+    const MAX_LIMIT = 100;
+    let parsedLimit = parseInt(limit as string, 10);
+    if (Number.isNaN(parsedLimit) || parsedLimit < 1) {
+      parsedLimit = DEFAULT_LIMIT;
+    } else if (parsedLimit > MAX_LIMIT) {
+      parsedLimit = MAX_LIMIT;
+    }
+    
+    // Sanitize search query: trim, validate characters, and prepare for URL usage
+    const rawSearchQuery = q.trim();
+    // Reject queries containing path traversal sequences or invalid characters for subreddit names
+    // Valid subreddit names contain only alphanumeric characters and underscores
+    const sanitizedSearchQuery = rawSearchQuery.replace(/[^a-zA-Z0-9_\s-]/g, '');
+    if (sanitizedSearchQuery.length < 2) {
+      return res.status(400).json({ error: 'Query contains invalid characters' });
+    }
+    const searchQuery = sanitizedSearchQuery;
     
     try {
       // Try multiple search approaches
@@ -124,8 +141,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // If no results found, try direct subreddit check
       if (subreddits.length === 0) {
         try {
+          // Use encodeURIComponent to ensure the subreddit name is safely URL-encoded
+          const encodedSubreddit = encodeURIComponent(searchQuery);
           addApiBreadcrumb('Trying direct subreddit check', { query: searchQuery });
-          const directResponse = await client.get(`/r/${searchQuery}/about`, { params: { raw_json: 1 } });
+          const directResponse = await client.get(`/r/${encodedSubreddit}/about`, { params: { raw_json: 1 } });
           
           if (directResponse.data?.data) {
             const subData = directResponse.data.data;
