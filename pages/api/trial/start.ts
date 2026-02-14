@@ -4,13 +4,12 @@ import { createServerSupabaseClient } from '../../../lib/supabase';
 import { invalidateEntitlementCache } from '../../../lib/entitlement';
 import { trackServerEvent } from '../../../lib/posthog-server';
 
-// TODO: Revert to 7 days after testing
 const TRIAL_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// For testing: 1 minute trial
+// For testing: 1 minute trial (set USE_TEST_DURATION to true for testing)
 const TEST_TRIAL_DURATION_MS = 1 * 60 * 1000; // 1 minute
-const USE_TEST_DURATION = true; // Set to false for production
+const USE_TEST_DURATION = false; // Set to true only for testing
 
 interface TrialUserRow {
   entitlement: string;
@@ -63,7 +62,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const trialDuration = USE_TEST_DURATION ? TEST_TRIAL_DURATION_MS : TRIAL_DAYS * DAY_MS;
   const trialEndsAt = new Date(now + trialDuration).toISOString();
 
-  const { error: updateError } = await supabase
+  // Use .select() to get returned rows and verify update succeeded
+  const { data: updatedRows, error: updateError } = await supabase
     .from('users')
     .update({
       entitlement: 'trial',
@@ -74,19 +74,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
     .eq('id', userId)
     .is('trial_used_at', null)
-    .neq('entitlement', 'paid');
+    .neq('entitlement', 'paid')
+    .select();
 
   if (updateError) {
     return res.status(500).json({ error: 'Failed to start trial' });
   }
 
+  // Check if any rows were actually updated (prevents concurrent request issues)
+  if (!updatedRows || updatedRows.length === 0) {
+    return res.status(409).json({ error: 'Trial could not be started. Please refresh and try again.' });
+  }
+
   invalidateEntitlementCache(userId);
   trackServerEvent(userId, 'trial_started', { plan: 'pro_trial' });
+
+  // Compute trialDaysLeft from actual duration used
+  const trialDaysLeft = Math.ceil(trialDuration / DAY_MS);
 
   return res.status(200).json({
     started: true,
     entitlement: 'trial',
     trialEndsAt,
-    trialDaysLeft: TRIAL_DAYS,
+    trialDaysLeft,
   });
 }

@@ -86,6 +86,7 @@ test.describe('@flow-edge Critical Edge Flows', () => {
     await postNowButton.click();
 
     await expect(authenticatedPage.getByText(/the url is not valid/i)).toBeVisible({ timeout: 10000 });
-    expect(queueMock.getPayload()).toBeNull();
+    // Verify the submit endpoint was never called (validation blocked it)
+    expect(queueMock.wasCalled()).toBe(false);
   });
 });

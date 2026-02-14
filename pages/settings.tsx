@@ -117,6 +117,9 @@ export default function Settings() {
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [newlyCreatedCategoryId, setNewlyCreatedCategoryId] = React.useState<string | null>(null);
   const [showCommunitySelectionModal, setShowCommunitySelectionModal] = React.useState(false);
+  
+  // Ref to prevent duplicate trial ended popup handling
+  const hasHandledTrialRef = React.useRef(false);
 
   // Use limits from auth (for paid users, maxSubreddits is MAX_SAFE_INTEGER)
   const maxSubreddits = limits.maxSubreddits;
@@ -162,13 +165,22 @@ export default function Settings() {
   }, [bulkDeleteExcept, refresh]);
 
   React.useEffect(() => {
-    if (!showTrialEndedPopup) return;
+    if (!showTrialEndedPopup) {
+      // Reset the ref when popup becomes false (allows re-triggering for future popups)
+      hasHandledTrialRef.current = false;
+      return;
+    }
+    // Only run once per popup signal
+    if (hasHandledTrialRef.current) return;
+    hasHandledTrialRef.current = true;
+    
     setShowTrialEndedModal(true);
     trackEvent('trial_ended_popup_shown', {
       source: 'settings',
     });
     refreshAuth();
-  }, [showTrialEndedPopup, refreshAuth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTrialEndedPopup]);
 
   // DnD handling
   const {

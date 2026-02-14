@@ -1,14 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { checkAdminAuth, isAdminPassword } from '../../lib/apiAuth';
+import { checkAdminAuth, isAdminPassword, createAdminSessionToken } from '../../lib/apiAuth';
 import { serialize } from 'cookie';
 
 /**
  * Endpoint to check if current user is admin or validate admin password.
  * GET: Returns { isAdmin: boolean }
- * POST: Validates password and sets admin cookie. Body: { password: string }
+ * POST: Validates password and sets admin session cookie. Body: { password: string }
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // POST: Validate password and set cookie
+  // POST: Validate password and set session cookie
   if (req.method === 'POST') {
     try {
       const { password } = req.body;
@@ -18,8 +18,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       if (isAdminPassword(password)) {
-        // Set admin password cookie (httpOnly for security)
-        res.setHeader('Set-Cookie', serialize('admin_password', password, {
+        // Create signed session token instead of storing raw password
+        const sessionToken = createAdminSessionToken(Date.now());
+        
+        // Set admin session cookie (httpOnly for security)
+        res.setHeader('Set-Cookie', serialize('admin_session', sessionToken, {
           path: '/',
           httpOnly: true,
           sameSite: 'lax',
@@ -30,7 +33,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       return res.status(401).json({ isAdmin: false, error: 'Invalid password' });
-    } catch {
+    } catch (error) {
+      console.error('Admin check error:', error);
       return res.status(500).json({ isAdmin: false, error: 'Server error' });
     }
   }
