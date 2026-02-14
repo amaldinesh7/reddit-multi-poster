@@ -52,7 +52,9 @@ const CommunitySelectionModal: React.FC<CommunitySelectionModalProps> = ({
   const isMobile = useIsMobile();
 
   const selectedCount = selectedIds.size;
-  const canConfirm = selectedCount === maxToKeep;
+  // Use effectiveMax to handle cases where user has fewer communities than maxToKeep
+  const effectiveMax = Math.min(maxToKeep, communities.length);
+  const canConfirm = selectedCount === effectiveMax;
 
   // Sort communities alphabetically
   const sortedCommunities = useMemo(() => {
@@ -81,7 +83,7 @@ const CommunitySelectionModal: React.FC<CommunitySelectionModalProps> = ({
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
-      } else if (next.size < maxToKeep) {
+      } else if (next.size < effectiveMax) {
         next.add(id);
       }
       return next;
@@ -126,7 +128,7 @@ const CommunitySelectionModal: React.FC<CommunitySelectionModalProps> = ({
 
   const priceLabel = pricing?.formatted ?? '₹299';
   const isBusy = isSubmitting || isLoading;
-  const remaining = maxToKeep - selectedCount;
+  const remaining = effectiveMax - selectedCount;
 
   const handleClose = () => {
     onOpenChange?.(false);
@@ -140,14 +142,14 @@ const CommunitySelectionModal: React.FC<CommunitySelectionModalProps> = ({
         <div className="flex items-center justify-between gap-3">
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-semibold tracking-tight">
-              Choose {maxToKeep} to keep
+              Choose {effectiveMax} to keep
             </h2>
             <p className="text-sm text-muted-foreground">
               Free plan limit reached
             </p>
           </div>
           <span className={`text-sm tabular-nums shrink-0 ${canConfirm ? 'text-emerald-400' : 'text-muted-foreground'}`}>
-            {selectedCount} of {maxToKeep}
+            {selectedCount} of {effectiveMax}
           </span>
           <button
             onClick={handleClose}
@@ -164,7 +166,7 @@ const CommunitySelectionModal: React.FC<CommunitySelectionModalProps> = ({
         <div className="divide-y divide-border/30">
           {sortedCommunities.map((community) => {
             const isSelected = selectedIds.has(community.id);
-            const isDisabled = !isSelected && selectedCount >= maxToKeep;
+            const isDisabled = !isSelected && selectedCount >= effectiveMax;
 
             return (
               <label

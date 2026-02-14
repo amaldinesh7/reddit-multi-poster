@@ -4,6 +4,7 @@ import {
   setupMockRoutes,
   setupQueueMockSuccess,
   setupQueueMockMixed,
+  setupQueueMockHanging,
   setupQueueMockNetworkError,
   setupQueueMockUnauthorized,
   mockResponses,
@@ -205,15 +206,7 @@ test.describe('Posting Queue Flow', () => {
     await authenticatedPage.getByRole('checkbox', { name: /images/i }).check();
     
     // Setup a slow mock that we can cancel
-    await authenticatedPage.route('**/api/queue', async route => {
-      // Send started but then hang
-      await route.fulfill({
-        status: 200,
-        contentType: 'text/plain',
-        body: JSON.stringify({ status: 'started', total: 2 }) + '\n' +
-              JSON.stringify({ index: 0, status: 'posting', subreddit: 'pics' }) + '\n',
-      });
-    });
+    await setupQueueMockHanging(authenticatedPage);
     
     // Click post button
     await authenticatedPage.getByRole('button', { name: /post to 2 communit/i }).click();

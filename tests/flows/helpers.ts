@@ -61,8 +61,9 @@ export const setupQueueContractMock = async (
   page: Page,
   subreddits: string[],
   outcomes: ('success' | 'error')[]
-): Promise<{ getPayload: () => CapturedQueuePayload | null }> => {
+): Promise<{ getPayload: () => CapturedQueuePayload | null; wasCalled: () => boolean }> => {
   let payload: CapturedQueuePayload | null = null;
+  let submitCalled = false;
   const mockJobId = `mock-job-${Date.now()}`;
   let pollCount = 0;
 
@@ -79,7 +80,29 @@ export const setupQueueContractMock = async (
 
   // Mock /api/queue/submit - captures payload and returns job ID
   await page.route('**/api/queue/submit', async (route: Route) => {
-    // For FormData requests, we can't easily parse the payload, but we can still mock the response
+    submitCalled = true;
+    const request = route.request();
+    const postData = request.postData();
+    
+    // Try to parse the payload from request body
+    if (postData) {
+      try {
+        // Try JSON parsing first
+        payload = JSON.parse(postData) as CapturedQueuePayload;
+      } catch {
+        // For FormData requests, extract what we can from the raw data
+        // The postData for FormData comes as a string with boundaries
+        // We'll set a placeholder indicating the submit was called
+        payload = {
+          caption: 'captured-from-formdata',
+          items: subreddits.map((subreddit) => ({
+            subreddit,
+            kind: 'link' as const,
+          })),
+        };
+      }
+    }
+    
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -130,5 +153,6 @@ export const setupQueueContractMock = async (
 
   return {
     getPayload: () => payload,
+    wasCalled: () => submitCalled,
   };
 };

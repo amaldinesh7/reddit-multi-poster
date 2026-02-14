@@ -18,7 +18,7 @@ interface UserStats {
 interface AppHeaderProps {
   userName?: string;
   userAvatar?: string;
-  onLogout: () => void;
+  onLogout?: () => void;
   isAdmin?: boolean;
   entitlement?: 'free' | 'trial' | 'paid';
   trialDaysLeft?: number | null;
@@ -363,11 +363,15 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                   Admin Panel
                 </DropdownMenuItem>
               )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onLogout} className="text-red-400">
-                <LogOut className="h-4 w-4 mr-2" aria-hidden="true" />
-                Logout
-              </DropdownMenuItem>
+              {onLogout && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onLogout} className="text-red-400">
+                    <LogOut className="h-4 w-4 mr-2" aria-hidden="true" />
+                    Logout
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenu>
             </div>
           </div>
