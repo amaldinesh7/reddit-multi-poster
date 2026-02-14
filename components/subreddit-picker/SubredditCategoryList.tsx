@@ -7,6 +7,7 @@ import { FailedPost } from '@/hooks/useFailedPosts';
 import { ValidationIssue } from '@/lib/preflightValidation';
 import { PerSubredditOverride } from './CustomizePostDialog';
 import { normalizeSubredditKey } from '@/lib/subredditKey';
+import { ControlsVariant } from './subredditRow.types';
 
 interface CategoryData {
   categoryName: string;
@@ -57,6 +58,8 @@ interface SubredditCategoryListProps {
   onFlairChange: (name: string, id: string) => void;
   onTitleSuffixChange: (name: string, suffix: string) => void;
   hasMissingFlair: (subreddit: string) => boolean;
+  /** UI variant for controls section (1-4) */
+  controlsVariant?: ControlsVariant;
 }
 
 const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
@@ -92,6 +95,7 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
   onFlairChange,
   onTitleSuffixChange,
   hasMissingFlair,
+  controlsVariant,
 }) => {
   const hasBlockingValidationErrors = (subreddit: string) => {
     const issues =
@@ -205,6 +209,7 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
                       eligibility={eligibilityData?.[key]}
                       userData={userData}
                       postKind={postKind}
+                      controlsVariant={controlsVariant}
                     />
                   );
                 })}

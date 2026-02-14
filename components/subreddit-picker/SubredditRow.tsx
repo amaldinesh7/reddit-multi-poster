@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { SubredditRowProps, SubredditRules } from './subredditRow.types';
 import SubredditRowMain from './SubredditRowMain';
 import SubredditRowActions from './SubredditRowActions';
-import SubredditRowControls from './SubredditRowControls';
+import SubredditRowControls, { ControlsVariant } from './SubredditRowControls';
 import SubredditRowExpandedDetails from './SubredditRowExpandedDetails';
 
 const SubredditRow = React.memo(({
@@ -32,6 +32,7 @@ const SubredditRow = React.memo(({
   postKind = 'self',
   rowRef,
   isHighlighted,
+  controlsVariant = 1,
 }: SubredditRowProps) => {
   const checkboxId = `checkbox-${name}`;
   const [isExpanded, setIsExpanded] = useState(false);
@@ -177,6 +178,7 @@ const SubredditRow = React.memo(({
         onSuffixSelectChange={handleSuffixSelectChange}
         onShowCustomInputChange={setShowCustomInput}
         onControlsClick={handleControlsClick}
+        variant={controlsVariant}
       />
 
       <SubredditRowExpandedDetails
