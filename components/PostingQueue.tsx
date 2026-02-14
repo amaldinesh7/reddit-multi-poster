@@ -25,6 +25,7 @@ import { ErrorCategory } from '@/lib/errorClassification';
 import { usePreflightValidation, ValidationIssue } from '../hooks/usePreflightValidation';
 import type { PreflightResult } from '@/lib/preflightValidation';
 import type { PerSubredditOverride } from './subreddit-picker';
+import { normalizeSubredditKey } from '@/lib/subredditKey';
 
 interface Item {
   subreddit: string;
@@ -233,23 +234,25 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
   // ============================================================================
 
   // Build validation input from items
+  // IMPORTANT: Use normalized subreddit keys to match the keys used in flairDataResult
   const validationInput = useMemo(() => {
-    const subreddits = items.map(i => i.subreddit);
+    const subreddits = items.map(i => normalizeSubredditKey(i.subreddit));
     const flairValue: Record<string, string | undefined> = {};
     const titleSuffixes: Record<string, string | undefined> = {};
     const titleBySubreddit: Record<string, string | undefined> = {};
     const bodyBySubreddit: Record<string, string | undefined> = {};
 
     items.forEach(item => {
-      flairValue[item.subreddit] = item.flairId;
-      titleSuffixes[item.subreddit] = item.titleSuffix;
-      const override = contentOverrides?.[item.subreddit];
-      const overrideTitle = override?.title ?? customTitles?.[item.subreddit];
+      const key = normalizeSubredditKey(item.subreddit);
+      flairValue[key] = item.flairId;
+      titleSuffixes[key] = item.titleSuffix;
+      const override = contentOverrides?.[item.subreddit] ?? contentOverrides?.[key];
+      const overrideTitle = override?.title ?? customTitles?.[item.subreddit] ?? customTitles?.[key];
       if (overrideTitle !== undefined) {
-        titleBySubreddit[item.subreddit] = overrideTitle;
+        titleBySubreddit[key] = overrideTitle;
       }
       if (override?.body !== undefined) {
-        bodyBySubreddit[item.subreddit] = override.body;
+        bodyBySubreddit[key] = override.body;
       }
     });
 
@@ -759,6 +762,7 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
 
   const isReviewEntry = mode === 'review-entry';
   const handleMobilePost = onReviewRequest ?? handleButtonClick;
+  const hasValidationBlockers = hasFlairErrors || !validation.canSubmit;
 
   useEffect(() => {
     if (onPostActionReady) {
@@ -1053,6 +1057,8 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
           isPosting={running}
           isCompleted={completed}
           hasErrors={hasFlairErrors || !batchInfo.canProceed || !validation.canSubmit}
+          allowErrorNavigation={isReviewEntry && hasValidationBlockers}
+          ctaLabel={hasValidationBlockers ? 'Fix errors' : 'Review & post'}
           onPostClick={handleMobilePost}
           onResetClick={handleMobileResetAll}
           onStopClick={handleCancel}

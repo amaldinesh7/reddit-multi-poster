@@ -428,13 +428,10 @@ async function waitForVideoProcessing(
   console.warn(`Video processing wait timed out after ${maxWaitMs / 1000}s, attempting submit anyway`);
 }
 
-export async function getFlairs(client: AxiosInstance, subreddit: string): Promise<{ flairs: FlairOption[]; required: boolean }> {
+export async function getFlairs(client: AxiosInstance, subreddit: string): Promise<{ flairs: FlairOption[] }> {
   try {
-    // Get subreddit info to check flair requirements
-    const [flairsResp, subredditResp] = await Promise.all([
-      client.get(`/r/${subreddit}/api/link_flair_v2`, { params: { raw_json: 1 } }),
-      client.get(`/r/${subreddit}/about`, { params: { raw_json: 1 } })
-    ]);
+    // Only fetch available flairs - requirement status comes from post_requirements endpoint
+    const flairsResp = await client.get(`/r/${subreddit}/api/link_flair_v2`, { params: { raw_json: 1 } });
     
     const flairs = (flairsResp.data as any[]).map((f) => ({ 
       id: f.id, 
@@ -443,14 +440,10 @@ export async function getFlairs(client: AxiosInstance, subreddit: string): Promi
       richtext: f.richtext 
     }));
     
-    // Check if flair is required
-    const subredditData = subredditResp.data?.data;
-    const required = subredditData?.link_flair_enabled && subredditData?.link_flair_position !== null;
-    
-    return { flairs, required };
+    return { flairs };
   } catch (error) {
-    // Fallback - return empty flairs and assume not required
-    return { flairs: [], required: false };
+    // Fallback - return empty flairs
+    return { flairs: [] };
   }
 }
 

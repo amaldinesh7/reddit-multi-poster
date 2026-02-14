@@ -8,6 +8,8 @@ interface Props {
     isPosting: boolean;
     isCompleted: boolean;
     hasErrors: boolean;
+    allowErrorNavigation?: boolean;
+    ctaLabel?: string;
     onPostClick: () => void;
     onResetClick: () => void;
     onStopClick?: () => void;
@@ -19,6 +21,8 @@ export const MobileStickyQueue: React.FC<Props> = ({
     isPosting,
     isCompleted,
     hasErrors,
+    allowErrorNavigation = false,
+    ctaLabel = 'Review & post',
     onPostClick,
     onResetClick,
     onStopClick,
@@ -90,11 +94,13 @@ export const MobileStickyQueue: React.FC<Props> = ({
                         ) : (
                             <Button
                                 onClick={onPostClick}
-                                disabled={hasErrors || items.length === 0}
+                                disabled={items.length === 0 || (hasErrors && !allowErrorNavigation)}
                                 size="sm"
-                                className={`h-9 px-3 font-medium active:scale-95 transition-all text-sm ${hasErrors ? 'opacity-50' : 'bg-primary'}`}
+                                className={`h-9 px-3 font-medium active:scale-95 transition-all text-sm ${
+                                  hasErrors && !allowErrorNavigation ? 'opacity-50' : 'bg-primary'
+                                }`}
                             >
-                                Review &amp; post
+                                {ctaLabel}
                             </Button>
                         )}
                     </div>

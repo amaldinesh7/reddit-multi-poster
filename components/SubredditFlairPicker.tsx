@@ -60,6 +60,11 @@ interface Props {
   postKind?: 'self' | 'link' | 'image' | 'video' | 'gallery';
   /** Trigger upgrade flow for gated actions */
   onRequestUpgrade?: (context?: { title?: string; message: string }) => void;
+  onIssueFieldInteraction?: () => void;
+  onNavigateToSubredditIssue?: (subreddit: string) => void;
+  navigationTargetSubreddit?: string | null;
+  onNavigationHandled?: () => void;
+  showInlineValidationHint?: boolean;
 }
 
 const SubredditFlairPicker: React.FC<Props> = ({
@@ -85,6 +90,11 @@ const SubredditFlairPicker: React.FC<Props> = ({
   userData,
   postKind,
   onRequestUpgrade,
+  onIssueFieldInteraction,
+  onNavigateToSubredditIssue,
+  navigationTargetSubreddit,
+  onNavigationHandled,
+  showInlineValidationHint,
 }) => {
   const [query, setQuery] = React.useState('');
   const [expandedCategories, setExpandedCategories] = usePersistentState<string[]>('rmp_expanded_categories', []);
@@ -119,9 +129,13 @@ const SubredditFlairPicker: React.FC<Props> = ({
 
   // Save to category state (for tracking saving subreddit name)
   const [savingSubreddit, setSavingSubreddit] = React.useState<string | null>(null);
+  const [highlightedSubreddit, setHighlightedSubreddit] = React.useState<string | null>(null);
 
   // Debounce timer ref
   const searchTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const highlightTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const navigationRetryTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const rowRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
 
   const mergedSubreddits = useMemo(() => {
     return [...new Set([...allSubreddits, ...temporarySubreddits])];
@@ -216,12 +230,14 @@ const SubredditFlairPicker: React.FC<Props> = ({
   const handleFlairChange = useCallback((sr: string, id: string) => {
     const key = normalizeSubredditKey(sr);
     onFlairChange({ ...flairValue, [key]: id || undefined });
-  }, [flairValue, onFlairChange]);
+    onIssueFieldInteraction?.();
+  }, [flairValue, onFlairChange, onIssueFieldInteraction]);
 
   const handleTitleSuffixChange = useCallback((sr: string, suffix: string) => {
     const key = normalizeSubredditKey(sr);
     onTitleSuffixChange({ ...titleSuffixValue, [key]: suffix || undefined });
-  }, [titleSuffixValue, onTitleSuffixChange]);
+    onIssueFieldInteraction?.();
+  }, [titleSuffixValue, onTitleSuffixChange, onIssueFieldInteraction]);
 
   const hasMissingFlair = useCallback((subreddit: string) => {
     const key = normalizeSubredditKey(subreddit);
@@ -234,6 +250,109 @@ const SubredditFlairPicker: React.FC<Props> = ({
   const handleReload = useCallback(() => {
     reloadSelectedData(selected);
   }, [reloadSelectedData, selected]);
+
+  const registerRowRef = useCallback((name: string, node: HTMLDivElement | null) => {
+    rowRefs.current[normalizeSubredditKey(name)] = node;
+  }, []);
+
+  const navigateToSubredditRow = useCallback((subreddit: string) => {
+    const normalizedTarget = normalizeSubredditKey(subreddit);
+    if (!normalizedTarget) {
+      onNavigationHandled?.();
+      return;
+    }
+
+    if (query.trim()) {
+      setQuery('');
+      setSearchResults(null);
+      setHasSearched(false);
+    }
+
+    if (viewMode === 'grouped') {
+      const containingCategory = displayCategories.find((category) =>
+        category.subreddits.some((sub) => normalizeSubredditKey(sub) === normalizedTarget),
+      );
+
+      if (containingCategory) {
+        setExpandedCategories((prev) => (
+          prev.includes(containingCategory.categoryName)
+            ? prev
+            : [...prev, containingCategory.categoryName]
+        ));
+      }
+    }
+
+    const focusTarget = () => {
+      const node = rowRefs.current[normalizedTarget];
+      if (!node) return false;
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      node.focus({ preventScroll: true });
+      setHighlightedSubreddit(normalizedTarget);
+      if (highlightTimerRef.current) {
+        clearTimeout(highlightTimerRef.current);
+      }
+      highlightTimerRef.current = setTimeout(() => {
+        setHighlightedSubreddit((prev) => (prev === normalizedTarget ? null : prev));
+      }, 1500);
+      onNavigateToSubredditIssue?.(subreddit);
+      onNavigationHandled?.();
+      return true;
+    };
+
+    // Retry in a short window so category expansion + render can complete.
+    if (focusTarget()) return;
+
+    let attempts = 0;
+    const maxAttempts = 8;
+    const intervalMs = 120;
+    if (navigationRetryTimerRef.current) {
+      clearInterval(navigationRetryTimerRef.current);
+    }
+
+    navigationRetryTimerRef.current = setInterval(() => {
+      attempts += 1;
+
+      if (focusTarget()) {
+        if (navigationRetryTimerRef.current) {
+          clearInterval(navigationRetryTimerRef.current);
+          navigationRetryTimerRef.current = null;
+        }
+        return;
+      }
+
+      if (attempts >= maxAttempts) {
+        if (navigationRetryTimerRef.current) {
+          clearInterval(navigationRetryTimerRef.current);
+          navigationRetryTimerRef.current = null;
+        }
+        onNavigationHandled?.();
+      }
+    }, intervalMs);
+  }, [
+    viewMode,
+    displayCategories,
+    setExpandedCategories,
+    onNavigateToSubredditIssue,
+    onNavigationHandled,
+    query,
+  ]);
+
+  React.useEffect(() => {
+    if (!navigationTargetSubreddit) return;
+    navigateToSubredditRow(navigationTargetSubreddit);
+  }, [navigationTargetSubreddit, navigateToSubredditRow]);
+
+  React.useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current) {
+        clearTimeout(highlightTimerRef.current);
+      }
+      if (navigationRetryTimerRef.current) {
+        clearInterval(navigationRetryTimerRef.current);
+        navigationRetryTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // Search Reddit API with debounce
   const handleSearch = useCallback(async (searchQuery: string) => {
@@ -485,7 +604,14 @@ const SubredditFlairPicker: React.FC<Props> = ({
                       onRetryPost={onRetryPost}
                       onEditPost={onEditPost}
                       onRemovePost={onRemovePost}
-                      validationIssues={validationIssuesBySubreddit?.[name]}
+                      validationIssues={
+                        validationIssuesBySubreddit?.[name] ||
+                        validationIssuesBySubreddit?.[key]
+                      }
+                      rowRef={(node) => registerRowRef(name, node)}
+                      isHighlighted={normalizeSubredditKey(name) === highlightedSubreddit}
+                      showInlineValidationHint={showInlineValidationHint}
+                      onInlineHintClick={navigateToSubredditRow}
                       contentOverride={contentOverrides?.[name]}
                       onCustomize={onCustomize}
                       customizationEnabled={customizationEnabled}
@@ -532,7 +658,14 @@ const SubredditFlairPicker: React.FC<Props> = ({
                 onRetryPost={onRetryPost}
                 onEditPost={onEditPost}
                 onRemovePost={onRemovePost}
-                validationIssues={validationIssuesBySubreddit?.[name]}
+                validationIssues={
+                  validationIssuesBySubreddit?.[name] ||
+                  validationIssuesBySubreddit?.[key]
+                }
+                rowRef={(node) => registerRowRef(name, node)}
+                isHighlighted={normalizeSubredditKey(name) === highlightedSubreddit}
+                showInlineValidationHint={showInlineValidationHint}
+                onInlineHintClick={navigateToSubredditRow}
                 contentOverride={contentOverrides?.[name]}
                 onCustomize={onCustomize}
                 customizationEnabled={customizationEnabled}
@@ -564,6 +697,10 @@ const SubredditFlairPicker: React.FC<Props> = ({
           onEditPost={onEditPost}
           onRemovePost={onRemovePost}
           validationIssuesBySubreddit={validationIssuesBySubreddit}
+          highlightedSubreddit={highlightedSubreddit}
+          showInlineValidationHint={showInlineValidationHint}
+          onInlineHintClick={navigateToSubredditRow}
+          registerRowRef={registerRowRef}
           contentOverrides={contentOverrides}
           onCustomize={onCustomize}
           customizationEnabled={customizationEnabled}

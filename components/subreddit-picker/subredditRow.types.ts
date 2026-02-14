@@ -38,4 +38,8 @@ export interface SubredditRowProps {
   eligibility?: SubredditEligibility;
   userData?: RedditUser;
   postKind?: 'self' | 'link' | 'image' | 'video' | 'gallery';
+  rowRef?: (node: HTMLDivElement | null) => void;
+  isHighlighted?: boolean;
+  showInlineValidationHint?: boolean;
+  onInlineHintClick?: (name: string) => void;
 }

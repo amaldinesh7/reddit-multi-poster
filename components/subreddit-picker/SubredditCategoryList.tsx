@@ -41,6 +41,10 @@ interface SubredditCategoryListProps {
   onRemovePost?: (id: string) => void;
   /** Validation issues grouped by subreddit */
   validationIssuesBySubreddit?: Record<string, ValidationIssue[]>;
+  highlightedSubreddit?: string | null;
+  showInlineValidationHint?: boolean;
+  onInlineHintClick?: (name: string) => void;
+  registerRowRef?: (name: string, node: HTMLDivElement | null) => void;
   /** Per-subreddit content overrides (PRO feature) */
   contentOverrides?: Record<string, PerSubredditOverride>;
   /** Callback when customize is clicked */
@@ -75,6 +79,10 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
   onEditPost,
   onRemovePost,
   validationIssuesBySubreddit,
+  highlightedSubreddit,
+  showInlineValidationHint,
+  onInlineHintClick,
+  registerRowRef,
   contentOverrides,
   onCustomize,
   customizationEnabled,
@@ -85,8 +93,18 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
   onTitleSuffixChange,
   hasMissingFlair,
 }) => {
+  const hasBlockingValidationErrors = (subreddit: string) => {
+    const issues =
+      validationIssuesBySubreddit?.[subreddit] ||
+      validationIssuesBySubreddit?.[normalizeSubredditKey(subreddit)] ||
+      [];
+    return issues.some((issue) => issue.severity === 'error');
+  };
+
   const categoryHasErrors = (subreddits: string[]) => {
-    return showValidationErrors && subreddits.some(subreddit => hasMissingFlair(subreddit));
+    return showValidationErrors && subreddits.some(
+      (subreddit) => hasMissingFlair(subreddit) || hasBlockingValidationErrors(subreddit),
+    );
   };
 
   if (categorizedSubreddits.length === 0) {
@@ -173,7 +191,14 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
                       onRetryPost={onRetryPost}
                       onEditPost={onEditPost}
                       onRemovePost={onRemovePost}
-                      validationIssues={validationIssuesBySubreddit?.[name]}
+                      validationIssues={
+                        validationIssuesBySubreddit?.[name] ||
+                        validationIssuesBySubreddit?.[key]
+                      }
+                      rowRef={(node) => registerRowRef?.(name, node)}
+                      isHighlighted={normalizeSubredditKey(name) === highlightedSubreddit}
+                      showInlineValidationHint={showInlineValidationHint}
+                      onInlineHintClick={onInlineHintClick}
                       contentOverride={contentOverrides?.[name]}
                       onCustomize={onCustomize}
                       customizationEnabled={customizationEnabled}

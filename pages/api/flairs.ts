@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import * as Sentry from '@sentry/nextjs';
-import { getFlairs, redditClient, refreshAccessToken } from '../../utils/reddit';
+import { getFlairs, getPostRequirements, redditClient, refreshAccessToken } from '../../utils/reddit';
 import { serialize } from 'cookie';
 import { addApiBreadcrumb, handleRedditApiError } from '../../lib/apiErrorHandler';
 
@@ -29,12 +29,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!access) return res.status(401).json({ error: 'Unauthorized' });
     
     const client = redditClient(access);
-    const { flairs, required } = await getFlairs(client, subreddit);
     
-    addApiBreadcrumb('Flairs fetched', { subreddit, flairCount: flairs.length, required });
+    // Fetch flairs and post requirements in parallel
+    const [flairsResult, postRequirements] = await Promise.all([
+      getFlairs(client, subreddit),
+      getPostRequirements(client, subreddit).catch(() => ({})),
+    ]);
+    
+    // Use is_flair_required from post_requirements as the authoritative source
+    const required = postRequirements.is_flair_required === true;
+    
+    addApiBreadcrumb('Flairs fetched', { subreddit, flairCount: flairsResult.flairs.length, required });
     
     res.status(200).json({ 
-      flairs, 
+      flairs: flairsResult.flairs, 
       required,
       subreddit: subreddit.toLowerCase(),
       fetchedAt: Date.now()
