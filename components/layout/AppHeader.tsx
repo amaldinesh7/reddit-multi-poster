@@ -216,6 +216,28 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 >
                   Multi Poster
                 </span>
+                {/* Trial badge - show icon only, positioned after Multi Poster text */}
+                {entitlement === 'trial' && (
+                  <span 
+                    className="relative inline-flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-r from-violet-500/20 via-purple-500/25 to-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/40 dark:border-violet-400/25 shadow-sm shadow-violet-500/25 overflow-hidden"
+                    aria-label={`Pro trial active${trialDaysLeft ? ` - ${trialDaysLeft} days left` : ''}`}
+                    title={`Trial${trialDaysLeft ? ` • ${trialDaysLeft}d left` : ''}`}
+                  >
+                    <Infinity className="w-3.5 h-3.5 relative z-10" aria-hidden="true" />
+                    <span className="absolute inset-0 animate-pro-shimmer" aria-hidden="true" />
+                  </span>
+                )}
+                {/* Pro badge - show full text */}
+                {entitlement === 'paid' && (
+                  <span 
+                    className="relative inline-flex items-center text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-gradient-to-r from-violet-500/20 via-purple-500/25 to-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/40 dark:border-violet-400/25 shadow-sm shadow-violet-500/25 overflow-hidden"
+                    aria-label="Pro plan active"
+                  >
+                    <span className="relative z-10">Pro</span>
+                    <span className="absolute inset-0 animate-pro-shimmer" aria-hidden="true" />
+                  </span>
+                )}
+                {/* Go Unlimited button - shown after trial/pro badge */}
                 {showUpgrade && (
                   <button
                     type="button"
@@ -237,17 +259,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     <Infinity className="h-4 w-4" aria-hidden="true" />
                     <span>{upgradeLoading ? 'Opening checkout…' : 'Go Unlimited'}</span>
                   </button>
-                )}
-                {hasProAccess && (
-                  <span 
-                    className="relative inline-flex items-center text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-gradient-to-r from-violet-500/20 via-purple-500/25 to-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/40 dark:border-violet-400/25 shadow-sm shadow-violet-500/25 overflow-hidden"
-                    aria-label={entitlement === 'trial' ? 'Pro trial active' : 'Pro plan active'}
-                  >
-                    <span className="relative z-10">
-                      {entitlement === 'trial' ? `Trial${trialDaysLeft ? ` • ${trialDaysLeft}d` : ''}` : 'Pro'}
-                    </span>
-                    <span className="absolute inset-0 animate-pro-shimmer" aria-hidden="true" />
-                  </span>
                 )}
               </div>
             )}

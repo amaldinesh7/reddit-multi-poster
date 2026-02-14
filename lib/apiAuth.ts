@@ -14,6 +14,49 @@ export const isAdmin = (redditUsername: string): boolean => {
 };
 
 /**
+ * Check if a password matches the admin password.
+ * Uses ADMIN_PASSWORD environment variable.
+ * Returns false if ADMIN_PASSWORD is not set.
+ */
+export const isAdminPassword = (password: string): boolean => {
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword || !password) return false;
+  return adminPassword === password;
+};
+
+/**
+ * Check if request has valid admin auth (either Reddit username or password).
+ * Checks in order:
+ * 1. admin_password cookie
+ * 2. X-Admin-Password header
+ * 3. Reddit username (requires login)
+ */
+export const checkAdminAuth = async (
+  req: NextApiRequest,
+  res: NextApiResponse
+): Promise<{ isAdmin: boolean; method: 'password' | 'reddit' | null }> => {
+  // Check password from cookie
+  const passwordCookie = req.cookies['admin_password'];
+  if (passwordCookie && isAdminPassword(passwordCookie)) {
+    return { isAdmin: true, method: 'password' };
+  }
+
+  // Check password from header
+  const passwordHeader = req.headers['x-admin-password'];
+  if (typeof passwordHeader === 'string' && isAdminPassword(passwordHeader)) {
+    return { isAdmin: true, method: 'password' };
+  }
+
+  // Fallback to Reddit username check
+  const { redditUsername } = await getUserDetails(req, res);
+  if (redditUsername && isAdmin(redditUsername)) {
+    return { isAdmin: true, method: 'reddit' };
+  }
+
+  return { isAdmin: false, method: null };
+};
+
+/**
  * Get user details from request (including username for admin check).
  * Returns both user ID and full user object.
  */

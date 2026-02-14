@@ -4,8 +4,13 @@ import { createServerSupabaseClient } from '../../../lib/supabase';
 import { invalidateEntitlementCache } from '../../../lib/entitlement';
 import { trackServerEvent } from '../../../lib/posthog-server';
 
+// TODO: Revert to 7 days after testing
 const TRIAL_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+// For testing: 1 minute trial
+const TEST_TRIAL_DURATION_MS = 1 * 60 * 1000; // 1 minute
+const USE_TEST_DURATION = true; // Set to false for production
 
 interface TrialUserRow {
   entitlement: string;
@@ -55,7 +60,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const trialStartedAt = new Date(now).toISOString();
-  const trialEndsAt = new Date(now + TRIAL_DAYS * DAY_MS).toISOString();
+  const trialDuration = USE_TEST_DURATION ? TEST_TRIAL_DURATION_MS : TRIAL_DAYS * DAY_MS;
+  const trialEndsAt = new Date(now + trialDuration).toISOString();
 
   const { error: updateError } = await supabase
     .from('users')

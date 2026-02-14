@@ -27,6 +27,7 @@ const SubredditRow = React.memo(({
   contentOverride,
   onCustomize,
   customizationEnabled,
+  onRequestUpgrade,
   eligibility,
   userData,
   postKind = 'self',
@@ -152,6 +153,7 @@ const SubredditRow = React.memo(({
           customizationEnabled={customizationEnabled}
           contentOverride={contentOverride}
           onCustomize={onCustomize}
+          onRequestUpgrade={onRequestUpgrade}
           onRetryPost={onRetryPost}
           onEditPost={onEditPost}
           onRemovePost={onRemovePost}

@@ -136,6 +136,11 @@ export default function Home() {
     bulkDeleteExcept,
     refresh: refreshSubreddits,
   } = useSubreddits();
+
+  // Calculate total saved subreddits count early (needed for limit checks in callbacks)
+  const totalSavedSubreddits = React.useMemo(() => {
+    return subredditData.categories.reduce((sum, c) => sum + c.user_subreddits.length, 0);
+  }, [subredditData.categories]);
   
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [upgradeLoading, setUpgradeLoading] = React.useState(false);
@@ -385,15 +390,56 @@ export default function Home() {
       return;
     }
 
+    // Check free user limits BEFORE opening review
+    // First check if user is OVER the saved communities limit (e.g., trial expired with many communities)
+    if (entitlement === 'free' && totalSavedSubreddits > FREE_MAX_SUBREDDITS) {
+      trackEvent('community_selection_required', {
+        source: 'review_click',
+        subreddit_count: totalSavedSubreddits,
+        max_allowed: FREE_MAX_SUBREDDITS,
+      });
+      setShowCommunitySelectionModal(true);
+      return; // Block review, show community selection modal first
+    }
+
     handleOpenReview();
-  }, [reviewCtaMode, handleGoToFirstValidationIssue, handleOpenReview]);
+  }, [reviewCtaMode, handleGoToFirstValidationIssue, handleOpenReview, entitlement, totalSavedSubreddits]);
 
   const handlePostNow = React.useCallback(() => {
+    // Check free user limits BEFORE posting
+    // First check if user is OVER the saved communities limit (e.g., trial expired with many communities)
+    if (entitlement === 'free' && totalSavedSubreddits > FREE_MAX_SUBREDDITS) {
+      trackEvent('community_selection_required', {
+        source: 'review_post_now',
+        subreddit_count: totalSavedSubreddits,
+        max_allowed: FREE_MAX_SUBREDDITS,
+      });
+      setIsReviewOpen(false);
+      setShowCommunitySelectionModal(true);
+      return; // Block posting, show community selection modal
+    }
+    
+    const maxPostItems = limits.maxPostItems ?? 5;
+    // Check if free user is trying to post to more subreddits than their limit
+    if (entitlement === 'free' && selectedSubs.length > maxPostItems) {
+      trackEvent('free_limit_reached', {
+        source: 'review_post_now',
+        subreddit_count: selectedSubs.length,
+      });
+      setIsReviewOpen(false);
+      setUpgradeModalContext({
+        title: `You picked ${selectedSubs.length} communities`,
+        message: `Free: up to ${maxPostItems} per post. Go Pro for unlimited.`,
+      });
+      setShowUpgradeModal(true);
+      return; // Block posting, show upgrade modal
+    }
+
     if (postActionRef.current) {
       postActionRef.current();
     }
     setIsReviewOpen(false);
-  }, []);
+  }, [entitlement, totalSavedSubreddits, limits.maxPostItems, selectedSubs.length]);
 
   const handleResetSelection = React.useCallback(() => {
     clearSelection();
@@ -566,8 +612,10 @@ export default function Home() {
     
     const checkAdmin = async () => {
       try {
-        const adminRes = await axios.get<{ isAdmin: boolean }>('/api/admin-check');
-        setIsAdmin(adminRes.data.isAdmin);
+        const adminRes = await axios.get<{ isAdmin: boolean; isAdminByUsername: boolean }>('/api/admin-check');
+        // Only show admin menu if user is admin by Reddit username (not password)
+        // isAdminByUsername is explicitly false for password-only auth
+        setIsAdmin(adminRes.data.isAdminByUsername === true);
       } catch {
         // Ignore admin check failures
       }
@@ -673,11 +721,6 @@ export default function Home() {
       hasVerifiedEmail: me.has_verified_email ?? false,
     };
   }, [me]);
-
-  // Calculate total saved subreddits count (for community selection modal check)
-  const totalSavedSubreddits = React.useMemo(() => {
-    return subredditData.categories.reduce((sum, c) => sum + c.user_subreddits.length, 0);
-  }, [subredditData.categories]);
 
   // Wrapper for post attempt that checks free user limit
   // Returns false to block posting, true to allow
