@@ -4,9 +4,6 @@ import { ValidationIssue } from '@/lib/preflightValidation';
 import { PerSubredditOverride } from './CustomizePostDialog';
 import { TitleTag } from '../../utils/subredditCache';
 
-// Controls variant type for UI experimentation
-export type ControlsVariant = 1 | 2 | 3 | 4;
-
 export interface SubredditRules {
   requiresGenderTag: boolean;
   requiresContentTag: boolean;
@@ -45,5 +42,4 @@ export interface SubredditRowProps {
   isHighlighted?: boolean;
   showInlineValidationHint?: boolean;
   onInlineHintClick?: (name: string) => void;
-  controlsVariant?: ControlsVariant;
 }

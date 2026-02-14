@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { usePersistentState } from '@/hooks/usePersistentState';
@@ -13,7 +13,11 @@ interface Props {
   resetSignal?: number;
 }
 
-export default function PostComposer({ value, onChange, body, onBodyChange, prefixes, onPrefixesChange, resetSignal }: Props) {
+export interface PostComposerRef {
+  focusTitle: () => void;
+}
+
+const PostComposer = forwardRef<PostComposerRef, Props>(function PostComposer({ value, onChange, body, onBodyChange, prefixes, onPrefixesChange, resetSignal }, ref) {
   const [showBody, setShowBody] = usePersistentState<boolean>('rmp_show_body', false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
@@ -21,6 +25,14 @@ export default function PostComposer({ value, onChange, body, onBodyChange, pref
   const limit = 300;
   const bodyLimit = 40000;
   const hasBody = (body?.length ?? 0) > 0;
+
+  // Expose focusTitle method to parent components
+  useImperativeHandle(ref, () => ({
+    focusTitle: () => {
+      titleRef.current?.focus();
+      titleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    },
+  }), []);
 
   // Auto-expand title textarea based on content
   useEffect(() => {
@@ -128,4 +140,6 @@ export default function PostComposer({ value, onChange, body, onBodyChange, pref
       </div>
     </div>
   );
-}
+});
+
+export default PostComposer;

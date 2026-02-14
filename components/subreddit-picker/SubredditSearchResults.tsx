@@ -1,7 +1,6 @@
 import React from 'react';
 import SubredditRow, { SubredditRules } from './SubredditRow';
 import { PostRequirements } from '@/utils/reddit';
-import { ControlsVariant } from './subredditRow.types';
 
 interface SubredditSearchResultsProps {
   filtered: string[];
@@ -19,7 +18,6 @@ interface SubredditSearchResultsProps {
   onFlairChange: (name: string, id: string) => void;
   onTitleSuffixChange: (name: string, suffix: string) => void;
   hasMissingFlair: (subreddit: string) => boolean;
-  controlsVariant?: ControlsVariant;
 }
 
 const SubredditSearchResults: React.FC<SubredditSearchResultsProps> = ({
@@ -38,7 +36,6 @@ const SubredditSearchResults: React.FC<SubredditSearchResultsProps> = ({
   onFlairChange,
   onTitleSuffixChange,
   hasMissingFlair,
-  controlsVariant,
 }) => {
   return (
     <div className="rounded-md border border-border overflow-hidden">
@@ -60,7 +57,6 @@ const SubredditSearchResults: React.FC<SubredditSearchResultsProps> = ({
             onToggle={onToggle}
             onFlairChange={onFlairChange}
             onTitleSuffixChange={onTitleSuffixChange}
-            controlsVariant={controlsVariant}
           />
         );
       })}

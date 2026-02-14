@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { useRouter } from 'next/router';
 import axios from 'axios';
 import SaveToCategoryDropdown from './SaveToCategoryDropdown';
 import { Input } from '@/components/ui/input';
@@ -11,7 +10,7 @@ import { SubredditCategoryList } from './subreddit-picker';
 import SubredditRow from './subreddit-picker/SubredditRow';
 import { FailedPost } from '@/hooks/useFailedPosts';
 import { ValidationIssue } from '@/lib/preflightValidation';
-import { PerSubredditOverride, ControlsVariant } from './subreddit-picker';
+import { PerSubredditOverride } from './subreddit-picker';
 import { RedditUser } from '@/utils/reddit';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { usePersistentState } from '@/hooks/usePersistentState';
@@ -97,20 +96,9 @@ const SubredditFlairPicker: React.FC<Props> = ({
   onNavigationHandled,
   showInlineValidationHint,
 }) => {
-  const router = useRouter();
   const [query, setQuery] = React.useState('');
   const [expandedCategories, setExpandedCategories] = usePersistentState<string[]>('rmp_expanded_categories', []);
   const { entitlement } = useAuthContext();
-
-  // Read controls variant from URL query param (?variant=1|2|3|4)
-  const controlsVariant = useMemo((): ControlsVariant => {
-    const v = router.query.variant;
-    if (typeof v === 'string') {
-      const num = parseInt(v, 10);
-      if (num >= 1 && num <= 4) return num as ControlsVariant;
-    }
-    return 1; // Default variant
-  }, [router.query.variant]);
 
   const {
     allSubreddits,
@@ -630,7 +618,6 @@ const SubredditFlairPicker: React.FC<Props> = ({
                       eligibility={eligibilityData[key]}
                       userData={userData}
                       postKind={postKind}
-                      controlsVariant={controlsVariant}
                     />
                   );
                 })}
@@ -685,7 +672,6 @@ const SubredditFlairPicker: React.FC<Props> = ({
                 eligibility={eligibilityData[key]}
                 userData={userData}
                 postKind={postKind}
-                controlsVariant={controlsVariant}
               />
             );
           })}
@@ -724,7 +710,6 @@ const SubredditFlairPicker: React.FC<Props> = ({
           onFlairChange={handleFlairChange}
           onTitleSuffixChange={handleTitleSuffixChange}
           hasMissingFlair={hasMissingFlair}
-          controlsVariant={controlsVariant}
         />
       )}
 
