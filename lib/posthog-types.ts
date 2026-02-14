@@ -53,9 +53,18 @@ export type AnalyticsEvent =
   // Tier 1: Revenue & Conversion
   | 'upgrade_modal_opened'
   | 'upgrade_clicked'
+  | 'trial_cta_clicked'
+  | 'trial_started'
+  | 'trial_expired'
+  | 'trial_ended_popup_shown'
+  | 'trial_converted_to_paid'
   | 'checkout_started'
   | 'checkout_completed'
   | 'free_limit_reached'
+  | 'community_selection_required'
+  | 'community_selection_modal_opened'
+  | 'community_selection_confirmed'
+  | 'community_selection_upgrade_clicked'
   // Tier 2: Core Engagement
   | 'first_post_created'
   | 'post_submitted'
@@ -96,6 +105,13 @@ export interface EventProperties {
   // Feature properties
   category_name?: string;
   search_query?: string;
+  
+  // Community selection properties (trial expiry flow)
+  total_communities?: number;
+  max_to_keep?: number;
+  max_allowed?: number;
+  kept?: number;
+  removed?: number;
   
   // Anonymous ID linking (for funnel continuity)
   $anon_distinct_id?: string;

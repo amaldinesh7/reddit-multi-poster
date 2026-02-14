@@ -4,13 +4,15 @@ import { useRouter } from 'next/router';
 import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Loader2, Search, FolderPlus, RefreshCw, GripVertical, FlaskConical, Crown } from 'lucide-react';
+import { Loader2, Search, FolderPlus, RefreshCw, GripVertical, FlaskConical, Crown, AlertTriangle } from 'lucide-react';
 import { useSubreddits } from '../hooks/useSubreddits';
 import { useLocalSubredditCache } from '../hooks/useLocalSubredditCache';
 import { useAuth } from '../hooks/useAuth';
 import { useSettingsDnd } from '../hooks/useSettingsDnd';
 import { searchSubreddits as searchSubredditsAPI } from '../lib/api/reddit';
 import UpgradeModal from '../components/UpgradeModal';
+import TrialEndedModal from '../components/TrialEndedModal';
+import CommunitySelectionModal from '../components/CommunitySelectionModal';
 import { AppHeader } from '@/components/layout';
 import { trackEvent } from '@/lib/posthog';
 
@@ -38,7 +40,17 @@ import {
 
 export default function Settings() {
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading, entitlement, limits, me, logout } = useAuth();
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    entitlement,
+    trialDaysLeft,
+    showTrialEndedPopup,
+    limits,
+    me,
+    logout,
+    refresh: refreshAuth,
+  } = useAuth();
   const {
     data,
     isLoaded,
@@ -52,6 +64,8 @@ export default function Settings() {
     deleteSubreddit,
     reorderCategories,
     reorderSubreddits,
+    getAllSubredditsWithCategory,
+    bulkDeleteExcept,
   } = useSubreddits();
   const localCache = useLocalSubredditCache();
   
@@ -96,18 +110,77 @@ export default function Settings() {
   const [isSearching, setIsSearching] = React.useState(false);
   const [showSearchResults, setShowSearchResults] = React.useState(false);
   const [upgradeLoading, setUpgradeLoading] = React.useState(false);
+  const [trialLoading, setTrialLoading] = React.useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
+  const [showTrialEndedModal, setShowTrialEndedModal] = React.useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [newlyCreatedCategoryId, setNewlyCreatedCategoryId] = React.useState<string | null>(null);
+  const [showCommunitySelectionModal, setShowCommunitySelectionModal] = React.useState(false);
+  
+  // Ref to prevent duplicate trial ended popup handling
+  const hasHandledTrialRef = React.useRef(false);
 
   // Use limits from auth (for paid users, maxSubreddits is MAX_SAFE_INTEGER)
   const maxSubreddits = limits.maxSubreddits;
 
   const handleUpgrade = React.useCallback(() => {
+    setUpgradeLoading(true);
     // Navigate to inline checkout page (full page load for consistency)
     window.location.href = '/checkout';
   }, []);
+
+  const handleStartTrial = React.useCallback(async () => {
+    setTrialLoading(true);
+    try {
+      await axios.post('/api/trial/start');
+      await refreshAuth();
+      setShowUpgradeModal(false);
+      trackEvent('trial_started', {
+        source: 'settings',
+        plan: 'pro_trial',
+      });
+    } catch (error) {
+      const userMessage = axios.isAxiosError(error)
+        ? error.response?.data?.error || 'Could not start trial. Please try again.'
+        : 'Could not start trial. Please try again.';
+
+      setUpgradeModalContext({
+        title: 'Trial unavailable',
+        message: userMessage,
+      });
+      setShowUpgradeModal(true);
+    } finally {
+      setTrialLoading(false);
+    }
+  }, [refreshAuth]);
+
+  // Handle community selection confirmation (when trial ends and user has >5 communities)
+  const handleCommunitySelectionConfirm = React.useCallback(async (selectedIds: string[]) => {
+    const success = await bulkDeleteExcept(selectedIds);
+    if (success) {
+      setShowCommunitySelectionModal(false);
+      await refresh(); // Refresh the data after deletion
+    }
+  }, [bulkDeleteExcept, refresh]);
+
+  React.useEffect(() => {
+    if (!showTrialEndedPopup) {
+      // Reset the ref when popup becomes false (allows re-triggering for future popups)
+      hasHandledTrialRef.current = false;
+      return;
+    }
+    // Only run once per popup signal
+    if (hasHandledTrialRef.current) return;
+    hasHandledTrialRef.current = true;
+    
+    setShowTrialEndedModal(true);
+    trackEvent('trial_ended_popup_shown', {
+      source: 'settings',
+    });
+    refreshAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTrialEndedPopup]);
 
   // DnD handling
   const {
@@ -144,8 +217,10 @@ export default function Settings() {
 
     const checkAdmin = async () => {
       try {
-        const adminRes = await axios.get<{ isAdmin: boolean }>('/api/admin-check');
-        setIsAdmin(adminRes.data.isAdmin);
+        const adminRes = await axios.get<{ isAdmin: boolean; isAdminByUsername: boolean }>('/api/admin-check');
+        // Only show admin menu if user is admin by Reddit username (not password)
+        // isAdminByUsername is explicitly false for password-only auth
+        setIsAdmin(adminRes.data.isAdminByUsername === true);
       } catch {
         // ignore admin failures
       }
@@ -157,10 +232,25 @@ export default function Settings() {
   // Calculate current subreddit count
   const currentSubredditCount = data.categories.reduce((sum, c) => sum + c.user_subreddits.length, 0);
   const isAtFreeLimit = entitlement === 'free' && currentSubredditCount >= maxSubreddits;
+  // Check if user has more communities than allowed (e.g., after trial expired)
+  const isOverFreeLimit = entitlement === 'free' && currentSubredditCount > maxSubreddits;
+  const excessCommunities = currentSubredditCount - maxSubreddits;
 
   // Wrapper for addSubreddit that checks free user limit
   const addSubredditWithLimitCheck = React.useCallback(async (categoryId: string, subredditName: string) => {
-    // Check if free user is at limit
+    // First check if user is OVER the limit (e.g., trial expired with many communities)
+    // This requires them to select which to keep before adding more
+    if (entitlement === 'free' && currentSubredditCount > maxSubreddits) {
+      trackEvent('community_selection_required', {
+        source: 'settings_add_subreddit',
+        subreddit_count: currentSubredditCount,
+        max_allowed: maxSubreddits,
+      });
+      setShowCommunitySelectionModal(true);
+      return null;
+    }
+    
+    // Check if free user is AT limit (can't add more)
     if (entitlement === 'free' && currentSubredditCount >= maxSubreddits) {
       // Track free limit reached for funnel analytics
       trackEvent('free_limit_reached', {
@@ -385,6 +475,7 @@ export default function Settings() {
               onLogout={logout}
               isAdmin={isAdmin}
               entitlement={entitlement}
+              trialDaysLeft={trialDaysLeft}
               pageTitle="Settings"
               showBackButton
             />
@@ -431,6 +522,37 @@ export default function Settings() {
                   <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 </Button>
               </div>
+
+              {/* Over Limit Warning Banner - shows when user had trial, added many communities, and now trial expired */}
+              {isOverFreeLimit && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/20">
+                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-amber-200">
+                        You have {currentSubredditCount} communities saved
+                      </p>
+                      <p className="text-xs text-amber-200/70 mt-0.5">
+                        Free plan allows {maxSubreddits}. Remove {excessCommunities} or upgrade to continue adding new communities. You can still post to any 5 at a time.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setUpgradeModalContext(undefined);
+                        setShowUpgradeModal(true);
+                      }}
+                      className="shrink-0 border-amber-500/30 text-amber-400 hover:bg-amber-500/10 cursor-pointer"
+                    >
+                      <Crown className="w-3 h-3 mr-1.5" />
+                      Upgrade
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {/* Search */}
               <div className="space-y-3">
@@ -540,8 +662,28 @@ export default function Settings() {
           open={showUpgradeModal}
           onOpenChange={setShowUpgradeModal}
           onUpgrade={handleUpgrade}
+          onStartTrial={handleStartTrial}
           upgradeLoading={upgradeLoading}
+          trialLoading={trialLoading}
+          canStartTrial={entitlement === 'free'}
+          trialDaysLeft={trialDaysLeft}
           context={upgradeModalContext}
+        />
+
+        <TrialEndedModal
+          open={showTrialEndedModal}
+          onOpenChange={setShowTrialEndedModal}
+          onUpgrade={handleUpgrade}
+        />
+
+        {/* Community Selection Modal - shown when trial expired and user has >5 communities */}
+        <CommunitySelectionModal
+          open={showCommunitySelectionModal}
+          onOpenChange={setShowCommunitySelectionModal}
+          communities={getAllSubredditsWithCategory()}
+          onConfirm={handleCommunitySelectionConfirm}
+          onUpgrade={handleUpgrade}
+          maxToKeep={maxSubreddits}
         />
       </>
     </SettingsContext.Provider>

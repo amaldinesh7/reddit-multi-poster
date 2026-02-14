@@ -17,6 +17,7 @@ import {
 import { getUserId } from '../../../lib/apiAuth';
 import { logPostAttempt, classifyPostError } from '../../../lib/supabase';
 import { addApiBreadcrumb } from '../../../lib/apiErrorHandler';
+import { getEntitlement, FREE_MAX_POST_ITEMS } from '../../../lib/entitlement';
 import {
   getQueueJob,
   claimQueueJob,
@@ -61,6 +62,14 @@ export default async function handler(
     // Verify ownership
     if (job.user_id !== userId) {
       return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Re-check entitlement before processing (trial may have expired since job was submitted)
+    const entitlement = await getEntitlement(userId);
+    if (entitlement === 'free' && job.items.length > FREE_MAX_POST_ITEMS) {
+      return res.status(403).json({
+        error: `Your trial has expired. Free plan allows posting to ${FREE_MAX_POST_ITEMS} subreddits at once. Upgrade to continue.`,
+      });
     }
 
     // Check if job can be processed

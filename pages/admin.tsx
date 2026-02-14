@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
@@ -10,8 +10,12 @@ import {
   RefreshCw,
   Loader2,
   XCircle,
+  Lock,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { AppHeader } from '@/components/layout';
@@ -100,6 +104,13 @@ export default function AdminPanel() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('analytics');
   const [isAdmin, setIsAdmin] = useState(false);
+  
+  // Password login state
+  const [showPasswordLogin, setShowPasswordLogin] = useState(false);
+  const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Get initial tab from URL hash
   useEffect(() => {
@@ -116,7 +127,7 @@ export default function AdminPanel() {
   };
 
   // Fetch analytics data
-  const fetchAnalytics = async (showRefresh = false) => {
+  const fetchAnalytics = useCallback(async (showRefresh = false) => {
     if (showRefresh) {
       setIsRefreshing(true);
     } else {
@@ -127,13 +138,10 @@ export default function AdminPanel() {
     try {
       const res = await fetch('/api/analytics');
 
-      if (res.status === 401) {
-        router.replace('/login');
-        return;
-      }
-
       if (res.status === 403) {
-        setError('Only admins can view this page.');
+        // Not admin - show password login option
+        setShowPasswordLogin(true);
+        setError(null);
         return;
       }
 
@@ -143,6 +151,7 @@ export default function AdminPanel() {
 
       const analyticsData = await res.json();
       setIsAdmin(true);
+      setShowPasswordLogin(false);
       setData(analyticsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -150,32 +159,61 @@ export default function AdminPanel() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
+  }, []);
+
+  // Handle password login
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setIsSubmittingPassword(true);
+
+    try {
+      const res = await fetch('/api/admin-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+
+      const result = await res.json();
+
+      if (result.isAdmin) {
+        // Password accepted - fetch analytics
+        setShowPasswordLogin(false);
+        setPassword('');
+        await fetchAnalytics();
+      } else {
+        setPasswordError(result.error || 'Invalid password');
+      }
+    } catch {
+      setPasswordError('Failed to verify password');
+    } finally {
+      setIsSubmittingPassword(false);
+    }
   };
 
-  // Initial fetch
+  // Initial fetch - try immediately (password cookie may be set)
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      fetchAnalytics();
-    } else if (!authLoading && !isAuthenticated) {
-      router.replace('/login');
-    }
-  }, [authLoading, isAuthenticated, router]);
+    // Don't wait for auth - try fetching analytics directly
+    // This allows password-only access without Reddit login
+    fetchAnalytics();
+  }, [fetchAnalytics]);
 
   // Handle refresh
   const handleRefresh = () => {
     fetchAnalytics(true);
   };
 
-  const header = isAuthenticated ? (
+  // Header - show if authenticated via Reddit OR if admin via password
+  const header = (isAuthenticated || isAdmin) ? (
     <AppHeader
       userName={me?.name}
       userAvatar={me?.icon_img}
-      onLogout={logout}
+      onLogout={isAuthenticated ? logout : undefined}
       entitlement={entitlement}
       isAdmin={isAdmin}
       pageTitle="Admin Panel"
       showBackButton
-      onBack={() => router.back()}
+      onBack={() => router.push('/')}
       headerActions={
         <Button
           variant="ghost"
@@ -192,7 +230,7 @@ export default function AdminPanel() {
   ) : null;
 
   // Loading state - simple centered spinner
-  if (authLoading || isLoading) {
+  if (isLoading) {
     return (
       <>
         {header}
@@ -203,7 +241,85 @@ export default function AdminPanel() {
     );
   }
 
-  // Error state (including access denied)
+  // Password login form (shown when not authenticated as admin)
+  if (showPasswordLogin) {
+    return (
+      <>
+        <Head>
+          <title>Admin Login - Reddit Multi Poster</title>
+          <meta name="robots" content="noindex, nofollow" />
+        </Head>
+        <div className="min-h-viewport bg-background flex items-center justify-center p-4">
+          <div className="w-full max-w-sm">
+            <div className="flex flex-col items-center gap-4 mb-6">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 flex items-center justify-center">
+                <Lock className="w-8 h-8 text-cyan-400" />
+              </div>
+              <div className="text-center">
+                <h1 className="text-xl font-semibold text-foreground">Admin Access</h1>
+                <p className="text-sm text-muted-foreground mt-1">Enter the admin password to continue</p>
+              </div>
+            </div>
+
+            <form onSubmit={handlePasswordLogin} className="space-y-4">
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Admin password"
+                  className="pr-10"
+                  autoFocus
+                  disabled={isSubmittingPassword}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {passwordError && (
+                <p className="text-sm text-red-400 text-center">{passwordError}</p>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full cursor-pointer"
+                disabled={!password || isSubmittingPassword}
+              >
+                {isSubmittingPassword ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  'Access Admin Panel'
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/')}
+                className="text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Home
+              </Button>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Error state
   if (error) {
     return (
       <>

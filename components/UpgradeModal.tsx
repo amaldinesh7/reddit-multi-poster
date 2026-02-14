@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from './ui/button';
-import { X, Crown, Zap, Infinity as InfinityIcon, Check, Loader2 } from 'lucide-react';
+import { X, Crown, Zap, Infinity as InfinityIcon, Check, Loader2, Timer } from 'lucide-react';
 import { trackEvent } from '@/lib/posthog';
 import { usePricing } from '@/hooks/usePricing';
 
@@ -8,7 +8,12 @@ interface UpgradeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpgrade: () => void;
+  onStartTrial: () => void;
   upgradeLoading?: boolean;
+  trialLoading?: boolean;
+  canStartTrial?: boolean;
+  /** Number of days left in trial (only applicable when on trial) */
+  trialDaysLeft?: number | null;
   /** Custom context message to show instead of default limit message */
   context?: {
     title?: string;
@@ -20,9 +25,15 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
   open,
   onOpenChange,
   onUpgrade,
+  onStartTrial,
   upgradeLoading = false,
+  trialLoading = false,
+  canStartTrial = true,
+  trialDaysLeft,
   context,
 }) => {
+  // Determine if user is currently on trial (canStartTrial is false when on trial or paid)
+  const isOnTrial = !canStartTrial && trialDaysLeft !== null && trialDaysLeft !== undefined && trialDaysLeft > 0;
   const { pricing } = usePricing();
 
   // Handle escape key
@@ -55,6 +66,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
   if (!open) return null;
 
   const priceLabel = pricing?.formatted ?? '₹299';
+  const isBusy = upgradeLoading || trialLoading;
 
   const benefits = [
     'Unlimited communities',
@@ -101,12 +113,34 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
               <Crown className="h-6 w-6" />
             </div>
             <div>
-              <h2 id="upgrade-modal-title" className="text-2xl font-bold">
-                Get Pro
-              </h2>
-              <p className="text-white/80 text-sm">
-                Post to unlimited communities
-              </p>
+              {isOnTrial ? (
+                <>
+                  <h2 id="upgrade-modal-title" className="text-2xl font-bold">
+                    Upgrade to Lifetime Pro
+                  </h2>
+                  <p className="text-white/80 text-sm">
+                    {trialDaysLeft} {trialDaysLeft === 1 ? 'day' : 'days'} left on your trial
+                  </p>
+                </>
+              ) : canStartTrial ? (
+                <>
+                  <h2 id="upgrade-modal-title" className="text-2xl font-bold">
+                    Try Pro for 7 days
+                  </h2>
+                  <p className="text-white/80 text-sm">
+                    Full Pro access, then choose lifetime
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 id="upgrade-modal-title" className="text-2xl font-bold">
+                    Upgrade to Lifetime Pro
+                  </h2>
+                  <p className="text-white/80 text-sm">
+                    Unlock all premium features forever
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -169,6 +203,32 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
 
         {/* Actions */}
         <div className="px-6 pb-6 space-y-3">
+          {canStartTrial && (
+            <Button
+              onClick={() => {
+                trackEvent('trial_cta_clicked', {
+                  source: context?.title || 'upgrade_modal',
+                });
+                onStartTrial();
+              }}
+              disabled={isBusy}
+              variant="outline"
+              className="w-full h-12 text-base font-semibold border-violet-500/35 text-violet-300 hover:bg-violet-500/10 cursor-pointer"
+            >
+              {trialLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Starting trial…
+                </>
+              ) : (
+                <>
+                  <Timer className="mr-2 h-5 w-5" />
+                  Start 7-day trial
+                </>
+              )}
+            </Button>
+          )}
+
           <Button
             onClick={() => {
               // Track upgrade button click for funnel analytics
@@ -177,7 +237,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
               });
               onUpgrade();
             }}
-            disabled={upgradeLoading}
+            disabled={isBusy}
             className="w-full h-12 text-base font-semibold bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white border-0 shadow-lg shadow-purple-500/25 cursor-pointer transition-all hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98]"
           >
             {upgradeLoading ? (
@@ -188,10 +248,15 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
             ) : (
               <>
                 <Crown className="mr-2 h-5 w-5" />
-                Get Pro
+                Get Lifetime Pro
               </>
             )}
           </Button>
+          {canStartTrial && (
+            <p className="text-xs text-muted-foreground text-center">
+              Trial includes full Pro access for 7 days. It ends automatically.
+            </p>
+          )}
           <button
             onClick={() => onOpenChange(false)}
             className="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"

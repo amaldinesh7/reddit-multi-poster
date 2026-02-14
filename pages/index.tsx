@@ -27,6 +27,8 @@ import { useFailedPosts, FailedPost } from '@/hooks/useFailedPosts';
 import { useSubredditFlairData } from '@/hooks/useSubredditFlairData';
 import { useQueueJob } from '@/hooks/useQueueJob';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubreddits } from '@/hooks/useSubreddits';
+import { FREE_MAX_SUBREDDITS } from '@/lib/entitlement-constants';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { captureClientError, addActionBreadcrumb } from '@/lib/clientErrorHandler';
 import type { ValidationIssue, PreflightResult } from '@/lib/preflightValidation';
@@ -80,6 +82,16 @@ const UpgradeModal = dynamic(
   { ssr: false }
 );
 
+const TrialEndedModal = dynamic(
+  () => import('../components/TrialEndedModal'),
+  { ssr: false }
+);
+
+const CommunitySelectionModal = dynamic(
+  () => import('../components/CommunitySelectionModal'),
+  { ssr: false }
+);
+
 const ReviewPanel = dynamic(
   () => import('../components/ReviewPanel'),
   { ssr: false }
@@ -102,12 +114,42 @@ export default function Home() {
   const router = useRouter();
   
   // Use cached auth from context - no redundant API calls on navigation
-  const { isAuthenticated, isLoading: authLoading, user, me, entitlement, limits, logout } = useAuth();
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    user,
+    me,
+    entitlement,
+    trialDaysLeft,
+    showTrialEndedPopup,
+    limits,
+    logout,
+    refresh,
+  } = useAuth();
+  
+  // Get saved subreddits data for community selection modal (trial expiry flow)
+  const {
+    data: subredditData,
+    getAllSubredditsWithCategory,
+    bulkDeleteExcept,
+    refresh: refreshSubreddits,
+  } = useSubreddits();
+
+  // Calculate total saved subreddits count early (needed for limit checks in callbacks)
+  const totalSavedSubreddits = React.useMemo(() => {
+    return subredditData.categories.reduce((sum, c) => sum + c.user_subreddits.length, 0);
+  }, [subredditData.categories]);
   
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [upgradeLoading, setUpgradeLoading] = React.useState(false);
+  const [trialLoading, setTrialLoading] = React.useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
+  const [showTrialEndedModal, setShowTrialEndedModal] = React.useState(false);
+  const [showCommunitySelectionModal, setShowCommunitySelectionModal] = React.useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
+  
+  // Ref to prevent duplicate trial ended popup handling
+  const hasRefreshedForTrialRef = React.useRef(false);
   const [mediaResetCounter, setMediaResetCounter] = React.useState(0);
   const [benchResetCounter, setBenchResetCounter] = React.useState(0);
   const [communitiesView, setCommunitiesView] = usePersistentState<'grouped' | 'all'>('rmp_communities_view', 'grouped');
@@ -356,15 +398,56 @@ export default function Home() {
       return;
     }
 
+    // Check free user limits BEFORE opening review
+    // First check if user is OVER the saved communities limit (e.g., trial expired with many communities)
+    if (entitlement === 'free' && totalSavedSubreddits > FREE_MAX_SUBREDDITS) {
+      trackEvent('community_selection_required', {
+        source: 'review_click',
+        subreddit_count: totalSavedSubreddits,
+        max_allowed: FREE_MAX_SUBREDDITS,
+      });
+      setShowCommunitySelectionModal(true);
+      return; // Block review, show community selection modal first
+    }
+
     handleOpenReview();
-  }, [reviewCtaMode, hasTitle, handleGoToFirstValidationIssue, handleOpenReview]);
+  }, [reviewCtaMode, hasTitle, handleGoToFirstValidationIssue, handleOpenReview, entitlement, totalSavedSubreddits]);
 
   const handlePostNow = React.useCallback(() => {
+    // Check free user limits BEFORE posting
+    // First check if user is OVER the saved communities limit (e.g., trial expired with many communities)
+    if (entitlement === 'free' && totalSavedSubreddits > FREE_MAX_SUBREDDITS) {
+      trackEvent('community_selection_required', {
+        source: 'review_post_now',
+        subreddit_count: totalSavedSubreddits,
+        max_allowed: FREE_MAX_SUBREDDITS,
+      });
+      setIsReviewOpen(false);
+      setShowCommunitySelectionModal(true);
+      return; // Block posting, show community selection modal
+    }
+    
+    const maxPostItems = limits.maxPostItems ?? 5;
+    // Check if free user is trying to post to more subreddits than their limit
+    if (entitlement === 'free' && selectedSubs.length > maxPostItems) {
+      trackEvent('free_limit_reached', {
+        source: 'review_post_now',
+        subreddit_count: selectedSubs.length,
+      });
+      setIsReviewOpen(false);
+      setUpgradeModalContext({
+        title: `You picked ${selectedSubs.length} communities`,
+        message: `Free: up to ${maxPostItems} per post. Go Pro for unlimited.`,
+      });
+      setShowUpgradeModal(true);
+      return; // Block posting, show upgrade modal
+    }
+
     if (postActionRef.current) {
       postActionRef.current();
     }
     setIsReviewOpen(false);
-  }, []);
+  }, [entitlement, totalSavedSubreddits, limits.maxPostItems, selectedSubs.length]);
 
   const handleResetSelection = React.useCallback(() => {
     clearSelection();
@@ -537,8 +620,10 @@ export default function Home() {
     
     const checkAdmin = async () => {
       try {
-        const adminRes = await axios.get<{ isAdmin: boolean }>('/api/admin-check');
-        setIsAdmin(adminRes.data.isAdmin);
+        const adminRes = await axios.get<{ isAdmin: boolean; isAdminByUsername: boolean }>('/api/admin-check');
+        // Only show admin menu if user is admin by Reddit username (not password)
+        // isAdminByUsername is explicitly false for password-only auth
+        setIsAdmin(adminRes.data.isAdminByUsername === true);
       } catch {
         // Ignore admin check failures
       }
@@ -559,9 +644,93 @@ export default function Home() {
   }, [logout]);
 
   const handleUpgrade = React.useCallback(() => {
+    setUpgradeLoading(true);
+    // Add a fallback timeout to reset loading state if navigation is blocked/delayed
+    const timeoutId = setTimeout(() => setUpgradeLoading(false), 5000);
+    // Clear timeout if page is actually unloading
+    const handleUnload = () => clearTimeout(timeoutId);
+    window.addEventListener('beforeunload', handleUnload, { once: true });
     // Navigate to inline checkout page (full page load for consistency)
     window.location.href = '/checkout';
   }, []);
+
+  const handleStartTrial = React.useCallback(async () => {
+    setTrialLoading(true);
+    try {
+      await axios.post('/api/trial/start');
+      await refresh();
+      setShowUpgradeModal(false);
+      trackEvent('trial_started', {
+        source: 'upgrade_modal',
+        plan: 'pro_trial',
+      });
+    } catch (error) {
+      const userMessage = axios.isAxiosError(error)
+        ? error.response?.data?.error || 'Could not start trial. Please try again.'
+        : 'Could not start trial. Please try again.';
+
+      setUpgradeModalContext({
+        title: 'Trial unavailable',
+        message: userMessage,
+      });
+      captureClientError(error, 'index.handleStartTrial', {
+        toastTitle: 'Trial unavailable',
+        userMessage,
+      });
+    } finally {
+      setTrialLoading(false);
+    }
+  }, [refresh]);
+
+  // Handle community selection confirmation (when trial ends and user has >5 communities)
+  const handleCommunitySelectionConfirm = React.useCallback(async (selectedIds: string[]) => {
+    // Validate selectedIds is not empty
+    if (!selectedIds || selectedIds.length === 0) {
+      captureClientError(new Error('No communities selected'), 'index.handleCommunitySelectionConfirm', {
+        toastTitle: 'Selection Error',
+        userMessage: 'Please select at least one community to keep.',
+      });
+      return;
+    }
+    
+    try {
+      const success = await bulkDeleteExcept(selectedIds);
+      if (success) {
+        setShowCommunitySelectionModal(false);
+        clearSelection(); // Clear selected subreddits since some may have been deleted
+        await refreshSubreddits(); // Refresh the subreddit data after deletion
+      } else {
+        // bulkDeleteExcept returned false (failure without throwing)
+        captureClientError(new Error('Community deletion failed'), 'index.handleCommunitySelectionConfirm', {
+          toastTitle: 'Failed to save selection',
+          userMessage: 'Could not remove communities. Please try again.',
+        });
+      }
+    } catch (error) {
+      captureClientError(error, 'index.handleCommunitySelectionConfirm', {
+        toastTitle: 'Failed to save selection',
+        userMessage: 'Could not remove communities. Please try again.',
+      });
+    }
+  }, [bulkDeleteExcept, refreshSubreddits, clearSelection]);
+
+  React.useEffect(() => {
+    if (!showTrialEndedPopup) {
+      // Reset the ref when popup becomes false (allows re-triggering for future popups)
+      hasRefreshedForTrialRef.current = false;
+      return;
+    }
+    // Only run once per popup signal
+    if (hasRefreshedForTrialRef.current) return;
+    hasRefreshedForTrialRef.current = true;
+    
+    setShowTrialEndedModal(true);
+    trackEvent('trial_ended_popup_shown', {
+      source: 'home',
+    });
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTrialEndedPopup]);
 
   // Calculate user stats for header display
   const userStats = React.useMemo(() => {
@@ -600,6 +769,18 @@ export default function Home() {
   // Wrapper for post attempt that checks free user limit
   // Returns false to block posting, true to allow
   const handlePostWithLimitCheck = React.useCallback((): boolean => {
+    // First check if user is OVER the saved communities limit (e.g., trial expired with many communities)
+    // This requires them to select which to keep before posting
+    if (entitlement === 'free' && totalSavedSubreddits > FREE_MAX_SUBREDDITS) {
+      trackEvent('community_selection_required', {
+        source: 'post_attempt',
+        subreddit_count: totalSavedSubreddits,
+        max_allowed: FREE_MAX_SUBREDDITS,
+      });
+      setShowCommunitySelectionModal(true);
+      return false; // Block posting, show community selection modal
+    }
+    
     const maxPostItems = limits.maxPostItems ?? 5;
     // Check if free user is trying to post to more subreddits than their limit
     if (entitlement === 'free' && selectedSubs.length > maxPostItems) {
@@ -618,7 +799,7 @@ export default function Home() {
     // Otherwise proceed with normal post attempt
     handlePostAttempt();
     return true; // Allow posting
-  }, [entitlement, limits.maxPostItems, selectedSubs.length, handlePostAttempt]);
+  }, [entitlement, totalSavedSubreddits, limits.maxPostItems, selectedSubs.length, handlePostAttempt]);
 
   return (
     <>
@@ -662,6 +843,7 @@ export default function Home() {
             onLogout={handleLogout}
             isAdmin={isAdmin}
             entitlement={entitlement}
+            trialDaysLeft={trialDaysLeft}
             onUpgrade={() => {
               setUpgradeModalContext(undefined);
               setShowUpgradeModal(true);
@@ -862,7 +1044,7 @@ export default function Home() {
                     validationIssuesBySubreddit={validationIssuesBySubreddit}
                     contentOverrides={contentOverrides}
                     onCustomize={handleCustomize}
-                    customizationEnabled={entitlement === 'paid'}
+                    customizationEnabled={entitlement === 'paid' || entitlement === 'trial'}
                     userData={me ?? undefined}
                     postKind={currentPostKind}
                     onRequestUpgrade={(context) => {
@@ -1054,8 +1236,28 @@ export default function Home() {
         open={showUpgradeModal}
         onOpenChange={setShowUpgradeModal}
         onUpgrade={handleUpgrade}
+        onStartTrial={handleStartTrial}
         upgradeLoading={upgradeLoading}
+        trialLoading={trialLoading}
+        canStartTrial={entitlement === 'free'}
+        trialDaysLeft={trialDaysLeft}
         context={upgradeModalContext}
+      />
+
+      <TrialEndedModal
+        open={showTrialEndedModal}
+        onOpenChange={setShowTrialEndedModal}
+        onUpgrade={handleUpgrade}
+      />
+
+      {/* Community Selection Modal - shown when trial expired and user has >5 communities */}
+      <CommunitySelectionModal
+        open={showCommunitySelectionModal}
+        onOpenChange={setShowCommunitySelectionModal}
+        communities={getAllSubredditsWithCategory()}
+        onConfirm={handleCommunitySelectionConfirm}
+        onUpgrade={handleUpgrade}
+        maxToKeep={FREE_MAX_SUBREDDITS}
       />
 
       {/* Edit Failed Post Dialog */}

@@ -35,7 +35,10 @@ interface MeResponse {
   authenticated: boolean;
   me?: RedditMe;
   userId?: string;
-  entitlement?: 'free' | 'paid';
+  entitlement?: 'free' | 'trial' | 'paid';
+  trialEndsAt?: string | null;
+  trialDaysLeft?: number | null;
+  showTrialEndedPopup?: boolean;
   limits?: PlanLimits;
 }
 
@@ -45,7 +48,10 @@ interface AuthContextValue {
   isLoading: boolean;
   user: AuthUser | null;
   me: RedditMe | null; // Raw Reddit user data
-  entitlement: 'free' | 'paid';
+  entitlement: 'free' | 'trial' | 'paid';
+  trialEndsAt: string | null;
+  trialDaysLeft: number | null;
+  showTrialEndedPopup: boolean;
   limits: PlanLimits;
   error: string | null;
   // Actions
@@ -116,7 +122,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         userId: data!.userId!, // Safe: hasValidUserId guarantees this exists
       }
     : null;
-  const entitlement = data?.entitlement === 'paid' ? 'paid' : 'free';
+  const entitlement = data?.entitlement === 'paid'
+    ? 'paid'
+    : data?.entitlement === 'trial'
+      ? 'trial'
+      : 'free';
+  const trialEndsAt = data?.trialEndsAt ?? null;
+  const trialDaysLeft = data?.trialDaysLeft ?? null;
+  const showTrialEndedPopup = Boolean(data?.showTrialEndedPopup);
   const limits = data?.limits ?? DEFAULT_LIMITS;
   const errorMessage = error ? 'Failed to check authentication' : null;
 
@@ -151,13 +164,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user,
       me,
       entitlement,
+      trialEndsAt,
+      trialDaysLeft,
+      showTrialEndedPopup,
       limits,
       error: errorMessage,
       login,
       logout,
       refresh,
     }),
-    [isAuthenticated, isLoading, user, me, entitlement, limits, errorMessage, login, logout, refresh]
+    [
+      isAuthenticated,
+      isLoading,
+      user,
+      me,
+      entitlement,
+      trialEndsAt,
+      trialDaysLeft,
+      showTrialEndedPopup,
+      limits,
+      errorMessage,
+      login,
+      logout,
+      refresh,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
