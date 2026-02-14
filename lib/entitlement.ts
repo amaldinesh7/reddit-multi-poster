@@ -2,12 +2,15 @@
  * Entitlement and plan limits (₹199 one-time via Dodo Payments + 7-day trial).
  * Free: max 5 subreddits in settings, max 5 items per post.
  * Trial/Paid: UNLIMITED - no restrictions.
+ * 
+ * NOTE: This file contains server-only code (Supabase, PostHog server).
+ * For client-safe constants, import from lib/entitlement-constants.ts instead.
  */
 
 import { createServerSupabaseClient } from './supabase';
 import { trackServerEvent } from './posthog-server';
-
-export type Entitlement = 'free' | 'trial' | 'paid';
+// Re-export client-safe types and constants
+export { type Entitlement, FREE_MAX_SUBREDDITS, FREE_MAX_POST_ITEMS } from './entitlement-constants';
 
 interface EntitlementRow {
   entitlement: string;
@@ -24,11 +27,8 @@ export interface EntitlementState {
   showTrialEndedPopup: boolean;
 }
 
-/** Max subreddits in settings (total across categories) for FREE users */
-export const FREE_MAX_SUBREDDITS = 5;
-
-/** Max subreddits per post for FREE users */
-export const FREE_MAX_POST_ITEMS = 5;
+// Import for local use
+import { type Entitlement, FREE_MAX_SUBREDDITS, FREE_MAX_POST_ITEMS } from './entitlement-constants';
 
 const ENTITLEMENT_CACHE: Map<string, { entitlement: Entitlement; fetchedAt: number }> = new Map();
 const CACHE_TTL_MS = 60_000; // 1 minute

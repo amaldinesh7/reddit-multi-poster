@@ -28,7 +28,7 @@ import { useSubredditFlairData } from '@/hooks/useSubredditFlairData';
 import { useQueueJob } from '@/hooks/useQueueJob';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubreddits } from '@/hooks/useSubreddits';
-import { FREE_MAX_SUBREDDITS } from '@/lib/entitlement';
+import { FREE_MAX_SUBREDDITS } from '@/lib/entitlement-constants';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { captureClientError, addActionBreadcrumb } from '@/lib/clientErrorHandler';
 import type { ValidationIssue, PreflightResult } from '@/lib/preflightValidation';
