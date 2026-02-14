@@ -53,6 +53,11 @@ export type AnalyticsEvent =
   // Tier 1: Revenue & Conversion
   | 'upgrade_modal_opened'
   | 'upgrade_clicked'
+  | 'trial_cta_clicked'
+  | 'trial_started'
+  | 'trial_expired'
+  | 'trial_ended_popup_shown'
+  | 'trial_converted_to_paid'
   | 'checkout_started'
   | 'checkout_completed'
   | 'free_limit_reached'

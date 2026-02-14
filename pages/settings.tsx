@@ -11,6 +11,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useSettingsDnd } from '../hooks/useSettingsDnd';
 import { searchSubreddits as searchSubredditsAPI } from '../lib/api/reddit';
 import UpgradeModal from '../components/UpgradeModal';
+import TrialEndedModal from '../components/TrialEndedModal';
 import { AppHeader } from '@/components/layout';
 import { trackEvent } from '@/lib/posthog';
 
@@ -38,7 +39,17 @@ import {
 
 export default function Settings() {
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading, entitlement, limits, me, logout } = useAuth();
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    entitlement,
+    trialDaysLeft,
+    showTrialEndedPopup,
+    limits,
+    me,
+    logout,
+    refresh: refreshAuth,
+  } = useAuth();
   const {
     data,
     isLoaded,
@@ -96,7 +107,9 @@ export default function Settings() {
   const [isSearching, setIsSearching] = React.useState(false);
   const [showSearchResults, setShowSearchResults] = React.useState(false);
   const [upgradeLoading, setUpgradeLoading] = React.useState(false);
+  const [trialLoading, setTrialLoading] = React.useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
+  const [showTrialEndedModal, setShowTrialEndedModal] = React.useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [newlyCreatedCategoryId, setNewlyCreatedCategoryId] = React.useState<string | null>(null);
@@ -105,9 +118,44 @@ export default function Settings() {
   const maxSubreddits = limits.maxSubreddits;
 
   const handleUpgrade = React.useCallback(() => {
+    setUpgradeLoading(true);
     // Navigate to inline checkout page (full page load for consistency)
     window.location.href = '/checkout';
   }, []);
+
+  const handleStartTrial = React.useCallback(async () => {
+    setTrialLoading(true);
+    try {
+      await axios.post('/api/trial/start');
+      await refreshAuth();
+      setShowUpgradeModal(false);
+      trackEvent('trial_started', {
+        source: 'settings',
+        plan: 'pro_trial',
+      });
+    } catch (error) {
+      const userMessage = axios.isAxiosError(error)
+        ? error.response?.data?.error || 'Could not start trial. Please try again.'
+        : 'Could not start trial. Please try again.';
+
+      setUpgradeModalContext({
+        title: 'Trial unavailable',
+        message: userMessage,
+      });
+      setShowUpgradeModal(true);
+    } finally {
+      setTrialLoading(false);
+    }
+  }, [refreshAuth]);
+
+  React.useEffect(() => {
+    if (!showTrialEndedPopup) return;
+    setShowTrialEndedModal(true);
+    trackEvent('trial_ended_popup_shown', {
+      source: 'settings',
+    });
+    refreshAuth();
+  }, [showTrialEndedPopup, refreshAuth]);
 
   // DnD handling
   const {
@@ -385,6 +433,7 @@ export default function Settings() {
               onLogout={logout}
               isAdmin={isAdmin}
               entitlement={entitlement}
+              trialDaysLeft={trialDaysLeft}
               pageTitle="Settings"
               showBackButton
             />
@@ -540,8 +589,17 @@ export default function Settings() {
           open={showUpgradeModal}
           onOpenChange={setShowUpgradeModal}
           onUpgrade={handleUpgrade}
+          onStartTrial={handleStartTrial}
           upgradeLoading={upgradeLoading}
+          trialLoading={trialLoading}
+          canStartTrial={entitlement === 'free'}
           context={upgradeModalContext}
+        />
+
+        <TrialEndedModal
+          open={showTrialEndedModal}
+          onOpenChange={setShowTrialEndedModal}
+          onUpgrade={handleUpgrade}
         />
       </>
     </SettingsContext.Provider>

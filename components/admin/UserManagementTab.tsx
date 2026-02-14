@@ -22,7 +22,7 @@ interface User {
   id: string;
   reddit_username: string;
   reddit_avatar_url: string | null;
-  entitlement: 'free' | 'paid';
+  entitlement: 'free' | 'trial' | 'paid';
   paid_at: string | null;
   created_at: string;
   post_count: number;
@@ -30,7 +30,7 @@ interface User {
 
 type SortField = 'created_at' | 'reddit_username' | 'post_count';
 type SortOrder = 'asc' | 'desc';
-type EntitlementFilter = 'all' | 'free' | 'paid';
+type EntitlementFilter = 'all' | 'free' | 'trial' | 'paid';
 
 export const UserManagementTab: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -146,7 +146,7 @@ export const UserManagementTab: React.FC = () => {
   // Stats
   const stats = useMemo(() => {
     const total = users.length;
-    const paid = users.filter((u) => u.entitlement === 'paid').length;
+    const paid = users.filter((u) => u.entitlement === 'paid' || u.entitlement === 'trial').length;
     const free = total - paid;
     const totalPosts = users.reduce((sum, u) => sum + u.post_count, 0);
     return { total, paid, free, totalPosts };
@@ -314,6 +314,14 @@ export const UserManagementTab: React.FC = () => {
                   Pro
                 </Button>
                 <Button
+                  variant={entitlementFilter === 'trial' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setEntitlementFilter('trial')}
+                  className="cursor-pointer"
+                >
+                  Trial
+                </Button>
+                <Button
                   variant={entitlementFilter === 'free' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setEntitlementFilter('free')}
@@ -403,7 +411,7 @@ export const UserManagementTab: React.FC = () => {
                         alt={user.reddit_username}
                         fallback={user.reddit_username}
                         size="sm"
-                        className={user.entitlement === 'paid' ? 'ring-2 ring-violet-500/50' : ''}
+                        className={user.entitlement === 'paid' || user.entitlement === 'trial' ? 'ring-2 ring-violet-500/50' : ''}
                       />
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">
@@ -418,10 +426,10 @@ export const UserManagementTab: React.FC = () => {
                     </a>
 
                     <div className="flex items-center gap-3 shrink-0">
-                      {user.entitlement === 'paid' ? (
+                      {user.entitlement === 'paid' || user.entitlement === 'trial' ? (
                         <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30 gap-1">
                           <Crown className="w-3 h-3" />
-                          Pro
+                          {user.entitlement === 'trial' ? 'Trial' : 'Pro'}
                         </Badge>
                       ) : (
                         <Badge variant="secondary" className="text-muted-foreground">
@@ -430,7 +438,7 @@ export const UserManagementTab: React.FC = () => {
                       )}
 
                       <Button
-                        variant={user.entitlement === 'paid' ? 'outline' : 'default'}
+                        variant={user.entitlement === 'paid' || user.entitlement === 'trial' ? 'outline' : 'default'}
                         size="sm"
                         onClick={() => handleToggleEntitlement(user)}
                         disabled={updatingUserId === user.id}
@@ -442,7 +450,7 @@ export const UserManagementTab: React.FC = () => {
                       >
                         {updatingUserId === user.id ? (
                           <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : user.entitlement === 'paid' ? (
+                        ) : user.entitlement === 'paid' || user.entitlement === 'trial' ? (
                           'Revoke'
                         ) : (
                           <>

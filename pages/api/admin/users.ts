@@ -6,7 +6,7 @@ import { invalidateEntitlementCache } from '../../../lib/entitlement';
 /**
  * Admin API for user management.
  * GET: List all users with their entitlement status.
- * PATCH: Update a user's entitlement (set to 'paid' or 'free').
+ * PATCH: Update a user's entitlement (set to 'paid', 'trial', or 'free').
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Verify admin access
@@ -43,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       // Apply entitlement filter
-      if (filterEntitlement && (filterEntitlement === 'free' || filterEntitlement === 'paid')) {
+      if (filterEntitlement && (filterEntitlement === 'free' || filterEntitlement === 'trial' || filterEntitlement === 'paid')) {
         query = query.eq('entitlement', filterEntitlement);
       }
 
@@ -111,8 +111,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'userId is required' });
       }
 
-      if (entitlement !== 'free' && entitlement !== 'paid') {
-        return res.status(400).json({ error: 'entitlement must be "free" or "paid"' });
+      if (entitlement !== 'free' && entitlement !== 'trial' && entitlement !== 'paid') {
+        return res.status(400).json({ error: 'entitlement must be "free", "trial", or "paid"' });
       }
 
       const updateData: { entitlement: string; paid_at?: string | null } = {

@@ -80,6 +80,11 @@ const UpgradeModal = dynamic(
   { ssr: false }
 );
 
+const TrialEndedModal = dynamic(
+  () => import('../components/TrialEndedModal'),
+  { ssr: false }
+);
+
 const ReviewPanel = dynamic(
   () => import('../components/ReviewPanel'),
   { ssr: false }
@@ -102,11 +107,24 @@ export default function Home() {
   const router = useRouter();
   
   // Use cached auth from context - no redundant API calls on navigation
-  const { isAuthenticated, isLoading: authLoading, user, me, entitlement, limits, logout } = useAuth();
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    user,
+    me,
+    entitlement,
+    trialDaysLeft,
+    showTrialEndedPopup,
+    limits,
+    logout,
+    refresh,
+  } = useAuth();
   
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [upgradeLoading, setUpgradeLoading] = React.useState(false);
+  const [trialLoading, setTrialLoading] = React.useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
+  const [showTrialEndedModal, setShowTrialEndedModal] = React.useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
   const [mediaResetCounter, setMediaResetCounter] = React.useState(0);
   const [benchResetCounter, setBenchResetCounter] = React.useState(0);
@@ -559,9 +577,47 @@ export default function Home() {
   }, [logout]);
 
   const handleUpgrade = React.useCallback(() => {
+    setUpgradeLoading(true);
     // Navigate to inline checkout page (full page load for consistency)
     window.location.href = '/checkout';
   }, []);
+
+  const handleStartTrial = React.useCallback(async () => {
+    setTrialLoading(true);
+    try {
+      await axios.post('/api/trial/start');
+      await refresh();
+      setShowUpgradeModal(false);
+      trackEvent('trial_started', {
+        source: 'upgrade_modal',
+        plan: 'pro_trial',
+      });
+    } catch (error) {
+      const userMessage = axios.isAxiosError(error)
+        ? error.response?.data?.error || 'Could not start trial. Please try again.'
+        : 'Could not start trial. Please try again.';
+
+      setUpgradeModalContext({
+        title: 'Trial unavailable',
+        message: userMessage,
+      });
+      captureClientError(error, 'index.handleStartTrial', {
+        toastTitle: 'Trial unavailable',
+        userMessage,
+      });
+    } finally {
+      setTrialLoading(false);
+    }
+  }, [refresh]);
+
+  React.useEffect(() => {
+    if (!showTrialEndedPopup) return;
+    setShowTrialEndedModal(true);
+    trackEvent('trial_ended_popup_shown', {
+      source: 'home',
+    });
+    refresh();
+  }, [showTrialEndedPopup, refresh]);
 
   // Calculate user stats for header display
   const userStats = React.useMemo(() => {
@@ -662,6 +718,7 @@ export default function Home() {
             onLogout={handleLogout}
             isAdmin={isAdmin}
             entitlement={entitlement}
+            trialDaysLeft={trialDaysLeft}
             onUpgrade={() => {
               setUpgradeModalContext(undefined);
               setShowUpgradeModal(true);
@@ -866,7 +923,7 @@ export default function Home() {
                     validationIssuesBySubreddit={validationIssuesBySubreddit}
                     contentOverrides={contentOverrides}
                     onCustomize={handleCustomize}
-                    customizationEnabled={entitlement === 'paid'}
+                    customizationEnabled={entitlement === 'paid' || entitlement === 'trial'}
                     userData={me ?? undefined}
                     postKind={currentPostKind}
                     onRequestUpgrade={(context) => {
@@ -1058,8 +1115,17 @@ export default function Home() {
         open={showUpgradeModal}
         onOpenChange={setShowUpgradeModal}
         onUpgrade={handleUpgrade}
+        onStartTrial={handleStartTrial}
         upgradeLoading={upgradeLoading}
+        trialLoading={trialLoading}
+        canStartTrial={entitlement === 'free'}
         context={upgradeModalContext}
+      />
+
+      <TrialEndedModal
+        open={showTrialEndedModal}
+        onOpenChange={setShowTrialEndedModal}
+        onUpgrade={handleUpgrade}
       />
 
       {/* Edit Failed Post Dialog */}
