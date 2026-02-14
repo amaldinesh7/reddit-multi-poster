@@ -93,31 +93,7 @@ export default async function handler(
     const [aboutResult, flairsResult, rulesResult, postRequirementsResult] = await Promise.all([
       // Main subreddit about data (includes settings AND user status)
       client.get(`/r/${subredditName}/about`, { params: { raw_json: 1 } })
-        .then(({ data }) => {
-          const result = data?.data || {};
-          // #region agent log
-          const fs = require('fs');
-          const logEntry = JSON.stringify({
-            location: 'subreddit-info.ts:96',
-            message: 'Raw Reddit /about response',
-            data: {
-              subreddit: subredditName,
-              user_is_contributor: result.user_is_contributor,
-              user_is_contributor_type: typeof result.user_is_contributor,
-              user_is_contributor_in_response: 'user_is_contributor' in result,
-              user_is_banned: result.user_is_banned,
-              user_is_subscriber: result.user_is_subscriber,
-              user_is_moderator: result.user_is_moderator,
-              subreddit_type: result.subreddit_type,
-              restrict_posting: result.restrict_posting,
-            },
-            hypothesisId: 'D',
-            timestamp: Date.now(),
-          }) + '\n';
-          fs.appendFileSync('/Users/amal.dinesh@postman.com/Teststation/reddit-multi-poster/.cursor/debug.log', logEntry);
-          // #endregion
-          return result;
-        })
+        .then(({ data }) => data?.data || {})
         .catch((error) => {
           console.error(`Failed to fetch /r/${subredditName}/about:`, error?.message);
           return {};
@@ -168,27 +144,6 @@ export default async function handler(
     if (aboutResult.user_is_contributor !== undefined) {
       userStatus.userIsContributor = aboutResult.user_is_contributor;
     }
-
-    // #region agent log
-    {
-      const fs = require('fs');
-      const logEntry = JSON.stringify({
-        location: 'subreddit-info.ts:170',
-        message: 'Transformed userStatus object',
-        data: {
-          subreddit: subredditName,
-          userStatusKeys: Object.keys(userStatus),
-          userIsContributorIncluded: 'userIsContributor' in userStatus,
-          userIsContributorValue: (userStatus as Record<string, unknown>).userIsContributor,
-          flairCount: flairsResult.flairs?.length || 0,
-          flairRequired: flairsResult.required,
-        },
-        hypothesisId: 'D',
-        timestamp: Date.now(),
-      }) + '\n';
-      fs.appendFileSync('/Users/amal.dinesh@postman.com/Teststation/reddit-multi-poster/.cursor/debug.log', logEntry);
-    }
-    // #endregion
 
     // Parse requirements from submit text
     let parsedRequirements: ParsedRequirements | null = null;

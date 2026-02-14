@@ -14,6 +14,7 @@ import { PerSubredditOverride } from './subreddit-picker';
 import { RedditUser } from '@/utils/reddit';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { usePersistentState } from '@/hooks/usePersistentState';
+import { normalizeSubredditKey } from '@/lib/subredditKey';
 
 interface SearchResult {
   name: string;
@@ -156,7 +157,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
   const failedPostsBySubreddit = useMemo(() => {
     if (!failedPosts || failedPosts.length === 0) return {};
     return failedPosts.reduce((acc, post) => {
-      acc[post.subreddit.toLowerCase()] = post;
+      acc[normalizeSubredditKey(post.subreddit)] = post;
       return acc;
     }, {} as Record<string, FailedPost>);
   }, [failedPosts]);
@@ -213,17 +214,20 @@ const SubredditFlairPicker: React.FC<Props> = ({
   }, [selected, onSelectedChange]);
 
   const handleFlairChange = useCallback((sr: string, id: string) => {
-    onFlairChange({ ...flairValue, [sr]: id || undefined });
+    const key = normalizeSubredditKey(sr);
+    onFlairChange({ ...flairValue, [key]: id || undefined });
   }, [flairValue, onFlairChange]);
 
   const handleTitleSuffixChange = useCallback((sr: string, suffix: string) => {
-    onTitleSuffixChange({ ...titleSuffixValue, [sr]: suffix || undefined });
+    const key = normalizeSubredditKey(sr);
+    onTitleSuffixChange({ ...titleSuffixValue, [key]: suffix || undefined });
   }, [titleSuffixValue, onTitleSuffixChange]);
 
   const hasMissingFlair = useCallback((subreddit: string) => {
+    const key = normalizeSubredditKey(subreddit);
     const isSelected = selected.includes(subreddit);
-    const isRequired = flairRequired[subreddit];
-    const hasFlairSelected = flairValue[subreddit];
+    const isRequired = flairRequired[key];
+    const hasFlairSelected = flairValue[key];
     return isSelected && isRequired && !hasFlairSelected;
   }, [selected, flairRequired, flairValue]);
 
@@ -338,8 +342,9 @@ const SubredditFlairPicker: React.FC<Props> = ({
   React.useEffect(() => {
     if (onValidationChange) {
       const missingFlairs = selected.filter(subreddit => {
-        const isRequired = flairRequired[subreddit];
-        const hasFlairSelected = flairValue[subreddit];
+        const key = normalizeSubredditKey(subreddit);
+        const isRequired = flairRequired[key];
+        const hasFlairSelected = flairValue[key];
         return isRequired && !hasFlairSelected;
       });
       const hasErrors = missingFlairs.length > 0;
@@ -457,21 +462,22 @@ const SubredditFlairPicker: React.FC<Props> = ({
               </div>
               <div className="space-y-2">
                 {localFilteredSubreddits.map((name) => {
+                  const key = normalizeSubredditKey(name);
                   const hasError = !!(showValidationErrors && hasMissingFlair(name));
-                  const failedPost = failedPostsBySubreddit[name.toLowerCase()];
+                  const failedPost = failedPostsBySubreddit[key];
                   return (
                     <SubredditRow
                       key={name}
                       name={name}
                       hasError={hasError}
                       isSelected={selected.includes(name)}
-                      isLoading={cacheLoading[name.toLowerCase()]}
-                      flairRequired={flairRequired[name]}
-                      flairOptions={flairOptions[name] || []}
-                      subredditRules={subredditRules[name]}
-                      postRequirements={postRequirements[name]}
-                      titleSuffix={titleSuffixValue[name]}
-                      flairValue={flairValue[name]}
+                      isLoading={cacheLoading[key]}
+                      flairRequired={flairRequired[key]}
+                      flairOptions={flairOptions[key] || []}
+                      subredditRules={subredditRules[key]}
+                      postRequirements={postRequirements[key]}
+                      titleSuffix={titleSuffixValue[key]}
+                      flairValue={flairValue[key]}
                       onToggle={handleToggle}
                       onFlairChange={handleFlairChange}
                       onTitleSuffixChange={handleTitleSuffixChange}
@@ -483,7 +489,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
                       contentOverride={contentOverrides?.[name]}
                       onCustomize={onCustomize}
                       customizationEnabled={customizationEnabled}
-                      eligibility={eligibilityData[name]}
+                      eligibility={eligibilityData[key]}
                       userData={userData}
                       postKind={postKind}
                     />
@@ -503,21 +509,22 @@ const SubredditFlairPicker: React.FC<Props> = ({
       ) : viewMode === 'all' ? (
         <div className="space-y-2">
           {flatSubreddits.map((name) => {
+            const key = normalizeSubredditKey(name);
             const hasError = !!(showValidationErrors && hasMissingFlair(name));
-            const failedPost = failedPostsBySubreddit[name.toLowerCase()];
+            const failedPost = failedPostsBySubreddit[key];
             return (
               <SubredditRow
                 key={name}
                 name={name}
                 hasError={hasError}
                 isSelected={selected.includes(name)}
-                isLoading={cacheLoading[name.toLowerCase()]}
-                flairRequired={flairRequired[name]}
-                flairOptions={flairOptions[name] || []}
-                subredditRules={subredditRules[name]}
-                postRequirements={postRequirements[name]}
-                titleSuffix={titleSuffixValue[name]}
-                flairValue={flairValue[name]}
+                isLoading={cacheLoading[key]}
+                flairRequired={flairRequired[key]}
+                flairOptions={flairOptions[key] || []}
+                subredditRules={subredditRules[key]}
+                postRequirements={postRequirements[key]}
+                titleSuffix={titleSuffixValue[key]}
+                flairValue={flairValue[key]}
                 onToggle={handleToggle}
                 onFlairChange={handleFlairChange}
                 onTitleSuffixChange={handleTitleSuffixChange}
@@ -529,7 +536,7 @@ const SubredditFlairPicker: React.FC<Props> = ({
                 contentOverride={contentOverrides?.[name]}
                 onCustomize={onCustomize}
                 customizationEnabled={customizationEnabled}
-                eligibility={eligibilityData[name]}
+                eligibility={eligibilityData[key]}
                 userData={userData}
                 postKind={postKind}
               />

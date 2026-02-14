@@ -155,14 +155,6 @@ const SubredditRow = React.memo(({
   // parsedRequirements,
 }: SubredditRowProps) => {
   const checkboxId = `checkbox-${name}`;
-  
-  // #region agent log
-  React.useEffect(() => {
-    if (isSelected) {
-      fetch('http://127.0.0.1:7245/ingest/d1dd910a-8a0d-4999-8cd8-1087cab3ca13',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SubredditRow.tsx:156',message:'SubredditRow props for selected subreddit',data:{subredditName:name,hasEligibility:!!eligibility,eligibilityKeys:eligibility?Object.keys(eligibility):[],userIsContributor:eligibility?.userIsContributor,userIsContributorInObj:eligibility?'userIsContributor' in eligibility:false,flairOptionsCount:flairOptions?.length||0,flairRequired:flairRequired},hypothesisId:'A,B,C',timestamp:Date.now()})}).catch(()=>{});
-    }
-  }, [isSelected, name, eligibility, flairOptions, flairRequired]);
-  // #endregion
   const [isExpanded, setIsExpanded] = useState(false);
   const [showCustomInput, setShowCustomInput] = useState(false);
 

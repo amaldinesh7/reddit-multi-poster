@@ -39,7 +39,7 @@ export const MobileStickyQueue: React.FC<Props> = ({
         : 'text-muted-foreground';
 
     return (
-        <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-[100] lg:hidden">
+        <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:bottom-0 left-0 right-0 z-[100] lg:hidden">
             <div className="bg-background/90 backdrop-blur-2xl border-t border-border/50 shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
                 <div className="px-5 py-3 flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">

@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { QueueItem } from '@/types';
 import { usePersistentState } from './usePersistentState';
 import type { PerSubredditOverride } from '@/components/subreddit-picker';
+import { normalizeSubredditKey } from '@/lib/subredditKey';
 
 // ============================================================================
 // Types
@@ -74,6 +75,41 @@ interface UseHomePageStateReturn {
   applyLastPostSettings: () => void;
 }
 
+function normalizeSubredditRecordKeys<T>(input: Record<string, T>): Record<string, T> {
+  const output: Record<string, T> = {};
+
+  for (const [rawKey, value] of Object.entries(input)) {
+    const normalizedKey = normalizeSubredditKey(rawKey);
+    if (!normalizedKey) continue;
+
+    // Canonical lowercase keys take precedence if both variants are present.
+    if (rawKey === normalizedKey) {
+      output[normalizedKey] = value;
+      continue;
+    }
+
+    if (!(normalizedKey in output)) {
+      output[normalizedKey] = value;
+    }
+  }
+
+  return output;
+}
+
+function areRecordsEqual<T>(a: Record<string, T>, b: Record<string, T>): boolean {
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+
+  for (const key of aKeys) {
+    if (!(key in b) || a[key] !== b[key]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePageStateReturn => {
   const [selectedSubs, setSelectedSubs] = usePersistentState<string[]>('rmp_selected_subs', []);
   const [caption, setCaption] = usePersistentState<string>('rmp_caption', '');
@@ -93,6 +129,7 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
   // Last post settings state
   const [lastPostSettings, setLastPostSettings] = useState<SavedPostSettings | null>(null);
   const [justAppliedLastPost, setJustAppliedLastPost] = useState(false);
+  const hasMigratedSubredditKeysRef = useRef(false);
 
   // Load last post settings from localStorage on mount
   useEffect(() => {
@@ -102,13 +139,33 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
         const parsed = JSON.parse(saved) as SavedPostSettings;
         // Validate the parsed data has required fields
         if (parsed.subreddits && Array.isArray(parsed.subreddits) && parsed.savedAt) {
-          setLastPostSettings(parsed);
+          setLastPostSettings({
+            ...parsed,
+            flairs: normalizeSubredditRecordKeys(parsed.flairs || {}),
+            titleSuffixes: normalizeSubredditRecordKeys(parsed.titleSuffixes || {}),
+          });
         }
       }
     } catch (error) {
       console.warn('Failed to load last post settings:', error);
     }
   }, []);
+
+  // One-time key migration for persisted subreddit-indexed maps.
+  useEffect(() => {
+    if (hasMigratedSubredditKeysRef.current) return;
+    hasMigratedSubredditKeysRef.current = true;
+
+    const migratedFlairs = normalizeSubredditRecordKeys(flairs);
+    if (!areRecordsEqual(flairs, migratedFlairs)) {
+      setFlairs(migratedFlairs);
+    }
+
+    const migratedTitleSuffixes = normalizeSubredditRecordKeys(titleSuffixes);
+    if (!areRecordsEqual(titleSuffixes, migratedTitleSuffixes)) {
+      setTitleSuffixes(migratedTitleSuffixes);
+    }
+  }, [flairs, titleSuffixes, setFlairs, setTitleSuffixes]);
 
   /**
    * Save current subreddit selection, flairs, and title suffixes as "last post settings"
@@ -142,8 +199,8 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
 
     // Apply the saved settings
     setSelectedSubs(lastPostSettings.subreddits);
-    setFlairs(lastPostSettings.flairs);
-    setTitleSuffixes(lastPostSettings.titleSuffixes);
+    setFlairs(normalizeSubredditRecordKeys(lastPostSettings.flairs));
+    setTitleSuffixes(normalizeSubredditRecordKeys(lastPostSettings.titleSuffixes));
     setPrefixes(lastPostSettings.prefixes);
 
     // Show feedback
@@ -166,14 +223,14 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
     setFlairs(prev => {
       const next = { ...prev };
       subreddits.forEach((subreddit) => {
-        delete next[subreddit];
+        delete next[normalizeSubredditKey(subreddit)];
       });
       return next;
     });
     setTitleSuffixes(prev => {
       const next = { ...prev };
       subreddits.forEach((subreddit) => {
-        delete next[subreddit];
+        delete next[normalizeSubredditKey(subreddit)];
       });
       return next;
     });
@@ -241,8 +298,8 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
         
         allItems.push({
           subreddit: sr,
-          flairId: flairs[sr],
-          titleSuffix: titleSuffixes[sr],
+          flairId: flairs[normalizeSubredditKey(sr)],
+          titleSuffix: titleSuffixes[normalizeSubredditKey(sr)],
           customTitle: effectiveTitle,
           kind,
           files: mediaFiles,
@@ -259,8 +316,8 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
         
         allItems.push({
           subreddit: sr,
-          flairId: flairs[sr],
-          titleSuffix: titleSuffixes[sr],
+          flairId: flairs[normalizeSubredditKey(sr)],
+          titleSuffix: titleSuffixes[normalizeSubredditKey(sr)],
           customTitle: effectiveTitle,
           kind: 'link',
           url: mediaUrl,
@@ -277,8 +334,8 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
         
         allItems.push({
           subreddit: sr,
-          flairId: flairs[sr],
-          titleSuffix: titleSuffixes[sr],
+          flairId: flairs[normalizeSubredditKey(sr)],
+          titleSuffix: titleSuffixes[normalizeSubredditKey(sr)],
           customTitle: effectiveTitle,
           kind: 'self',
           url: undefined,
