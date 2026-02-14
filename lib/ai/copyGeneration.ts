@@ -1,6 +1,8 @@
 export type CopyKind = 'title' | 'description';
-export type CopyTone = 'neutral' | 'catchy' | 'question' | 'urgent' | 'story';
+export type CopyTone = 'straightforward' | 'viral' | 'discussion' | 'excited' | 'personal' | 'humor' | 'professional';
 export type CopyProvider = 'gemini' | 'groq' | 'fallback';
+
+export type PreferredProvider = 'auto' | 'gemini' | 'groq';
 
 export interface GenerateCopyInput {
   kind: CopyKind;
@@ -13,6 +15,8 @@ export interface GenerateCopyInput {
   mediaType?: 'self' | 'link' | 'image' | 'video' | 'gallery';
   userBrief?: string;
   tone?: CopyTone;
+  preferredProvider?: PreferredProvider;
+  previousTitles?: string[];
 }
 
 export interface GenerateCopyResult {
@@ -100,10 +104,10 @@ const parseArrayFromText = (content: string): string[] => {
 };
 
 const buildUserPrompt = (input: GenerateCopyInput, count: number): string => {
-  const context = {
+  const context: Record<string, unknown> = {
     kind: input.kind,
     count,
-    tone: input.tone || 'neutral',
+    tone: input.tone || 'straightforward',
     userBrief: (input.userBrief || '').slice(0, MAX_CONTEXT_LENGTH),
     baseText: (input.baseText || '').slice(0, MAX_CONTEXT_LENGTH),
     globalTitle: (input.globalTitle || '').slice(0, MAX_CONTEXT_LENGTH),
@@ -113,21 +117,57 @@ const buildUserPrompt = (input: GenerateCopyInput, count: number): string => {
     mediaType: input.mediaType || 'self',
   };
 
+  if (input.previousTitles && input.previousTitles.length > 0) {
+    context.previousTitles = input.previousTitles.slice(0, 15);
+  }
+
   return JSON.stringify(context);
 };
 
-const buildSystemPrompt = (kind: CopyKind, count: number): string => {
+const TONE_GUIDANCE: Record<CopyTone, string> = {
+  straightforward: 'clear, direct, and informative - gets to the point without fluff or emotional hooks',
+  viral: 'shareable and scroll-stopping - uses curiosity gaps, relatable angles, or surprising takes that make people want to engage',
+  discussion: 'invites conversation - poses questions, seeks opinions, or presents something debatable to encourage comments',
+  excited: 'enthusiastic and energetic - shows genuine excitement without being cringy or salesy, uses natural hype language',
+  personal: 'authentic first-person perspective - tells a story, shares an experience, or gives a behind-the-scenes feel',
+  humor: 'witty and playful - matches Reddit humor culture with self-awareness, wordplay, or relatable observations',
+  professional: 'polished and credible - suitable for career, business, or serious topics while still being approachable',
+};
+
+const buildSystemPrompt = (kind: CopyKind, count: number, tone: CopyTone, mediaType?: string, hasPreviousTitles?: boolean): string => {
   const limit = kind === 'title' ? TITLE_LIMIT : DESCRIPTION_LIMIT;
   const contentType = kind === 'title' ? 'Reddit post titles' : 'Reddit post descriptions';
+  const toneDescription = TONE_GUIDANCE[tone] || TONE_GUIDANCE.straightforward;
+
+  const mediaContext = mediaType && mediaType !== 'self'
+    ? `\n- This is a ${mediaType} post, so reference the visual content naturally`
+    : '';
+
+  const previousTitlesContext = hasPreviousTitles
+    ? '\n- previousTitles shows the user\'s recent posts - match their writing style, vocabulary, and vibe'
+    : '';
 
   return [
-    `You generate ${contentType}.`,
-    `Return a valid JSON array containing exactly ${count} unique strings.`,
-    `Each string must be <= ${limit} characters.`,
-    'Avoid markdown bullets, numbering, and quotes around the entire value.',
-    'Use subreddit context and user brief if present.',
-    'Do not include explanations, only the JSON array.',
-  ].join(' ');
+    `You are an expert Reddit content strategist specializing in ${contentType}.`,
+    `Generate exactly ${count} unique, high-engagement options.`,
+    '',
+    `TONE: ${tone}`,
+    `Style: ${toneDescription}`,
+    '',
+    'RULES:',
+    `- Each option must be <= ${limit} characters`,
+    '- Use sentence case ONLY (capitalize first word and proper nouns) - do NOT Title Case every word',
+    '- Write like a real Reddit user, not a headline writer',
+    '- Avoid generic phrases like "Check this out", "Amazing", or "You won\'t believe"',
+    '- Match the subreddit culture and audience if subreddit context is provided',
+    '- Incorporate the user\'s brief naturally without copying it verbatim',
+    '- Make each option distinctly different in approach, not just word variations',
+    '- Do NOT use markdown, bullets, numbering, or quotes around values',
+    mediaContext,
+    previousTitlesContext,
+    '',
+    'Return ONLY a valid JSON array of strings. No explanations, preamble, or other text.',
+  ].filter(Boolean).join('\n');
 };
 
 const generateFallbackOptions = (input: GenerateCopyInput, count: number): string[] => {
@@ -158,6 +198,8 @@ const generateWithGroq = async (input: GenerateCopyInput, count: number): Promis
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return null;
 
+  const tone = input.tone || 'straightforward';
+  const hasPreviousTitles = Boolean(input.previousTitles && input.previousTitles.length > 0);
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -167,10 +209,10 @@ const generateWithGroq = async (input: GenerateCopyInput, count: number): Promis
     body: JSON.stringify({
       model: DEFAULT_GROQ_MODEL,
       messages: [
-        { role: 'system', content: buildSystemPrompt(input.kind, count) },
+        { role: 'system', content: buildSystemPrompt(input.kind, count, tone, input.mediaType, hasPreviousTitles) },
         { role: 'user', content: buildUserPrompt(input, count) },
       ],
-      temperature: 0.4,
+      temperature: 0.5,
       max_tokens: 900,
     }),
   });
@@ -192,6 +234,8 @@ const generateWithGemini = async (input: GenerateCopyInput, count: number): Prom
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
 
+  const tone = input.tone || 'straightforward';
+  const hasPreviousTitles = Boolean(input.previousTitles && input.previousTitles.length > 0);
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_GEMINI_MODEL}:generateContent?key=${apiKey}`;
 
   const response = await fetch(endpoint, {
@@ -201,14 +245,14 @@ const generateWithGemini = async (input: GenerateCopyInput, count: number): Prom
     },
     body: JSON.stringify({
       generationConfig: {
-        temperature: 0.4,
+        temperature: 0.5,
         maxOutputTokens: 900,
       },
       contents: [
         {
           role: 'user',
           parts: [
-            { text: buildSystemPrompt(input.kind, count) },
+            { text: buildSystemPrompt(input.kind, count, tone, input.mediaType, hasPreviousTitles) },
             { text: buildUserPrompt(input, count) },
           ],
         },
@@ -231,35 +275,54 @@ const generateWithGemini = async (input: GenerateCopyInput, count: number): Prom
 
 export async function generateCopyOptions(input: GenerateCopyInput): Promise<GenerateCopyResult> {
   const desiredCount = clamp(input.count || MAX_COUNT, 1, MAX_COUNT);
+  const preferredProvider = input.preferredProvider || 'auto';
 
-  try {
-    const geminiRaw = await generateWithGemini(input, desiredCount);
-    const geminiOptions = dedupeAndNormalize(geminiRaw || [], input.kind, desiredCount);
+  // Determine the order of providers to try based on preference
+  const providerOrder: Array<'gemini' | 'groq'> = preferredProvider === 'groq'
+    ? ['groq', 'gemini']
+    : ['gemini', 'groq']; // Default: gemini first, or if explicitly set to gemini
 
-    if (geminiOptions.length === desiredCount) {
-      return {
-        options: geminiOptions,
-        provider: 'gemini',
-        fallbackUsed: false,
-      };
+  for (const providerName of providerOrder) {
+    // Skip if user explicitly chose a different provider (not auto)
+    if (preferredProvider !== 'auto' && preferredProvider !== providerName) {
+      continue;
     }
-  } catch {
-    // continue to Groq fallback
+
+    try {
+      const generateFn = providerName === 'gemini' ? generateWithGemini : generateWithGroq;
+      const rawOptions = await generateFn(input, desiredCount);
+      const normalizedOptions = dedupeAndNormalize(rawOptions || [], input.kind, desiredCount);
+
+      if (normalizedOptions.length === desiredCount) {
+        return {
+          options: normalizedOptions,
+          provider: providerName,
+          fallbackUsed: false,
+        };
+      }
+    } catch {
+      // Continue to next provider or fallback
+    }
   }
 
-  try {
-    const groqRaw = await generateWithGroq(input, desiredCount);
-    const groqOptions = dedupeAndNormalize(groqRaw || [], input.kind, desiredCount);
+  // If preferred provider failed and it's not auto, try the other provider
+  if (preferredProvider !== 'auto') {
+    const otherProvider = preferredProvider === 'gemini' ? 'groq' : 'gemini';
+    try {
+      const generateFn = otherProvider === 'gemini' ? generateWithGemini : generateWithGroq;
+      const rawOptions = await generateFn(input, desiredCount);
+      const normalizedOptions = dedupeAndNormalize(rawOptions || [], input.kind, desiredCount);
 
-    if (groqOptions.length === desiredCount) {
-      return {
-        options: groqOptions,
-        provider: 'groq',
-        fallbackUsed: false,
-      };
+      if (normalizedOptions.length === desiredCount) {
+        return {
+          options: normalizedOptions,
+          provider: otherProvider,
+          fallbackUsed: false,
+        };
+      }
+    } catch {
+      // Continue to local fallback
     }
-  } catch {
-    // continue to local fallback
   }
 
   const fallbackOptions = dedupeAndNormalize(generateFallbackOptions(input, desiredCount), input.kind, desiredCount);

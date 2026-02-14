@@ -16,7 +16,7 @@ const DrawerOverlay = React.forwardRef<
   <DrawerPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] cursor-pointer",
+      "fixed inset-0 z-[110] bg-black/40 backdrop-blur-[2px] cursor-pointer",
       "data-[state=open]:animate-in data-[state=closed]:animate-out",
       "data-[state=open]:fade-in data-[state=closed]:fade-out",
       className
@@ -35,7 +35,7 @@ const DrawerContent = React.forwardRef<
     <DrawerPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 flex h-auto flex-col",
+        "fixed inset-x-0 bottom-0 z-[110] flex h-auto flex-col",
         "rounded-t-2xl border-t border-border/50 bg-background",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=open]:slide-in-from-bottom-8 data-[state=closed]:slide-out-to-bottom-8",

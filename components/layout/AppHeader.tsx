@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { ChevronDown, User, Settings, LogOut, Shield, Sun, Moon, Monitor, Infinity, ArrowLeft, HelpCircle } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
-import type { Theme } from '@/contexts/ThemeContext';
+import { ChevronDown, User, Settings, LogOut, Shield, Infinity, ArrowLeft, HelpCircle } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -113,23 +112,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   showBackButton = false,
   onBack,
 }) => {
-  const { theme, setTheme } = useTheme();
   const { isVisible, isAtTop } = useScrollDirection();
   const showUpgrade = entitlement !== 'paid' && onUpgrade;
   const hasProAccess = entitlement === 'paid' || entitlement === 'trial';
   const trimmedUserName = userName?.trim() || '';
   const showAdminIcon = isAdmin && pageTitle === 'Admin Panel';
-
-  // Theme cycle for mobile tap-to-switch button
-  const THEME_CYCLE: Theme[] = ['light', 'dark', 'system'];
-  const THEME_ICONS: Record<Theme, typeof Sun> = { light: Sun, dark: Moon, system: Monitor };
-  const ThemeIcon = THEME_ICONS[theme];
-
-  const handleCycleTheme = () => {
-    const idx = THEME_CYCLE.indexOf(theme);
-    const next = THEME_CYCLE[(idx + 1) % THEME_CYCLE.length];
-    setTheme(next);
-  };
 
   const handleViewProfile = () => {
     if (!trimmedUserName) return;
@@ -184,21 +171,23 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             </Button>
           )}
           <div className="flex min-w-0 shrink-0 items-center gap-2.5">
-            <a
-              href="/"
-              aria-label="Go to post screen"
-              className={cn(
-                "relative h-9 w-9 shrink-0 overflow-hidden rounded-lg flex items-center justify-center",
-                "cursor-pointer",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              )}
-            >
-              <img 
-                src="/logo.png" 
-                alt="Reddit Multi Poster" 
-                className="h-full w-full object-contain" 
-              />
-            </a>
+            {!pageTitle && (
+              <a
+                href="/"
+                aria-label="Go to post screen"
+                className={cn(
+                  "relative h-9 w-9 shrink-0 overflow-hidden rounded-lg flex items-center justify-center",
+                  "cursor-pointer",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                )}
+              >
+                <img 
+                  src="/logo.png" 
+                  alt="Reddit Multi Poster" 
+                  className="h-full w-full object-contain" 
+                />
+              </a>
+            )}
             {pageTitle ? (
               <div className="flex items-center gap-2 min-w-0">
                 {showAdminIcon && <Shield className="w-4 h-4 text-cyan-400" aria-hidden="true" />}
@@ -300,29 +289,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               </button>
             )}
             {headerActions}
-            {/* Mobile-only: Theme cycle button */}
-            <button
-              type="button"
-              onClick={handleCycleTheme}
-              className={cn(
-                "md:hidden min-h-[44px] min-w-[44px]",
-                "flex items-center justify-center",
-                "cursor-pointer active:scale-95"
-              )}
-              aria-label={`Theme: ${theme}. Tap to switch.`}
-            >
-              <ThemeIcon className="w-[18px] h-[18px] text-muted-foreground" aria-hidden="true" />
-            </button>
-            {/* Desktop-only: Theme cycle button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCycleTheme}
-              className="hidden md:inline-flex min-h-[44px] min-w-[44px] p-2 cursor-pointer"
-              aria-label={`Theme: ${theme}. Click to switch.`}
-            >
-              <ThemeIcon className="w-[18px] h-[18px] text-muted-foreground" aria-hidden="true" />
-            </Button>
+            {/* Theme toggle button with animated sun/moon icon */}
+            <ThemeToggle />
             {/* Desktop-only: User dropdown (profile/settings/theme/logout moved to bottom nav on mobile) */}
             <div className="hidden md:flex">
             <DropdownMenu

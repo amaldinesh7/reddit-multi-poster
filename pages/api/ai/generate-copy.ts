@@ -4,6 +4,7 @@ import { applyRateLimit, aiGenerationRateLimit } from '@/lib/rateLimit';
 import {
   CopyKind,
   CopyTone,
+  PreferredProvider,
   generateCopyOptions,
 } from '@/lib/ai/copyGeneration';
 
@@ -18,6 +19,8 @@ interface GenerateCopyRequest {
   mediaType?: 'self' | 'link' | 'image' | 'video' | 'gallery';
   userBrief?: string;
   tone?: CopyTone;
+  preferredProvider?: PreferredProvider;
+  previousTitles?: string[];
 }
 
 interface GenerateCopyResponse {
@@ -30,7 +33,8 @@ interface GenerateCopyResponse {
   error?: string;
 }
 
-const ALLOWED_TONES: CopyTone[] = ['neutral', 'catchy', 'question', 'urgent', 'story'];
+const ALLOWED_TONES: CopyTone[] = ['straightforward', 'viral', 'discussion', 'excited', 'personal', 'humor', 'professional'];
+const ALLOWED_PROVIDERS: PreferredProvider[] = ['auto', 'gemini', 'groq'];
 
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === 'string');
@@ -76,8 +80,18 @@ export default async function handler(
       return;
     }
 
+    if (body.preferredProvider && !ALLOWED_PROVIDERS.includes(body.preferredProvider)) {
+      res.status(400).json({ success: false, error: 'Invalid provider option.' });
+      return;
+    }
+
     if (body.selectedSubreddits && !isStringArray(body.selectedSubreddits)) {
       res.status(400).json({ success: false, error: 'selectedSubreddits must be a string array.' });
+      return;
+    }
+
+    if (body.previousTitles && !isStringArray(body.previousTitles)) {
+      res.status(400).json({ success: false, error: 'previousTitles must be a string array.' });
       return;
     }
 
@@ -91,7 +105,9 @@ export default async function handler(
       subreddit: sanitizeText(body.subreddit),
       mediaType: body.mediaType,
       userBrief: sanitizeText(body.userBrief),
-      tone: body.tone || 'neutral',
+      tone: body.tone || 'straightforward',
+      preferredProvider: body.preferredProvider || 'auto',
+      previousTitles: body.previousTitles,
     });
 
     res.status(200).json({
