@@ -52,10 +52,10 @@ const SubredditRowControls: React.FC<SubredditRowControlsProps> = ({
       {flairOptions.length > 0 && (
         <NativeSelect
           value={flairValue || ''}
-          onValueChange={(value) => onFlairChange(name, value === '_none' ? '' : value)}
+          onValueChange={(value) => onFlairChange(name, value === '__clear__' || value === '_none' ? '' : value)}
           placeholder={flairRequired ? 'Flair (required)' : 'Flair'}
           options={[
-            ...(!flairRequired ? [{ value: '_none', label: 'No flair' }] : []),
+            { value: '__clear__', label: 'Clear flair' },
             ...flairOptions.map((f) => ({
               value: f.id,
               label: f.text || '—',

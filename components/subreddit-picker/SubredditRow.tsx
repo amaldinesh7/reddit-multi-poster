@@ -32,8 +32,6 @@ const SubredditRow = React.memo(({
   postKind = 'self',
   rowRef,
   isHighlighted,
-  showInlineValidationHint,
-  onInlineHintClick,
 }: SubredditRowProps) => {
   const checkboxId = `checkbox-${name}`;
   const [isExpanded, setIsExpanded] = useState(false);
@@ -114,17 +112,6 @@ const SubredditRow = React.memo(({
   };
 
   const canExpand = isSelected && (hasGuidelines || hasBlacklist || !!subredditRules?.submitText);
-  const firstValidationError = validationErrors[0];
-  const extraValidationErrorCount = Math.max(0, validationErrors.length - 1);
-  const inlineValidationHint = firstValidationError
-    ? `Fix: ${firstValidationError.message}${extraValidationErrorCount > 0 ? ` +${extraValidationErrorCount} more` : ''}`
-    : '';
-
-  const handleInlineValidationHintClick = () => {
-    setOpenValidationDetailsSignal((prev) => prev + 1);
-    onInlineHintClick?.(name);
-  };
-
   useEffect(() => {
     if (!isHighlighted) return;
     // Reveal details automatically when this row becomes the navigation target.
@@ -191,17 +178,6 @@ const SubredditRow = React.memo(({
         onShowCustomInputChange={setShowCustomInput}
         onControlsClick={handleControlsClick}
       />
-
-      {isSelected && showInlineValidationHint && validationErrors.length > 0 && (
-        <button
-          type="button"
-          onClick={handleInlineValidationHintClick}
-          className="w-full border-t border-border/60 px-3 sm:px-4 py-2 text-left text-xs text-red-400 hover:text-red-300 hover:bg-red-500/5 transition-colors cursor-pointer"
-          aria-label={`Open validation details for r/${name}`}
-        >
-          {inlineValidationHint}
-        </button>
-      )}
 
       <SubredditRowExpandedDetails
         isExpanded={isExpanded}

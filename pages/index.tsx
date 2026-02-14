@@ -362,7 +362,8 @@ export default function Home() {
   const handleResetSelection = React.useCallback(() => {
     clearSelection();
     setPostToProfile(false);
-  }, [clearSelection, setPostToProfile]);
+    setIsReviewOpen(false);
+  }, [clearSelection, setPostToProfile, setIsReviewOpen]);
 
   // Handle posting results and track failed posts
   const handleResultsAvailable = React.useCallback((
