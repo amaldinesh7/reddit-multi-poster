@@ -47,6 +47,13 @@ export default async function handler(
   }
 
   try {
+    const demoHeader = req.headers['x-rmp-demo'];
+    const demoHeaderValue = Array.isArray(demoHeader) ? demoHeader[0] : demoHeader;
+    const isDemoRequest =
+      (process.env.NEXT_PUBLIC_QUEUE_DEMO_MODE === 'true' ||
+        process.env.NEXT_PUBLIC_QUEUE_DEMO_MODE === '1') &&
+      demoHeaderValue === '1';
+
     // Get user ID
     const userId = await getUserId(req, res);
     if (!userId) {
@@ -110,6 +117,22 @@ export default async function handler(
       ? fields.sharedFileCount[0] 
       : fields.sharedFileCount;
     const sharedFileCount = sharedFileCountField ? parseInt(sharedFileCountField as string) : 0;
+
+    // Demo-only short-circuit: never upload files or create DB jobs.
+    if (isDemoRequest) {
+      if (sharedFileCount > 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Demo mode does not support file uploads.',
+        });
+      }
+
+      addApiBreadcrumb('Demo queue job submitted', { itemCount: parsedItems.length });
+      return res.status(200).json({
+        success: true,
+        jobId: `demo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      });
+    }
 
     // Upload shared files once (itemIndex = -1 indicates shared files)
     for (let fileIndex = 0; fileIndex < sharedFileCount; fileIndex++) {
