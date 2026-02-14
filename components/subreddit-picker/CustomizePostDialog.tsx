@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Sparkles } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -11,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { PostRequirements } from '@/utils/reddit';
+import CopyGenerationDialog from '@/components/ai/CopyGenerationDialog';
 
 export interface PerSubredditOverride {
   title?: string;
@@ -42,6 +44,7 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
   const [useCustomBody, setUseCustomBody] = useState(false);
   const [customTitle, setCustomTitle] = useState('');
   const [customBody, setCustomBody] = useState('');
+  const [aiTargetField, setAiTargetField] = useState<'title' | 'description' | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
@@ -52,6 +55,7 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
       setUseCustomBody(!!override?.body);
       setCustomTitle(override?.title || globalTitle);
       setCustomBody(override?.body || globalBody);
+      setAiTargetField(null);
     }
   }, [open, override, globalTitle, globalBody]);
 
@@ -157,14 +161,26 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
             
             {useCustomTitle ? (
               <div className="mt-2">
-                <Textarea
-                  ref={titleRef}
-                  value={customTitle}
-                  onChange={(e) => setCustomTitle(e.target.value.slice(0, titleMaxLength))}
-                  placeholder="Custom title for this community"
-                  className="resize-none min-h-[40px] overflow-hidden"
-                  rows={1}
-                />
+                <div className="relative">
+                  <Textarea
+                    ref={titleRef}
+                    value={customTitle}
+                    onChange={(e) => setCustomTitle(e.target.value.slice(0, titleMaxLength))}
+                    placeholder="Custom title for this community"
+                    className="resize-none min-h-[40px] overflow-hidden pr-14"
+                    rows={1}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setAiTargetField('title')}
+                    className="absolute right-2 top-2 inline-flex h-7 items-center gap-1 rounded-md border border-border bg-background/90 px-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-background cursor-pointer"
+                    aria-label="Generate custom title options with AI"
+                    title="Generate custom title options with AI"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">AI</span>
+                  </button>
+                </div>
                 <div className="flex justify-end mt-1">
                   <span className={`text-xs ${displayTitle.length > titleMaxLength * 0.9 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
                     {displayTitle.length}/{titleMaxLength}
@@ -221,14 +237,26 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
             
             {useCustomBody ? (
               <div className="mt-2">
-                <Textarea
-                  ref={bodyRef}
-                  value={customBody}
-                  onChange={(e) => setCustomBody(e.target.value.slice(0, bodyMaxLength))}
-                  placeholder="Custom description for this community"
-                  className="resize-none min-h-[80px] overflow-hidden"
-                  rows={3}
-                />
+                <div className="relative">
+                  <Textarea
+                    ref={bodyRef}
+                    value={customBody}
+                    onChange={(e) => setCustomBody(e.target.value.slice(0, bodyMaxLength))}
+                    placeholder="Custom description for this community"
+                    className="resize-none min-h-[80px] overflow-hidden pr-14"
+                    rows={3}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setAiTargetField('description')}
+                    className="absolute right-2 top-2 inline-flex h-7 items-center gap-1 rounded-md border border-border bg-background/90 px-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-background cursor-pointer"
+                    aria-label="Generate custom description options with AI"
+                    title="Generate custom description options with AI"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">AI</span>
+                  </button>
+                </div>
                 <div className="flex justify-end mt-1">
                   <span className={`text-xs ${displayBody.length > bodyMaxLength * 0.9 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
                     {displayBody.length}/{bodyMaxLength}
@@ -268,6 +296,30 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {aiTargetField && (
+        <CopyGenerationDialog
+          open={!!aiTargetField}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setAiTargetField(null);
+            }
+          }}
+          kind={aiTargetField}
+          onApply={(value) => {
+            if (aiTargetField === 'title') {
+              setCustomTitle(value.slice(0, titleMaxLength));
+              return;
+            }
+            setCustomBody(value.slice(0, bodyMaxLength));
+          }}
+          baseText={aiTargetField === 'title' ? customTitle : customBody}
+          globalTitle={globalTitle}
+          globalBody={globalBody}
+          selectedSubreddits={[subredditName]}
+          subreddit={subredditName}
+        />
+      )}
     </Dialog>
   );
 };

@@ -25,6 +25,26 @@ test.describe('Multi-Subreddit Posting', () => {
     await setupMockRoutes(authenticatedPage);
   });
 
+  test('global title AI flow applies selected option', async ({ authenticatedPage }) => {
+    await authenticatedPage.goto('/');
+
+    const aiButton = authenticatedPage.getByRole('button', { name: /generate title options with ai/i });
+    await expect(aiButton).toBeVisible();
+    await aiButton.click();
+
+    await expect(authenticatedPage.getByText('AI Title Generator')).toBeVisible();
+
+    await authenticatedPage.getByLabel('Optional brief').fill('Make it practical and short');
+    await authenticatedPage.getByRole('button', { name: /generate 3 options/i }).click();
+    await expect(authenticatedPage.getByText('fallback')).toBeVisible();
+
+    const option = authenticatedPage.getByRole('button', { name: 'AI title option two' });
+    await expect(option).toBeVisible();
+    await option.click();
+
+    await expect(authenticatedPage.getByPlaceholder(/post title/i)).toHaveValue('AI title option two');
+  });
+
   test('home page displays post composer correctly', async ({ authenticatedPage }) => {
     await authenticatedPage.goto('/');
     

@@ -69,6 +69,25 @@ export const mockResponses = {
       required: false,
     };
   },
+  generateCopy: (kind: 'title' | 'description') => ({
+    success: true,
+    data: {
+      options:
+        kind === 'title'
+          ? [
+              'AI title option one',
+              'AI title option two',
+              'AI title option three',
+            ]
+          : [
+              'AI description option one',
+              'AI description option two',
+              'AI description option three',
+            ],
+      provider: 'fallback',
+      fallbackUsed: true,
+    },
+  }),
 };
 
 /**
@@ -221,6 +240,18 @@ export const setupMockRoutes = async (page: Page): Promise<void> => {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ success: true }),
+    });
+  });
+
+  // Mock /api/ai/generate-copy endpoint
+  await page.route('**/api/ai/generate-copy', async (route: Route) => {
+    const body = route.request().postDataJSON() as { kind?: 'title' | 'description' } | null;
+    const kind = body?.kind === 'description' ? 'description' : 'title';
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(mockResponses.generateCopy(kind)),
     });
   });
 };

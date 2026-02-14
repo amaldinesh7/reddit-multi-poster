@@ -775,6 +775,10 @@ export default function Home() {
                     prefixes={prefixes}
                     onPrefixesChange={setPrefixes}
                     resetSignal={benchResetCounter}
+                    aiContext={{
+                      selectedSubreddits: selectedSubs,
+                      mediaType: currentPostKind,
+                    }}
                   />
                 </section>
               </div>

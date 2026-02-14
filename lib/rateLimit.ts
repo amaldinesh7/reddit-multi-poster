@@ -103,6 +103,11 @@ export const cacheRateLimit = rateLimit({
   windowMs: 60 * 1000, // 100 requests per minute
 });
 
+export const aiGenerationRateLimit = rateLimit({
+  limit: 20,
+  windowMs: 60 * 1000, // 20 AI generation requests per minute
+});
+
 // Helper to apply rate limit and respond
 export function applyRateLimit(
   req: NextApiRequest,
