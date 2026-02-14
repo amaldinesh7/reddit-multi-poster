@@ -7,6 +7,9 @@ import { TitleTag, UnifiedSubredditData } from '../types/api';
 import { ParsedRequirements } from '../lib/parseSubredditRequirements';
 import { normalizeSubredditKey } from '@/lib/subredditKey';
 
+// Stable empty array to prevent re-renders when no options provided
+const EMPTY_ARRAY: string[] = [];
+
 export interface SubredditRulesData {
   requiresGenderTag: boolean;
   requiresContentTag: boolean;
@@ -77,7 +80,11 @@ function toEligibilityData(data: UnifiedSubredditData): SubredditEligibility {
 }
 
 export const useSubredditFlairData = (options: UseSubredditFlairDataOptions = {}): UseSubredditFlairDataReturn => {
-  const { eagerSubreddits = [], loadAllOnMount = true, selectedSubreddits = [] } = options;
+  const { 
+    eagerSubreddits = EMPTY_ARRAY, 
+    loadAllOnMount = true, 
+    selectedSubreddits = EMPTY_ARRAY 
+  } = options;
   const { getSubredditsByCategory, getAllSubreddits, isLoaded, refresh, addSubreddit } = useSubreddits();
   const localCache = useLocalSubredditCache();
 
