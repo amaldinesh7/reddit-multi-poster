@@ -776,7 +776,7 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
       {(running || logs.length > 0) && (
         <div className="flex flex-col gap-2 mb-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-base lg:text-lg font-semibold tracking-tight pt-1 lg:pt-2">Ready to post</h3>
+            <h3 className="text-base lg:text-lg font-semibold tracking-tight">Ready to post</h3>
             {items.length > 0 && (
               <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
                 {items.length}
