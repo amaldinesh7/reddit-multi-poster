@@ -26,5 +26,20 @@ jobs:
       - name: Link to Supabase project
         run: supabase link --project-ref $PROJECT_ID
 
+      - name: Repair migration history (mark orphaned remote migrations as reverted)
+        run: |
+          # Get list of remote migrations not in local directory
+          REMOTE_MIGRATIONS=$(supabase migration list 2>/dev/null | grep -E '^\s*[0-9]+' | awk '{print $1}' || true)
+          LOCAL_MIGRATIONS=$(ls supabase/migrations/*.sql 2>/dev/null | xargs -I {} basename {} .sql | sed 's/_.*$//' || true)
+          
+          for migration in $REMOTE_MIGRATIONS; do
+            # Check if this migration exists locally (by prefix match)
+            if ! echo "$LOCAL_MIGRATIONS" | grep -q "^${migration}"; then
+              echo "Marking orphaned migration $migration as reverted..."
+              supabase migration repair --status reverted "$migration" || true
+            fi
+          done
+        continue-on-error: true
+
       - name: Push migrations to production
         run: supabase db push
