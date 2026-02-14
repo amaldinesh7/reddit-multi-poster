@@ -80,15 +80,6 @@ export default async function handler(
       return res.status(400).json({ success: false, error: 'Items must be a non-empty array' });
     }
 
-    // Only enforce limit for FREE users - paid users have no limit
-    const entitlement = await getEntitlement(userId);
-    if (entitlement === 'free' && parsedItems.length > FREE_MAX_POST_ITEMS) {
-      return res.status(400).json({
-        success: false,
-        error: `Free plan allows posting to ${FREE_MAX_POST_ITEMS} subreddits at once. Upgrade for unlimited.`,
-      });
-    }
-
     // Extract caption and prefixes
     const caption = Array.isArray(fields.caption) ? fields.caption[0] : fields.caption || '';
     const prefixesJson = Array.isArray(fields.prefixes) ? fields.prefixes[0] : fields.prefixes;
@@ -101,17 +92,6 @@ export default async function handler(
       }
     }
 
-    // Generate meaningful folder path for file uploads
-    // Format: {username}/{date}/job_{shortId}/
-    const redditUsername = req.cookies['reddit_username'] || 'unknown';
-    const dateStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const shortId = Math.random().toString(36).slice(2, 8);
-    const jobFolder = `${redditUsername}/${dateStr}/job_${shortId}`;
-
-    // Process shared files (uploaded once, used by all items)
-    const filePaths: QueueFileReference[] = [];
-    const jobItems: QueueJobItem[] = [];
-
     // Get shared file count from form data
     const sharedFileCountField = Array.isArray(fields.sharedFileCount) 
       ? fields.sharedFileCount[0] 
@@ -119,6 +99,7 @@ export default async function handler(
     const sharedFileCount = sharedFileCountField ? parseInt(sharedFileCountField as string) : 0;
 
     // Demo-only short-circuit: never upload files or create DB jobs.
+    // NOTE: This must happen before entitlement/DB checks to keep demo capture safe/deterministic.
     if (isDemoRequest) {
       if (sharedFileCount > 0) {
         return res.status(400).json({
@@ -133,6 +114,26 @@ export default async function handler(
         jobId: `demo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       });
     }
+
+    // Only enforce limit for FREE users - paid users have no limit
+    const entitlement = await getEntitlement(userId);
+    if (entitlement === 'free' && parsedItems.length > FREE_MAX_POST_ITEMS) {
+      return res.status(400).json({
+        success: false,
+        error: `Free plan allows posting to ${FREE_MAX_POST_ITEMS} subreddits at once. Upgrade for unlimited.`,
+      });
+    }
+
+    // Generate meaningful folder path for file uploads
+    // Format: {username}/{date}/job_{shortId}/
+    const redditUsername = req.cookies['reddit_username'] || 'unknown';
+    const dateStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const shortId = Math.random().toString(36).slice(2, 8);
+    const jobFolder = `${redditUsername}/${dateStr}/job_${shortId}`;
+
+    // Process shared files (uploaded once, used by all items)
+    const filePaths: QueueFileReference[] = [];
+    const jobItems: QueueJobItem[] = [];
 
     // Upload shared files once (itemIndex = -1 indicates shared files)
     for (let fileIndex = 0; fileIndex < sharedFileCount; fileIndex++) {

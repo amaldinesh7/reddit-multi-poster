@@ -24,8 +24,8 @@ export const testData = {
    * Mock Supabase user IDs
    */
   supabaseUsers: {
-    standard: 'test-supabase-uuid-12345',
-    secondary: 'test-supabase-uuid-67890',
+    standard: '00000000-0000-0000-0000-000000000001',
+    secondary: '00000000-0000-0000-0000-000000000002',
   },
 
   /**

@@ -71,6 +71,46 @@ export const mockResponses = {
       required: false,
     };
   },
+
+  /**
+   * Mock response for /api/reddit/subreddit-info endpoint (UnifiedSubredditData).
+   * This prevents server-side calls to Reddit during E2E runs.
+   */
+  subredditInfo: (subredditName: string) => {
+    const normalized = subredditName.toLowerCase().replace(/^r\//, '');
+    const cache = mockResponses.subredditCache(normalized);
+
+    return {
+      success: true,
+      data: {
+        subreddit: normalized,
+        flairs: cache.flairs,
+        flairRequired: cache.required,
+        rules: {
+          requiresGenderTag: false,
+          requiresContentTag: false,
+          genderTags: [],
+          contentTags: [],
+          rules: [],
+          submitText: '',
+        },
+        titleTags: [],
+        postRequirements: {
+          is_flair_required: cache.required,
+          title_text_max_length: 300,
+          title_text_min_length: 1,
+        },
+        subredditType: 'public',
+        restrictPosting: false,
+        submissionType: 'any',
+        allowImages: true,
+        allowVideos: true,
+        allowGifs: true,
+        cachedAt: new Date().toISOString(),
+        cacheVersion: 1,
+      },
+    };
+  },
 };
 
 /**
@@ -84,6 +124,38 @@ export const setupMockRoutes = async (page: Page): Promise<void> => {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(mockResponses.meAuthenticated),
+    });
+  });
+
+  // Mock /api/admin-check endpoint
+  await page.route('**/api/admin-check', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ isAdmin: false }),
+    });
+  });
+
+  // Mock /api/pricing endpoint
+  await page.route('**/api/pricing', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        pricing: { region: 'us_canada', amount: 9, currency: 'USD', formatted: '$9.00' },
+      }),
+    });
+  });
+
+  // Mock /api/reddit/subreddit-info to avoid live Reddit calls during tests.
+  await page.route('**/api/reddit/subreddit-info*', async (route: Route) => {
+    const url = new URL(route.request().url());
+    const name = url.searchParams.get('name') || '';
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(mockResponses.subredditInfo(name)),
     });
   });
 

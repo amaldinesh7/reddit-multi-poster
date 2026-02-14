@@ -467,7 +467,9 @@ export function useQueueJob(): UseQueueJobReturn {
       }));
 
       // Subscribe to updates and start processing
-      subscribeToJob(jobId);
+      if (!isQueueDemoModeEnabled) {
+        subscribeToJob(jobId);
+      }
       startPolling(jobId);
 
       return jobId;

@@ -65,7 +65,8 @@ test.describe('Product Hunt demo video capture', () => {
     await authenticatedPage.getByRole('menuitem', { name: /post now/i }).click();
     await pause(1500);
 
-    await expect(authenticatedPage.getByText(/all done/i)).toBeVisible({ timeout: 60_000 });
+    // "All done!" appears in multiple UI locations; avoid strict-mode collisions.
+    await expect(authenticatedPage.getByText('All done!').first()).toBeVisible({ timeout: 60_000 });
     await pause(4000);
 
     await authenticatedPage.goto('/demo/cards?variant=cta');
