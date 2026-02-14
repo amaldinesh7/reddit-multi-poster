@@ -665,6 +665,7 @@ export default function Settings() {
         {/* Community Selection Modal - shown when trial expired and user has >5 communities */}
         <CommunitySelectionModal
           open={showCommunitySelectionModal}
+          onOpenChange={setShowCommunitySelectionModal}
           communities={getAllSubredditsWithCategory()}
           onConfirm={handleCommunitySelectionConfirm}
           onUpgrade={handleUpgrade}
