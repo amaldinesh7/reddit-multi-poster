@@ -134,7 +134,7 @@ export default async function handler(
         // Note: We use getSubredditSettings instead of getSubredditEligibility to get only non-user-specific data
         // User-specific data (userIsBanned, userIsContributor, etc.) is fetched separately via /api/user/subreddit-status
         const [flairsResult, rulesResult, postRequirementsResult, settingsResult, enhancedInfoResult] = await Promise.all([
-          getFlairs(client, subredditName).catch(() => ({ flairs: [], required: false })),
+          getFlairs(client, subredditName).catch(() => ({ flairs: [] })),
           getSubredditRules(client, subredditName).catch(() => ({
             requiresGenderTag: false,
             requiresContentTag: false,
@@ -182,13 +182,16 @@ export default async function handler(
           }
         }
 
+        // Use is_flair_required from post_requirements as the authoritative source
+        const flairRequired = postRequirementsResult.is_flair_required === true;
+
         // Upsert to cache
         // Note: eligibility now only contains SubredditSettings (non-user-specific data)
         // User-specific fields were removed to prevent caching one user's data for all users
         const cacheData = {
           subreddit_name: subredditName,
           flairs: flairsResult.flairs,
-          flair_required: flairsResult.required,
+          flair_required: flairRequired,
           rules: {
             requiresGenderTag: rulesResult.requiresGenderTag,
             requiresContentTag: rulesResult.requiresContentTag,
@@ -200,7 +203,7 @@ export default async function handler(
           eligibility: settingsResult,
           parsed_requirements: parsedRequirements,
           cached_at: new Date().toISOString(),
-          cache_version: 5, // Bumped version for user-specific data separation
+          cache_version: 6, // Bumped version for flair_required fix
         };
 
         const { error: upsertError } = await supabase

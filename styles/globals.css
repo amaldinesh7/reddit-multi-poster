@@ -189,6 +189,39 @@ html.theme-transitioning.theme-wipe::before {
   }
 }
 
+@keyframes issue-row-focus-pulse {
+  0% {
+    border-color: hsl(var(--border) / 0.6);
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0), 0 0 0 0 hsl(var(--primary) / 0);
+  }
+  15% {
+    border-color: hsl(var(--primary) / 0.55);
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.45), 0 0 0 4px hsl(var(--primary) / 0.14);
+  }
+  60% {
+    border-color: hsl(var(--primary) / 0.5);
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.4), 0 0 0 4px hsl(var(--primary) / 0.12);
+  }
+  100% {
+    border-color: hsl(var(--border) / 0.6);
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0), 0 0 0 0 hsl(var(--primary) / 0);
+  }
+}
+
+@layer utilities {
+  .issue-row-highlight {
+    animation: issue-row-focus-pulse 1500ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .issue-row-highlight {
+    animation: none;
+    border-color: hsl(var(--primary) / 0.55);
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.35);
+  }
+}
+
 /* Drag and Drop Styles */
 @layer utilities {
   .dragging {

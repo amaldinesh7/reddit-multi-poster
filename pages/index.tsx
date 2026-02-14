@@ -31,6 +31,7 @@ import { usePersistentState } from '@/hooks/usePersistentState';
 import { captureClientError, addActionBreadcrumb } from '@/lib/clientErrorHandler';
 import type { ValidationIssue, PreflightResult } from '@/lib/preflightValidation';
 import { cn } from '@/lib/utils';
+import { normalizeSubredditKey } from '@/lib/subredditKey';
 import type { PerSubredditOverride } from '../components/subreddit-picker';
 import { trackEvent } from '@/lib/posthog';
 
@@ -120,6 +121,10 @@ export default function Home() {
     issuesBySubreddit: Record<string, ValidationIssue[]>;
   } | null>(null);
   const [isMoreActionsOpen, setIsMoreActionsOpen] = React.useState(false);
+  const [hasValidationFieldInteraction, setHasValidationFieldInteraction] = React.useState(false);
+  const [hasValidationCtaIntent, setHasValidationCtaIntent] = React.useState(false);
+  const [validationNavigatorIndex, setValidationNavigatorIndex] = React.useState(0);
+  const [navigationTargetSubreddit, setNavigationTargetSubreddit] = React.useState<string | null>(null);
 
   // Smooth loader exit: keep AppLoader mounted briefly to fade out
   const [showLoader, setShowLoader] = React.useState(true);
@@ -162,6 +167,7 @@ export default function Home() {
     setPostToProfile,
     hasFlairErrors,
     showValidationErrors,
+    setShowValidationErrors,
     items,
     handleValidationChange,
     handlePostAttempt,
@@ -201,9 +207,43 @@ export default function Home() {
 
   const hasTitle = caption.trim().length > 0;
   const hasDestinations = selectedSubs.length > 0 || postToProfile;
-  const canReview = hasTitle && hasDestinations && (validationState?.canSubmit ?? true);
+  const blockingValidationErrors = validationState?.errors ?? [];
+  const blockingValidationSubreddits = React.useMemo(() => {
+    const seen = new Set<string>();
+    const ordered: string[] = [];
+
+    for (const issue of blockingValidationErrors) {
+      if (!issue.subreddit) continue;
+      const normalized = normalizeSubredditKey(issue.subreddit);
+      if (!normalized || seen.has(normalized)) continue;
+      seen.add(normalized);
+      ordered.push(issue.subreddit);
+    }
+
+    return ordered;
+  }, [blockingValidationErrors]);
+  const hasBlockingValidation = hasTitle && hasDestinations && blockingValidationErrors.length > 0;
+  const reviewCtaMode: 'missing_essentials' | 'blocking_validation' | 'ready' = !hasTitle || !hasDestinations
+    ? 'missing_essentials'
+    : hasBlockingValidation
+      ? 'blocking_validation'
+      : 'ready';
+  const canReview = reviewCtaMode === 'ready';
   const canPost = canReview;
-  const isReviewDisabled = !canReview;
+  const isReviewDisabled = reviewCtaMode !== 'ready';
+  const shouldShowValidationNavigator = hasBlockingValidation && (hasValidationFieldInteraction || hasValidationCtaIntent);
+  const validationNavigatorSummary = `You have ${blockingValidationErrors.length} blocking errors in ${blockingValidationSubreddits.length} communities.`;
+
+  React.useEffect(() => {
+    if (!hasBlockingValidation) {
+      setValidationNavigatorIndex(0);
+      return;
+    }
+
+    if (validationNavigatorIndex >= blockingValidationSubreddits.length) {
+      setValidationNavigatorIndex(0);
+    }
+  }, [hasBlockingValidation, validationNavigatorIndex, blockingValidationSubreddits.length]);
 
   // Compute current post kind based on media state
   const currentPostKind = React.useMemo((): 'self' | 'link' | 'image' | 'video' | 'gallery' => {
@@ -221,6 +261,27 @@ export default function Home() {
       setIsMoreActionsOpen(false);
     }
   }, [isReviewDisabled, isMoreActionsOpen]);
+
+  const handleNavigateToValidationIssue = React.useCallback((nextIndex: number) => {
+    if (blockingValidationSubreddits.length === 0) return;
+
+    const normalizedIndex =
+      ((nextIndex % blockingValidationSubreddits.length) + blockingValidationSubreddits.length) % blockingValidationSubreddits.length;
+    const target = blockingValidationSubreddits[normalizedIndex];
+
+    setValidationNavigatorIndex(normalizedIndex);
+    setNavigationTargetSubreddit(target);
+    setShowValidationErrors(true);
+    setHasValidationCtaIntent(true);
+  }, [blockingValidationSubreddits, setShowValidationErrors]);
+
+  const handleGoToFirstValidationIssue = React.useCallback(() => {
+    handleNavigateToValidationIssue(0);
+  }, [handleNavigateToValidationIssue]);
+
+  const handleGoToNextValidationIssue = React.useCallback(() => {
+    handleNavigateToValidationIssue(validationNavigatorIndex + 1);
+  }, [handleNavigateToValidationIssue, validationNavigatorIndex]);
 
   // Flair data for edit dialog
   const { flairOptions, flairRequired, postRequirements, cacheLoading: flairLoading } = useSubredditFlairData();
@@ -280,6 +341,17 @@ export default function Home() {
     setIsReviewOpen(true);
   }, []);
 
+  const handleReviewAndPostAction = React.useCallback(() => {
+    if (reviewCtaMode === 'missing_essentials') return;
+
+    if (reviewCtaMode === 'blocking_validation') {
+      handleGoToFirstValidationIssue();
+      return;
+    }
+
+    handleOpenReview();
+  }, [reviewCtaMode, handleGoToFirstValidationIssue, handleOpenReview]);
+
   const handlePostNow = React.useCallback(() => {
     if (postActionRef.current) {
       postActionRef.current();
@@ -290,7 +362,8 @@ export default function Home() {
   const handleResetSelection = React.useCallback(() => {
     clearSelection();
     setPostToProfile(false);
-  }, [clearSelection, setPostToProfile]);
+    setIsReviewOpen(false);
+  }, [clearSelection, setPostToProfile, setIsReviewOpen]);
 
   // Handle posting results and track failed posts
   const handleResultsAvailable = React.useCallback((
@@ -685,7 +758,10 @@ export default function Home() {
                   <h3 className="text-base lg:text-lg font-semibold tracking-tight">Title & Body</h3>
                   <PostComposer
                     value={caption}
-                    onChange={setCaption}
+                    onChange={(value) => {
+                      setCaption(value);
+                      setHasValidationFieldInteraction(true);
+                    }}
                     body={body}
                     onBodyChange={setBody}
                     prefixes={prefixes}
@@ -763,6 +839,11 @@ export default function Home() {
                     onTitleSuffixChange={setTitleSuffixes}
                     onValidationChange={handleValidationChange}
                     showValidationErrors={showValidationErrors}
+                    showInlineValidationHint={showValidationErrors}
+                    onIssueFieldInteraction={() => setHasValidationFieldInteraction(true)}
+                    onNavigateToSubredditIssue={() => setHasValidationCtaIntent(true)}
+                    navigationTargetSubreddit={navigationTargetSubreddit}
+                    onNavigationHandled={() => setNavigationTargetSubreddit(null)}
                     temporarySelectionEnabled={limits.temporarySelectionEnabled ?? true}
                     resetSignal={benchResetCounter}
                     viewMode={communitiesView}
@@ -817,14 +898,40 @@ export default function Home() {
                   )}
                 >
                   <div className="mb-3 hidden lg:flex items-center gap-2">
-                    <div className="flex flex-1 items-center">
+                    <div className="flex flex-1 flex-col items-stretch gap-2">
+                      {shouldShowValidationNavigator && (
+                        <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                          <p className="font-medium">{validationNavigatorSummary}</p>
+                          <div className="mt-2 flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleGoToFirstValidationIssue}
+                              className="h-7 border-red-400/30 bg-transparent px-2 text-xs text-red-200 hover:bg-red-500/10 cursor-pointer"
+                            >
+                              Go to first issue
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleGoToNextValidationIssue}
+                              className="h-7 border-red-400/30 bg-transparent px-2 text-xs text-red-200 hover:bg-red-500/10 cursor-pointer"
+                            >
+                              Next issue
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center">
                       <Button
-                        onClick={handleOpenReview}
-                        disabled={!canReview}
+                        onClick={handleReviewAndPostAction}
+                        disabled={reviewCtaMode === 'missing_essentials'}
                         className="flex-1 cursor-pointer rounded-r-none"
                         aria-label="Review and post"
                       >
-                        Review &amp; post
+                        {reviewCtaMode === 'blocking_validation' ? 'Fix errors to continue' : 'Review &amp; post'}
                       </Button>
                       <DropdownMenuRoot
                         open={isMoreActionsOpen}
@@ -859,6 +966,12 @@ export default function Home() {
                           </DropdownMenuItemPrimitive>
                         </DropdownMenuContent>
                       </DropdownMenuRoot>
+                      </div>
+                      {reviewCtaMode === 'missing_essentials' && (
+                        <p className="text-xs text-muted-foreground">
+                          Add a title and choose at least one destination.
+                        </p>
+                      )}
                     </div>
                     <Button
                       variant="ghost"
@@ -887,7 +1000,7 @@ export default function Home() {
                     onPostActionReady={(handler) => {
                       postActionRef.current = handler;
                     }}
-                    onReviewRequest={handleOpenReview}
+                    onReviewRequest={handleReviewAndPostAction}
                     hideMobileBar={isReviewOpen}
                   />
                 </section>

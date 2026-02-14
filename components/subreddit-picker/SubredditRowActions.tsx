@@ -53,6 +53,7 @@ interface SubredditRowActionsProps {
   onRemovePost?: (id: string) => void;
   onExpandClick: (e: React.MouseEvent) => void;
   onControlsClick: (e: React.MouseEvent<HTMLDivElement>) => void;
+  openValidationDetailsSignal?: number;
 }
 
 const getErrorIcon = (iconName: ClassifiedError['icon'], className: string = 'h-4 w-4') => {
@@ -98,9 +99,18 @@ const SubredditRowActions: React.FC<SubredditRowActionsProps> = ({
   onRemovePost,
   onExpandClick,
   onControlsClick,
+  openValidationDetailsSignal,
 }) => {
+  const [isValidationMenuOpen, setIsValidationMenuOpen] = React.useState(false);
   const hasValidationIssues = (validationIssues?.length ?? 0) > 0;
   const hasValidationErrors = validationErrors.length > 0;
+
+  React.useEffect(() => {
+    if (!openValidationDetailsSignal || !hasValidationIssues || failedPost) {
+      return;
+    }
+    setIsValidationMenuOpen(true);
+  }, [openValidationDetailsSignal, hasValidationIssues, failedPost]);
 
   if (!isSelected || !(customizationEnabled || hasValidationIssues || failedPost || canExpand)) {
     return null;
@@ -109,7 +119,7 @@ const SubredditRowActions: React.FC<SubredditRowActionsProps> = ({
   return (
     <div className="flex items-center gap-1.5 flex-shrink-0" onClick={onControlsClick}>
       {hasValidationIssues && validationSummary && !failedPost && (
-        <DropdownMenuRoot>
+        <DropdownMenuRoot open={isValidationMenuOpen} onOpenChange={setIsValidationMenuOpen}>
           <DropdownMenuTrigger asChild>
             <button
               className="p-1 cursor-pointer hover:opacity-80 transition-opacity"

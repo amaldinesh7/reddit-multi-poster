@@ -99,7 +99,7 @@ export default async function handler(
           return {};
         }),
       // Flairs
-      getFlairs(client, subredditName).catch(() => ({ flairs: [], required: false })),
+      getFlairs(client, subredditName).catch(() => ({ flairs: [] })),
       // Rules
       getSubredditRules(client, subredditName).catch(() => ({
         requiresGenderTag: false,
@@ -168,11 +168,15 @@ export default async function handler(
       }
     }
 
+    // Determine if flair is required using the authoritative source: post_requirements endpoint
+    // The is_flair_required field directly indicates if flair selection is mandatory
+    const flairRequired = postRequirementsResult.is_flair_required === true;
+
     // Build the unified response
     const unifiedData: UnifiedSubredditData = {
       subreddit: subredditName,
       flairs: flairsResult.flairs,
-      flairRequired: flairsResult.required,
+      flairRequired,
       rules: rulesResult,
       titleTags,
       postRequirements: Object.keys(postRequirementsResult).length > 0 ? postRequirementsResult : undefined,
@@ -193,7 +197,7 @@ export default async function handler(
     // This runs in the background and doesn't block the response
     updateSupabaseCache(subredditName, {
       flairs: flairsResult.flairs,
-      flairRequired: flairsResult.required,
+      flairRequired,
       rules: rulesResult,
       titleTags,
       postRequirements: postRequirementsResult,
