@@ -61,6 +61,10 @@ export type AnalyticsEvent =
   | 'checkout_started'
   | 'checkout_completed'
   | 'free_limit_reached'
+  | 'community_selection_required'
+  | 'community_selection_modal_opened'
+  | 'community_selection_confirmed'
+  | 'community_selection_upgrade_clicked'
   // Tier 2: Core Engagement
   | 'first_post_created'
   | 'post_submitted'
@@ -101,6 +105,13 @@ export interface EventProperties {
   // Feature properties
   category_name?: string;
   search_query?: string;
+  
+  // Community selection properties (trial expiry flow)
+  total_communities?: number;
+  max_to_keep?: number;
+  max_allowed?: number;
+  kept?: number;
+  removed?: number;
   
   // Anonymous ID linking (for funnel continuity)
   $anon_distinct_id?: string;

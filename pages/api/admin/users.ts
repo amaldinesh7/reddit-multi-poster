@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Build query
       let query = client
         .from('users')
-        .select('id, reddit_username, reddit_avatar_url, entitlement, paid_at, created_at');
+        .select('id, reddit_username, reddit_avatar_url, entitlement, paid_at, created_at, trial_ends_at');
 
       // Apply search filter (case-insensitive)
       if (search && typeof search === 'string' && search.trim()) {
@@ -102,20 +102,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // PATCH: Update user entitlement
+  // PATCH: Update user entitlement or perform actions
   if (req.method === 'PATCH') {
     try {
-      const { userId, entitlement } = req.body;
+      const { userId, entitlement, action } = req.body;
 
       if (!userId || typeof userId !== 'string') {
         return res.status(400).json({ error: 'userId is required' });
       }
 
+      // Handle special actions
+      if (action === 'expireTrial') {
+        // Expire trial immediately (for testing)
+        const { data, error } = await client
+          .from('users')
+          .update({
+            trial_ends_at: new Date(Date.now() - 1000).toISOString(),
+          })
+          .eq('id', userId)
+          .select('id, reddit_username, entitlement, paid_at, trial_ends_at')
+          .single();
+
+        if (error) throw error;
+
+        // Invalidate cache so the auto-downgrade happens on next request
+        invalidateEntitlementCache(userId);
+
+        return res.status(200).json({ user: data, message: 'Trial expired. User will be downgraded on next page load.' });
+      }
+
+      // Handle entitlement changes
       if (entitlement !== 'free' && entitlement !== 'trial' && entitlement !== 'paid') {
         return res.status(400).json({ error: 'entitlement must be "free", "trial", or "paid"' });
       }
 
-      const updateData: { entitlement: string; paid_at?: string | null } = {
+      const updateData: {
+        entitlement: string;
+        paid_at?: string | null;
+        trial_started_at?: string | null;
+        trial_ends_at?: string | null;
+        trial_used_at?: string | null;
+        trial_ended_notified_at?: string | null;
+      } = {
         entitlement,
       };
 
@@ -126,11 +154,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         updateData.paid_at = null;
       }
 
+      // Set trial dates when admin grants a trial
+      if (entitlement === 'trial') {
+        const now = new Date();
+        const trialEndsAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+        updateData.trial_started_at = now.toISOString();
+        updateData.trial_ends_at = trialEndsAt.toISOString();
+        updateData.trial_used_at = now.toISOString();
+        updateData.trial_ended_notified_at = null; // Reset notification flag
+      }
+
+      // Clear trial notification flag when downgrading to free (so they don't see the popup again if admin re-grants trial)
+      if (entitlement === 'free') {
+        updateData.trial_ended_notified_at = new Date().toISOString();
+      }
+
       const { data, error } = await client
         .from('users')
         .update(updateData)
         .eq('id', userId)
-        .select('id, reddit_username, entitlement, paid_at')
+        .select('id, reddit_username, entitlement, paid_at, trial_ends_at')
         .single();
 
       if (error) throw error;
