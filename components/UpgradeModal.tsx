@@ -12,6 +12,8 @@ interface UpgradeModalProps {
   upgradeLoading?: boolean;
   trialLoading?: boolean;
   canStartTrial?: boolean;
+  /** Number of days left in trial (only applicable when on trial) */
+  trialDaysLeft?: number | null;
   /** Custom context message to show instead of default limit message */
   context?: {
     title?: string;
@@ -27,8 +29,11 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
   upgradeLoading = false,
   trialLoading = false,
   canStartTrial = true,
+  trialDaysLeft,
   context,
 }) => {
+  // Determine if user is currently on trial (canStartTrial is false when on trial or paid)
+  const isOnTrial = !canStartTrial && trialDaysLeft !== null && trialDaysLeft !== undefined && trialDaysLeft > 0;
   const { pricing } = usePricing();
 
   // Handle escape key
@@ -108,12 +113,34 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
               <Crown className="h-6 w-6" />
             </div>
             <div>
-              <h2 id="upgrade-modal-title" className="text-2xl font-bold">
-                Try Pro for 7 days
-              </h2>
-              <p className="text-white/80 text-sm">
-                Full Pro access, then choose lifetime
-              </p>
+              {isOnTrial ? (
+                <>
+                  <h2 id="upgrade-modal-title" className="text-2xl font-bold">
+                    Upgrade to Lifetime Pro
+                  </h2>
+                  <p className="text-white/80 text-sm">
+                    {trialDaysLeft} {trialDaysLeft === 1 ? 'day' : 'days'} left on your trial
+                  </p>
+                </>
+              ) : canStartTrial ? (
+                <>
+                  <h2 id="upgrade-modal-title" className="text-2xl font-bold">
+                    Try Pro for 7 days
+                  </h2>
+                  <p className="text-white/80 text-sm">
+                    Full Pro access, then choose lifetime
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 id="upgrade-modal-title" className="text-2xl font-bold">
+                    Upgrade to Lifetime Pro
+                  </h2>
+                  <p className="text-white/80 text-sm">
+                    Unlock all premium features forever
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>

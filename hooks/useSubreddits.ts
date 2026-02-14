@@ -313,6 +313,52 @@ export function useSubreddits() {
     }));
   }, [data]);
 
+  // Get all subreddits with their category names (for community selection modal)
+  const getAllSubredditsWithCategory = useCallback((): Array<{ id: string; name: string; categoryName: string }> => {
+    const result: Array<{ id: string; name: string; categoryName: string }> = [];
+    data.categories.forEach(category => {
+      category.user_subreddits.forEach(subreddit => {
+        result.push({
+          id: subreddit.id,
+          name: subreddit.subreddit_name,
+          categoryName: category.name,
+        });
+      });
+    });
+    return result;
+  }, [data]);
+
+  // Bulk delete all subreddits except the specified IDs
+  // Used when trial expires and user selects which communities to keep
+  const bulkDeleteExcept = useCallback(async (keepIds: string[]): Promise<boolean> => {
+    try {
+      const response = await axios.post<ApiResponse<{ deletedCount: number; keptCount: number }>>(
+        '/api/settings/subreddits/bulk-delete',
+        { keepIds }
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.error?.message || 'Failed to delete communities');
+      }
+
+      // Update local state - remove all subreddits not in keepIds
+      setData(prev => ({
+        categories: prev.categories.map(cat => ({
+          ...cat,
+          user_subreddits: cat.user_subreddits.filter(sub => keepIds.includes(sub.id))
+        }))
+      }));
+
+      return true;
+    } catch (err) {
+      captureClientError(err, 'useSubreddits.bulkDeleteExcept', {
+        toastTitle: 'Failed to update communities',
+        context: { keepIdsCount: keepIds.length },
+      });
+      return false;
+    }
+  }, []);
+
   return {
     data,
     isLoaded,
@@ -329,5 +375,7 @@ export function useSubreddits() {
     reorderSubreddits,
     getAllSubreddits,
     getSubredditsByCategory,
+    getAllSubredditsWithCategory,
+    bulkDeleteExcept,
   };
 }

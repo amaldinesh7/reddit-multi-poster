@@ -16,7 +16,16 @@ import {
   ArrowUpDown,
   Filter,
   BarChart3,
+  ChevronDown,
+  Timer,
+  Clock,
 } from 'lucide-react';
+import {
+  DropdownMenuRoot,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface User {
   id: string;
@@ -26,6 +35,7 @@ interface User {
   paid_at: string | null;
   created_at: string;
   post_count: number;
+  trial_ends_at: string | null;
 }
 
 type SortField = 'created_at' | 'reddit_username' | 'post_count';
@@ -82,21 +92,33 @@ export const UserManagementTab: React.FC = () => {
     fetchUsers();
   }, [fetchUsers]);
 
-  // Handle entitlement toggle with confirmation
-  const handleToggleEntitlement = async (user: User) => {
-    const isUpgrading = user.entitlement === 'free';
-    
-    const confirmed = await confirmDialog.openDialog({
-      title: isUpgrading ? 'Upgrade to Pro' : 'Revoke Pro Access',
-      message: isUpgrading
-        ? `Are you sure you want to upgrade u/${user.reddit_username} to Pro? This will grant them access to all premium features.`
-        : `Are you sure you want to revoke Pro access for u/${user.reddit_username}? They will be downgraded to the free tier.`,
-      variant: isUpgrading ? 'default' : 'destructive',
-    });
+  // Handle entitlement change with confirmation
+  const handleSetEntitlement = async (user: User, newEntitlement: 'free' | 'trial' | 'paid') => {
+    if (user.entitlement === newEntitlement) return;
 
+    const actionLabels: Record<string, { title: string; message: string; variant: 'default' | 'destructive' }> = {
+      'free': {
+        title: 'Revoke Pro Access',
+        message: `Are you sure you want to revoke Pro access for u/${user.reddit_username}? They will be downgraded to the free tier.`,
+        variant: 'destructive',
+      },
+      'trial': {
+        title: 'Start 7-Day Trial',
+        message: `Are you sure you want to start a 7-day Pro trial for u/${user.reddit_username}? They will get full Pro access for 7 days.`,
+        variant: 'default',
+      },
+      'paid': {
+        title: 'Upgrade to Pro',
+        message: `Are you sure you want to upgrade u/${user.reddit_username} to Pro? This will grant them lifetime access to all premium features.`,
+        variant: 'default',
+      },
+    };
+
+    const { title, message, variant } = actionLabels[newEntitlement];
+    
+    const confirmed = await confirmDialog.openDialog({ title, message, variant });
     if (!confirmed) return;
 
-    const newEntitlement = isUpgrading ? 'paid' : 'free';
     setUpdatingUserId(user.id);
 
     try {
@@ -114,12 +136,42 @@ export const UserManagementTab: React.FC = () => {
       setUsers((prev) =>
         prev.map((u) =>
           u.id === user.id
-            ? { ...u, entitlement: data.user.entitlement, paid_at: data.user.paid_at }
+            ? { ...u, entitlement: data.user.entitlement, paid_at: data.user.paid_at, trial_ends_at: data.user.trial_ends_at }
             : u
         )
       );
     } catch (err) {
       console.error('Failed to update user:', err);
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
+  // Handle expire trial for testing
+  const handleExpireTrial = async (user: User) => {
+    const confirmed = await confirmDialog.openDialog({
+      title: 'Expire Trial Now',
+      message: `This will immediately expire the trial for u/${user.reddit_username}. They will be downgraded to free on their next page load. Use this for testing only.`,
+      variant: 'destructive',
+    });
+
+    if (!confirmed) return;
+
+    setUpdatingUserId(user.id);
+
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, action: 'expireTrial' }),
+      });
+
+      if (!res.ok) throw new Error('Failed to expire trial');
+
+      // Refresh the user list to show updated state
+      await fetchUsers();
+    } catch (err) {
+      console.error('Failed to expire trial:', err);
     } finally {
       setUpdatingUserId(null);
     }
@@ -131,6 +183,22 @@ export const UserManagementTab: React.FC = () => {
       day: 'numeric',
       year: 'numeric',
     });
+  };
+
+  const getTrialTimeRemaining = (trialEndsAt: string | null): string | null => {
+    if (!trialEndsAt) return null;
+    const endsAt = new Date(trialEndsAt).getTime();
+    const now = Date.now();
+    if (endsAt <= now) return 'Expired';
+
+    const diffMs = endsAt - now;
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+    if (days > 0) return `${days}d ${hours}h left`;
+    if (hours > 0) return `${hours}h left`;
+    const mins = Math.floor(diffMs / (1000 * 60));
+    return `${mins}m left`;
   };
 
   // Toggle sort
@@ -425,40 +493,80 @@ export const UserManagementTab: React.FC = () => {
                       </div>
                     </a>
 
-                    <div className="flex items-center gap-3 shrink-0">
-                      {user.entitlement === 'paid' || user.entitlement === 'trial' ? (
-                        <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30 gap-1">
-                          <Crown className="w-3 h-3" />
-                          {user.entitlement === 'trial' ? 'Trial' : 'Pro'}
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-muted-foreground">
-                          Free
-                        </Badge>
-                      )}
-
-                      <Button
-                        variant={user.entitlement === 'paid' || user.entitlement === 'trial' ? 'outline' : 'default'}
-                        size="sm"
-                        onClick={() => handleToggleEntitlement(user)}
-                        disabled={updatingUserId === user.id}
-                        className={`cursor-pointer text-xs h-8 px-3 ${
-                          user.entitlement === 'free'
-                            ? 'bg-violet-600 hover:bg-violet-700 text-white'
-                            : 'hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30'
-                        }`}
-                      >
-                        {updatingUserId === user.id ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : user.entitlement === 'paid' || user.entitlement === 'trial' ? (
-                          'Revoke'
-                        ) : (
-                          <>
-                            <Check className="w-3 h-3 mr-1" />
-                            Set Paid
-                          </>
-                        )}
-                      </Button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Status Dropdown - Shows current status and allows changing */}
+                      <DropdownMenuRoot>
+                        <DropdownMenuTrigger asChild disabled={updatingUserId === user.id}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={`cursor-pointer text-xs h-8 px-3 min-w-[100px] justify-between ${
+                              user.entitlement === 'paid'
+                                ? 'border-violet-500/50 text-violet-400 bg-violet-500/10'
+                                : user.entitlement === 'trial'
+                                ? 'border-amber-500/50 text-amber-400 bg-amber-500/10'
+                                : 'border-border/50 text-muted-foreground'
+                            }`}
+                          >
+                            {updatingUserId === user.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <>
+                                {user.entitlement === 'paid' && <Crown className="w-3 h-3 mr-1.5" />}
+                                {user.entitlement === 'trial' && <Timer className="w-3 h-3 mr-1.5" />}
+                                {user.entitlement === 'paid' ? 'Pro' : user.entitlement === 'trial' ? (
+                                  <span className="flex items-center gap-1">
+                                    Trial
+                                    <span className="text-[10px] opacity-80">
+                                      ({getTrialTimeRemaining(user.trial_ends_at)})
+                                    </span>
+                                  </span>
+                                ) : 'Free'}
+                                <ChevronDown className="w-3 h-3 ml-1.5 opacity-50" />
+                              </>
+                            )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="min-w-[160px]">
+                          <DropdownMenuItem
+                            onClick={() => handleSetEntitlement(user, 'paid')}
+                            className={`cursor-pointer ${user.entitlement === 'paid' ? 'bg-violet-500/10' : ''}`}
+                          >
+                            <Crown className="w-4 h-4 mr-2 text-violet-500" />
+                            Pro (Lifetime)
+                            {user.entitlement === 'paid' && <Check className="w-3 h-3 ml-auto text-violet-500" />}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleSetEntitlement(user, 'trial')}
+                            className={`cursor-pointer ${user.entitlement === 'trial' ? 'bg-amber-500/10' : ''}`}
+                          >
+                            <Timer className="w-4 h-4 mr-2 text-amber-500" />
+                            Trial (7 days)
+                            {user.entitlement === 'trial' && <Check className="w-3 h-3 ml-auto text-amber-500" />}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleSetEntitlement(user, 'free')}
+                            className={`cursor-pointer ${user.entitlement === 'free' ? 'bg-secondary' : ''}`}
+                          >
+                            <Users className="w-4 h-4 mr-2 text-muted-foreground" />
+                            Free
+                            {user.entitlement === 'free' && <Check className="w-3 h-3 ml-auto" />}
+                          </DropdownMenuItem>
+                          {/* Expire Trial option - only for trial users */}
+                          {user.entitlement === 'trial' && (
+                            <>
+                              <div className="h-px bg-border/50 my-1" />
+                              <DropdownMenuItem
+                                onClick={() => handleExpireTrial(user)}
+                                className="cursor-pointer text-amber-500"
+                              >
+                                <Clock className="w-4 h-4 mr-2" />
+                                Expire Trial (Test)
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenuRoot>
                     </div>
                   </div>
                 ))}
@@ -474,7 +582,7 @@ export const UserManagementTab: React.FC = () => {
         title={confirmDialog.title}
         message={confirmDialog.message}
         variant={confirmDialog.variant}
-        confirmLabel={confirmDialog.variant === 'destructive' ? 'Revoke Access' : 'Upgrade to Pro'}
+        confirmLabel={confirmDialog.variant === 'destructive' ? 'Confirm' : 'Confirm'}
         onConfirm={confirmDialog.handleConfirm}
         onCancel={confirmDialog.handleCancel}
       />

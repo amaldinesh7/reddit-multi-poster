@@ -27,6 +27,10 @@ import { useFailedPosts, FailedPost } from '@/hooks/useFailedPosts';
 import { useSubredditFlairData } from '@/hooks/useSubredditFlairData';
 import { useQueueJob } from '@/hooks/useQueueJob';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubreddits } from '@/hooks/useSubreddits';
+
+// Client-side constant for free plan limit (must match lib/entitlement.ts)
+const FREE_MAX_SUBREDDITS = 5;
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { captureClientError, addActionBreadcrumb } from '@/lib/clientErrorHandler';
 import type { ValidationIssue, PreflightResult } from '@/lib/preflightValidation';
@@ -85,6 +89,11 @@ const TrialEndedModal = dynamic(
   { ssr: false }
 );
 
+const CommunitySelectionModal = dynamic(
+  () => import('../components/CommunitySelectionModal'),
+  { ssr: false }
+);
+
 const ReviewPanel = dynamic(
   () => import('../components/ReviewPanel'),
   { ssr: false }
@@ -120,11 +129,20 @@ export default function Home() {
     refresh,
   } = useAuth();
   
+  // Get saved subreddits data for community selection modal (trial expiry flow)
+  const {
+    data: subredditData,
+    getAllSubredditsWithCategory,
+    bulkDeleteExcept,
+    refresh: refreshSubreddits,
+  } = useSubreddits();
+  
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [upgradeLoading, setUpgradeLoading] = React.useState(false);
   const [trialLoading, setTrialLoading] = React.useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
   const [showTrialEndedModal, setShowTrialEndedModal] = React.useState(false);
+  const [showCommunitySelectionModal, setShowCommunitySelectionModal] = React.useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = React.useState<{ title?: string; message: string } | undefined>(undefined);
   const [mediaResetCounter, setMediaResetCounter] = React.useState(0);
   const [benchResetCounter, setBenchResetCounter] = React.useState(0);
@@ -610,6 +628,16 @@ export default function Home() {
     }
   }, [refresh]);
 
+  // Handle community selection confirmation (when trial ends and user has >5 communities)
+  const handleCommunitySelectionConfirm = React.useCallback(async (selectedIds: string[]) => {
+    const success = await bulkDeleteExcept(selectedIds);
+    if (success) {
+      setShowCommunitySelectionModal(false);
+      clearSelection(); // Clear selected subreddits since some may have been deleted
+      await refreshSubreddits(); // Refresh the subreddit data after deletion
+    }
+  }, [bulkDeleteExcept, refreshSubreddits, clearSelection]);
+
   React.useEffect(() => {
     if (!showTrialEndedPopup) return;
     setShowTrialEndedModal(true);
@@ -653,9 +681,26 @@ export default function Home() {
     };
   }, [me]);
 
+  // Calculate total saved subreddits count (for community selection modal check)
+  const totalSavedSubreddits = React.useMemo(() => {
+    return subredditData.categories.reduce((sum, c) => sum + c.user_subreddits.length, 0);
+  }, [subredditData.categories]);
+
   // Wrapper for post attempt that checks free user limit
   // Returns false to block posting, true to allow
   const handlePostWithLimitCheck = React.useCallback((): boolean => {
+    // First check if user is OVER the saved communities limit (e.g., trial expired with many communities)
+    // This requires them to select which to keep before posting
+    if (entitlement === 'free' && totalSavedSubreddits > FREE_MAX_SUBREDDITS) {
+      trackEvent('community_selection_required', {
+        source: 'post_attempt',
+        subreddit_count: totalSavedSubreddits,
+        max_allowed: FREE_MAX_SUBREDDITS,
+      });
+      setShowCommunitySelectionModal(true);
+      return false; // Block posting, show community selection modal
+    }
+    
     const maxPostItems = limits.maxPostItems ?? 5;
     // Check if free user is trying to post to more subreddits than their limit
     if (entitlement === 'free' && selectedSubs.length > maxPostItems) {
@@ -674,7 +719,7 @@ export default function Home() {
     // Otherwise proceed with normal post attempt
     handlePostAttempt();
     return true; // Allow posting
-  }, [entitlement, limits.maxPostItems, selectedSubs.length, handlePostAttempt]);
+  }, [entitlement, totalSavedSubreddits, limits.maxPostItems, selectedSubs.length, handlePostAttempt]);
 
   return (
     <>
@@ -1119,6 +1164,7 @@ export default function Home() {
         upgradeLoading={upgradeLoading}
         trialLoading={trialLoading}
         canStartTrial={entitlement === 'free'}
+        trialDaysLeft={trialDaysLeft}
         context={upgradeModalContext}
       />
 
@@ -1126,6 +1172,15 @@ export default function Home() {
         open={showTrialEndedModal}
         onOpenChange={setShowTrialEndedModal}
         onUpgrade={handleUpgrade}
+      />
+
+      {/* Community Selection Modal - shown when trial expired and user has >5 communities */}
+      <CommunitySelectionModal
+        open={showCommunitySelectionModal}
+        communities={getAllSubredditsWithCategory()}
+        onConfirm={handleCommunitySelectionConfirm}
+        onUpgrade={handleUpgrade}
+        maxToKeep={FREE_MAX_SUBREDDITS}
       />
 
       {/* Edit Failed Post Dialog */}
