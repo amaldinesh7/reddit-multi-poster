@@ -166,5 +166,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     pricing_region: pricingRegion,
   });
 
+  if (existing.entitlement === 'trial') {
+    trackServerEvent(userId, 'trial_converted_to_paid', {
+      plan: 'pro',
+      pricing_region: pricingRegion,
+    });
+  }
+
   return res.status(200).json({ received: true });
 }

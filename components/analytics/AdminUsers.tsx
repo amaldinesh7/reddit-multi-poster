@@ -9,7 +9,7 @@ interface User {
   id: string;
   reddit_username: string;
   reddit_avatar_url: string | null;
-  entitlement: 'free' | 'paid';
+  entitlement: 'free' | 'trial' | 'paid';
   paid_at: string | null;
   created_at: string;
 }
@@ -40,7 +40,7 @@ export const AdminUsers: React.FC = () => {
   }, []);
 
   const handleToggleEntitlement = async (user: User) => {
-    const newEntitlement = user.entitlement === 'paid' ? 'free' : 'paid';
+    const newEntitlement = user.entitlement === 'free' ? 'paid' : 'free';
     setUpdatingUserId(user.id);
     
     try {
@@ -115,7 +115,7 @@ export const AdminUsers: React.FC = () => {
     );
   }
 
-  const paidCount = users.filter(u => u.entitlement === 'paid').length;
+  const paidCount = users.filter(u => u.entitlement === 'paid' || u.entitlement === 'trial').length;
 
   return (
     <Card>
@@ -162,10 +162,10 @@ export const AdminUsers: React.FC = () => {
               </div>
               
               <div className="flex items-center gap-2 shrink-0">
-                {user.entitlement === 'paid' ? (
+                {user.entitlement === 'paid' || user.entitlement === 'trial' ? (
                   <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30 gap-1">
                     <Crown className="w-3 h-3" />
-                    Pro
+                    {user.entitlement === 'trial' ? 'Trial' : 'Pro'}
                   </Badge>
                 ) : (
                   <Badge variant="secondary" className="text-muted-foreground">
@@ -174,7 +174,7 @@ export const AdminUsers: React.FC = () => {
                 )}
                 
                 <Button
-                  variant={user.entitlement === 'paid' ? 'outline' : 'default'}
+                  variant={user.entitlement === 'paid' || user.entitlement === 'trial' ? 'outline' : 'default'}
                   size="sm"
                   onClick={() => handleToggleEntitlement(user)}
                   disabled={updatingUserId === user.id}
@@ -186,7 +186,7 @@ export const AdminUsers: React.FC = () => {
                 >
                   {updatingUserId === user.id ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : user.entitlement === 'paid' ? (
+                  ) : user.entitlement === 'paid' || user.entitlement === 'trial' ? (
                     'Revoke'
                   ) : (
                     <>

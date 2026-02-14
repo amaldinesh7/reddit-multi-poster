@@ -20,7 +20,8 @@ interface AppHeaderProps {
   userAvatar?: string;
   onLogout: () => void;
   isAdmin?: boolean;
-  entitlement?: 'free' | 'paid';
+  entitlement?: 'free' | 'trial' | 'paid';
+  trialDaysLeft?: number | null;
   onUpgrade?: () => void;
   upgradeLoading?: boolean;
   userStats?: UserStats;
@@ -103,6 +104,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onLogout,
   isAdmin = false,
   entitlement,
+  trialDaysLeft = null,
   onUpgrade,
   upgradeLoading = false,
   userStats: _userStats,
@@ -114,6 +116,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   const { theme, setTheme } = useTheme();
   const { isVisible, isAtTop } = useScrollDirection();
   const showUpgrade = entitlement !== 'paid' && onUpgrade;
+  const hasProAccess = entitlement === 'paid' || entitlement === 'trial';
   const trimmedUserName = userName?.trim() || '';
   const showAdminIcon = isAdmin && pageTitle === 'Admin Panel';
 
@@ -208,7 +211,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <span 
                   className={cn(
                     "truncate font-semibold tracking-tight",
-                    entitlement === 'paid' && "font-display font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-violet-400 bg-clip-text text-transparent"
+                    hasProAccess && "font-display font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-violet-400 bg-clip-text text-transparent"
                   )}
                 >
                   Multi Poster
@@ -235,12 +238,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     <span>{upgradeLoading ? 'Opening checkout…' : 'Go Unlimited'}</span>
                   </button>
                 )}
-                {entitlement === 'paid' && (
+                {hasProAccess && (
                   <span 
                     className="relative inline-flex items-center text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-gradient-to-r from-violet-500/20 via-purple-500/25 to-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/40 dark:border-violet-400/25 shadow-sm shadow-violet-500/25 overflow-hidden"
-                    aria-label="Pro plan active"
+                    aria-label={entitlement === 'trial' ? 'Pro trial active' : 'Pro plan active'}
                   >
-                    <span className="relative z-10">Pro</span>
+                    <span className="relative z-10">
+                      {entitlement === 'trial' ? `Trial${trialDaysLeft ? ` • ${trialDaysLeft}d` : ''}` : 'Pro'}
+                    </span>
                     <span className="absolute inset-0 animate-pro-shimmer" aria-hidden="true" />
                   </span>
                 )}
