@@ -238,13 +238,16 @@ const HelpPage: React.FC = () => {
         const res = await fetch('/api/admin-check');
         if (res.ok) {
           const data: unknown = await res.json();
+          // Only show admin menu if user is admin by Reddit username (not password)
           if (
             typeof data === 'object' &&
             data !== null &&
-            'isAdmin' in data &&
-            typeof (data as { isAdmin: unknown }).isAdmin === 'boolean'
+            'isAdminByUsername' in data &&
+            (data as { isAdminByUsername: unknown }).isAdminByUsername === true
           ) {
-            setIsAdmin((data as { isAdmin: boolean }).isAdmin);
+            setIsAdmin(true);
+          } else {
+            setIsAdmin(false);
           }
         }
       } catch {

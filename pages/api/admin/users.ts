@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getUserDetails, isAdmin } from '../../../lib/apiAuth';
+import { checkAdminAuth } from '../../../lib/apiAuth';
 import { createServerSupabaseClient } from '../../../lib/supabase';
 import { invalidateEntitlementCache } from '../../../lib/entitlement';
 
@@ -9,14 +9,10 @@ import { invalidateEntitlementCache } from '../../../lib/entitlement';
  * PATCH: Update a user's entitlement (set to 'paid', 'trial', or 'free').
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Verify admin access
-  const { redditUsername } = await getUserDetails(req, res);
+  // Verify admin access (password or Reddit username)
+  const { isAdmin } = await checkAdminAuth(req, res);
   
-  if (!redditUsername) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  if (!isAdmin(redditUsername)) {
+  if (!isAdmin) {
     return res.status(403).json({ error: 'Forbidden - Admin access required' });
   }
 

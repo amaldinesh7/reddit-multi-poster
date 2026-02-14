@@ -205,8 +205,10 @@ export default function Settings() {
 
     const checkAdmin = async () => {
       try {
-        const adminRes = await axios.get<{ isAdmin: boolean }>('/api/admin-check');
-        setIsAdmin(adminRes.data.isAdmin);
+        const adminRes = await axios.get<{ isAdmin: boolean; isAdminByUsername: boolean }>('/api/admin-check');
+        // Only show admin menu if user is admin by Reddit username (not password)
+        // isAdminByUsername is explicitly false for password-only auth
+        setIsAdmin(adminRes.data.isAdminByUsername === true);
       } catch {
         // ignore admin failures
       }
