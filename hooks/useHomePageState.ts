@@ -237,14 +237,14 @@ export const useHomePageState = ({ authMe }: UseHomePageStateProps): UseHomePage
     setCustomTitles(prev => {
       const next = { ...prev };
       subreddits.forEach((subreddit) => {
-        delete next[subreddit];
+        delete next[normalizeSubredditKey(subreddit)];
       });
       return next;
     });
     setContentOverrides(prev => {
       const next = { ...prev };
       subreddits.forEach((subreddit) => {
-        delete next[subreddit];
+        delete next[normalizeSubredditKey(subreddit)];
       });
       return next;
     });

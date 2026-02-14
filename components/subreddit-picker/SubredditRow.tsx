@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { getEligibilityForSubreddit } from '@/lib/preflightValidation';
 import { SubredditRowProps, SubredditRules } from './subredditRow.types';
 import SubredditRowMain from './SubredditRowMain';
 import SubredditRowActions from './SubredditRowActions';
@@ -84,12 +83,6 @@ const SubredditRow = React.memo(({
       label: validationWarnings.length === 1 ? 'Warning' : `${validationWarnings.length} warnings`,
     };
   }, [hasValidationIssues, hasValidationErrors, validationErrors.length, validationWarnings.length]);
-
-  // Preserve existing eligibility computation behavior for parity with prior implementation.
-  useMemo(() => {
-    if (!isSelected) return null;
-    return getEligibilityForSubreddit(name, eligibility, userData, postKind);
-  }, [name, eligibility, userData, postKind, isSelected]);
 
   const handleControlsClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
