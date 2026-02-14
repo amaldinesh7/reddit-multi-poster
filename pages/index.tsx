@@ -1,7 +1,7 @@
 import React from 'react';
 import type { GetServerSideProps } from 'next';
 import dynamic from 'next/dynamic';
-import { Lightbulb, Settings } from 'lucide-react';
+import { Lightbulb, Settings, Loader2, X } from 'lucide-react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import axios from 'axios';
@@ -1115,55 +1115,80 @@ export default function Home() {
                         </div>
                       )}
                       <div className="flex items-center gap-2">
-                        <div className="flex flex-1 items-center">
-                          <Button
-                            onClick={handleReviewAndPostAction}
-                            className="flex-1 cursor-pointer rounded-r-none"
-                            aria-label="Review and post"
-                          >
-                            {reviewCtaMode === 'blocking_validation' ? 'Fix errors to post' : 'Review & post'}
-                          </Button>
-                          <DropdownMenuRoot
-                            open={isMoreActionsOpen}
-                            onOpenChange={(nextOpen) => {
-                              if (isReviewDisabled) {
-                                setIsMoreActionsOpen(false);
-                                return;
-                              }
-                              setIsMoreActionsOpen(nextOpen);
-                            }}
-                          >
-                            <DropdownMenuTrigger asChild>
+                        {/* When posting is in progress, show posting status and Stop button */}
+                        {queueJobHook.state.isProcessing ? (
+                          <>
+                            <Button
+                              disabled
+                              className="flex-1"
+                              aria-label="Posting in progress"
+                            >
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Posting ({queueJobHook.state.currentIndex}/{queueJobHook.state.items.length})
+                            </Button>
+                            <Button
+                              onClick={() => queueJobHook.cancel()}
+                              variant="destructive"
+                              className="cursor-pointer"
+                              aria-label="Stop posting"
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Stop
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex flex-1 items-center">
                               <Button
-                                size="icon"
-                                disabled={isReviewDisabled}
-                                className={cn(
-                                  "h-10 w-10 cursor-pointer rounded-l-none bg-primary text-primary-foreground border border-primary/80 border-l border-l-white/20",
-                                  "hover:bg-primary/90",
-                                  "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary"
-                                )}
-                                aria-label="More actions"
+                                onClick={handleReviewAndPostAction}
+                                className="flex-1 cursor-pointer rounded-r-none"
+                                aria-label="Review and post"
                               >
-                                <ChevronDown className="h-4 w-4" />
+                                {reviewCtaMode === 'blocking_validation' ? 'Fix errors to post' : 'Review & post'}
                               </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItemPrimitive
-                                onClick={handlePostNow}
-                                className="text-sm cursor-pointer"
+                              <DropdownMenuRoot
+                                open={isMoreActionsOpen}
+                                onOpenChange={(nextOpen) => {
+                                  if (isReviewDisabled) {
+                                    setIsMoreActionsOpen(false);
+                                    return;
+                                  }
+                                  setIsMoreActionsOpen(nextOpen);
+                                }}
                               >
-                                Post now
-                              </DropdownMenuItemPrimitive>
-                            </DropdownMenuContent>
-                          </DropdownMenuRoot>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          onClick={handleClearAll}
-                          className="hidden lg:inline-flex h-10 px-3 text-sm font-medium cursor-pointer"
-                        >
-                          Reset
-                        </Button>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    disabled={isReviewDisabled}
+                                    className={cn(
+                                      "h-10 w-10 cursor-pointer rounded-l-none bg-primary text-primary-foreground border border-primary/80 border-l border-l-white/20",
+                                      "hover:bg-primary/90",
+                                      "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary"
+                                    )}
+                                    aria-label="More actions"
+                                  >
+                                    <ChevronDown className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItemPrimitive
+                                    onClick={handlePostNow}
+                                    className="text-sm cursor-pointer"
+                                  >
+                                    Post now
+                                  </DropdownMenuItemPrimitive>
+                                </DropdownMenuContent>
+                              </DropdownMenuRoot>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              onClick={handleClearAll}
+                              className="hidden lg:inline-flex h-10 px-3 text-sm font-medium cursor-pointer"
+                            >
+                              Reset
+                            </Button>
+                          </>
+                        )}
                       </div>
                       {reviewCtaMode === 'missing_essentials' && (
                         <p 

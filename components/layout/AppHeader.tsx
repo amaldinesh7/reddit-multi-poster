@@ -216,15 +216,13 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 >
                   Multi Poster
                 </span>
-                {/* Trial badge - show icon only, positioned after Multi Poster text */}
+                {/* Trial badge - text badge in amber to create urgency */}
                 {entitlement === 'trial' && (
                   <span 
-                    className="relative inline-flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-r from-violet-500/20 via-purple-500/25 to-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/40 dark:border-violet-400/25 shadow-sm shadow-violet-500/25 overflow-hidden"
-                    aria-label={`Pro trial active${trialDaysLeft ? ` - ${trialDaysLeft} days left` : ''}`}
-                    title={`Trial${trialDaysLeft ? ` • ${trialDaysLeft}d left` : ''}`}
+                    className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                    aria-label={`Trial${trialDaysLeft ? ` - ${trialDaysLeft} days left` : ''}`}
                   >
-                    <Infinity className="w-3.5 h-3.5 relative z-10" aria-hidden="true" />
-                    <span className="absolute inset-0 animate-pro-shimmer" aria-hidden="true" />
+                    Trial{trialDaysLeft ? ` • ${trialDaysLeft}d` : ''}
                   </span>
                 )}
                 {/* Pro badge - show full text */}
@@ -267,30 +265,38 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           {/* Desktop: User Stats removed (now shown in sub-header banner) */}
 
           <div className="flex min-w-0 shrink items-center gap-2 sm:gap-3 ml-auto">
-            
-
+            {/* Mobile: Go Unlimited button - icon-only for trial users, full button for free users */}
             {showUpgrade && (
               <button
                 type="button"
                 onClick={onUpgrade}
                 disabled={upgradeLoading}
                 className={cn(
-                  "md:hidden shrink-0 flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer",
+                  "md:hidden shrink-0 flex items-center justify-center cursor-pointer",
                   "disabled:opacity-50 disabled:cursor-not-allowed",
-                  "rounded-md px-3.5 py-1.5 font-semibold",
+                  "rounded-md font-semibold",
                   "text-white border border-violet-700/40",
                   "bg-violet-800/90",
                   "transition-all duration-200",
                   "hover:bg-violet-800",
                   "shadow-[0_0_0_1px_rgba(124,58,237,0.4)]",
                   "hover:shadow-[0_0_0_3px_rgba(124,58,237,0.28)]",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  // Icon-only on mobile when on trial, full button for free users
+                  entitlement === 'trial' 
+                    ? "p-2 min-h-[36px] min-w-[36px]" 
+                    : "gap-1.5 px-3.5 py-1.5 text-xs sm:text-sm"
                 )}
                 aria-label="Go Unlimited"
               >
                 <Infinity className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">{upgradeLoading ? 'Opening checkout…' : 'Go Unlimited'}</span>
-                <span className="sm:hidden">{upgradeLoading ? '…' : 'Go Unlimited'}</span>
+                {/* Show text only for free users (not on trial) */}
+                {entitlement !== 'trial' && (
+                  <>
+                    <span className="hidden sm:inline">{upgradeLoading ? 'Opening checkout…' : 'Go Unlimited'}</span>
+                    <span className="sm:hidden">{upgradeLoading ? '…' : 'Go Unlimited'}</span>
+                  </>
+                )}
               </button>
             )}
             {headerActions}
