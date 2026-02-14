@@ -8,7 +8,7 @@ import axios from 'axios';
 import { checkAuthCookies, redirectToLogin } from '@/lib/serverAuth';
 import * as Sentry from '@sentry/nextjs';
 import MediaUpload from '../components/MediaUpload';
-import PostComposer from '../components/PostComposer';
+import PostComposer, { PostComposerRef } from '../components/PostComposer';
 import { AppLoader, Skeleton, SubredditRowSkeleton, CardSkeleton } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -113,6 +113,7 @@ export default function Home() {
   const [communitiesView, setCommunitiesView] = usePersistentState<'grouped' | 'all'>('rmp_communities_view', 'grouped');
   const [isReviewOpen, setIsReviewOpen] = React.useState(false);
   const postActionRef = React.useRef<(() => void) | null>(null);
+  const postComposerRef = React.useRef<PostComposerRef>(null);
   const [validationState, setValidationState] = React.useState<{
     canSubmit: boolean;
     errors: ValidationIssue[];
@@ -342,7 +343,13 @@ export default function Home() {
   }, []);
 
   const handleReviewAndPostAction = React.useCallback(() => {
-    if (reviewCtaMode === 'missing_essentials') return;
+    if (reviewCtaMode === 'missing_essentials') {
+      // Focus title field if title is missing
+      if (!hasTitle) {
+        postComposerRef.current?.focusTitle();
+      }
+      return;
+    }
 
     if (reviewCtaMode === 'blocking_validation') {
       handleGoToFirstValidationIssue();
@@ -350,7 +357,7 @@ export default function Home() {
     }
 
     handleOpenReview();
-  }, [reviewCtaMode, handleGoToFirstValidationIssue, handleOpenReview]);
+  }, [reviewCtaMode, hasTitle, handleGoToFirstValidationIssue, handleOpenReview]);
 
   const handlePostNow = React.useCallback(() => {
     if (postActionRef.current) {
@@ -757,6 +764,7 @@ export default function Home() {
                 <section className="space-y-4 mb-4">
                   <h3 className="text-base lg:text-lg font-semibold tracking-tight">Title & Body</h3>
                   <PostComposer
+                    ref={postComposerRef}
                     value={caption}
                     onChange={(value) => {
                       setCaption(value);
@@ -924,62 +932,70 @@ export default function Home() {
                           </div>
                         </div>
                       )}
-                      <div className="flex items-center">
-                      <Button
-                        onClick={handleReviewAndPostAction}
-                        disabled={reviewCtaMode === 'missing_essentials'}
-                        className="flex-1 cursor-pointer rounded-r-none"
-                        aria-label="Review and post"
-                      >
-                        {reviewCtaMode === 'blocking_validation' ? 'Fix errors to continue' : 'Review &amp; post'}
-                      </Button>
-                      <DropdownMenuRoot
-                        open={isMoreActionsOpen}
-                        onOpenChange={(nextOpen) => {
-                          if (isReviewDisabled) {
-                            setIsMoreActionsOpen(false);
-                            return;
-                          }
-                          setIsMoreActionsOpen(nextOpen);
-                        }}
-                      >
-                        <DropdownMenuTrigger asChild>
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-1 items-center">
                           <Button
-                            size="icon"
-                            disabled={isReviewDisabled}
-                            className={cn(
-                              "h-10 w-10 cursor-pointer rounded-l-none bg-primary text-primary-foreground border border-primary/80 border-l border-l-white/20",
-                              "hover:bg-primary/90",
-                              "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary"
-                            )}
-                            aria-label="More actions"
+                            onClick={handleReviewAndPostAction}
+                            className="flex-1 cursor-pointer rounded-r-none"
+                            aria-label="Review and post"
                           >
-                            <ChevronDown className="h-4 w-4" />
+                            {reviewCtaMode === 'blocking_validation' ? 'Fix errors to post' : 'Review & post'}
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItemPrimitive
-                            onClick={handlePostNow}
-                            className="text-sm cursor-pointer"
+                          <DropdownMenuRoot
+                            open={isMoreActionsOpen}
+                            onOpenChange={(nextOpen) => {
+                              if (isReviewDisabled) {
+                                setIsMoreActionsOpen(false);
+                                return;
+                              }
+                              setIsMoreActionsOpen(nextOpen);
+                            }}
                           >
-                            Post now
-                          </DropdownMenuItemPrimitive>
-                        </DropdownMenuContent>
-                      </DropdownMenuRoot>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                size="icon"
+                                disabled={isReviewDisabled}
+                                className={cn(
+                                  "h-10 w-10 cursor-pointer rounded-l-none bg-primary text-primary-foreground border border-primary/80 border-l border-l-white/20",
+                                  "hover:bg-primary/90",
+                                  "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary"
+                                )}
+                                aria-label="More actions"
+                              >
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItemPrimitive
+                                onClick={handlePostNow}
+                                className="text-sm cursor-pointer"
+                              >
+                                Post now
+                              </DropdownMenuItemPrimitive>
+                            </DropdownMenuContent>
+                          </DropdownMenuRoot>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          onClick={handleClearAll}
+                          className="hidden lg:inline-flex h-10 px-3 text-sm font-medium cursor-pointer"
+                        >
+                          Reset
+                        </Button>
                       </div>
                       {reviewCtaMode === 'missing_essentials' && (
-                        <p className="text-xs text-muted-foreground">
+                        <p 
+                          className="text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                          onClick={() => {
+                            if (!hasTitle) {
+                              postComposerRef.current?.focusTitle();
+                            }
+                          }}
+                        >
                           Add a title and choose at least one destination.
                         </p>
                       )}
                     </div>
-                    <Button
-                      variant="ghost"
-                      onClick={handleClearAll}
-                      className="hidden lg:inline-flex h-10 px-3 text-sm font-medium cursor-pointer"
-                    >
-                      Reset
-                    </Button>
                   </div>
                   <PostingQueue
                     items={items}
