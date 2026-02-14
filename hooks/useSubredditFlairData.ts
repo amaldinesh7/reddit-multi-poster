@@ -5,6 +5,7 @@ import { useLocalSubredditCache } from './useLocalSubredditCache';
 import { PostRequirements, SubredditEligibility } from '../utils/reddit';
 import { TitleTag, UnifiedSubredditData } from '../types/api';
 import { ParsedRequirements } from '../lib/parseSubredditRequirements';
+import { normalizeSubredditKey } from '@/lib/subredditKey';
 
 export interface SubredditRulesData {
   requiresGenderTag: boolean;
@@ -114,7 +115,7 @@ export const useSubredditFlairData = (options: UseSubredditFlairDataOptions = {}
     subreddit: string, 
     force: boolean = false
   ): Promise<UnifiedSubredditData | null> => {
-    const normalizedName = subreddit.toLowerCase();
+    const normalizedName = normalizeSubredditKey(subreddit);
     
     // Check localStorage cache first
     if (!force) {
@@ -156,14 +157,16 @@ export const useSubredditFlairData = (options: UseSubredditFlairDataOptions = {}
    * Process fetched data and update component state
    */
   const processData = useCallback((subreddit: string, data: UnifiedSubredditData) => {
-    setFlairOptions(prev => ({ ...prev, [subreddit]: data.flairs }));
-    setFlairRequired(prev => ({ ...prev, [subreddit]: data.flairRequired }));
+    const key = normalizeSubredditKey(subreddit);
+
+    setFlairOptions(prev => ({ ...prev, [key]: data.flairs }));
+    setFlairRequired(prev => ({ ...prev, [key]: data.flairRequired }));
     
     // Safely handle missing rules data (can happen with old cached data or API errors)
     if (data.rules) {
       setSubredditRules(prev => ({ 
         ...prev, 
-        [subreddit]: {
+        [key]: {
           requiresGenderTag: data.rules.requiresGenderTag ?? false,
           requiresContentTag: data.rules.requiresContentTag ?? false,
           genderTags: data.rules.genderTags ?? [],
@@ -175,14 +178,14 @@ export const useSubredditFlairData = (options: UseSubredditFlairDataOptions = {}
     }
     
     if (data.postRequirements) {
-      setPostRequirements(prev => ({ ...prev, [subreddit]: data.postRequirements! }));
+      setPostRequirements(prev => ({ ...prev, [key]: data.postRequirements! }));
     }
     
     // Build eligibility data from unified data
-    setEligibilityData(prev => ({ ...prev, [subreddit]: toEligibilityData(data) }));
+    setEligibilityData(prev => ({ ...prev, [key]: toEligibilityData(data) }));
     
     if (data.parsedRequirements) {
-      setParsedRequirements(prev => ({ ...prev, [subreddit]: data.parsedRequirements! }));
+      setParsedRequirements(prev => ({ ...prev, [key]: data.parsedRequirements! }));
     }
   }, []);
 
@@ -190,8 +193,13 @@ export const useSubredditFlairData = (options: UseSubredditFlairDataOptions = {}
    * Load data for a list of subreddits (from cache or fetch)
    */
   const loadFlairData = useCallback(async (subredditsToLoad: string[]) => {
+    const normalizedTargets = Array.from(
+      new Set(subredditsToLoad.map((name) => normalizeSubredditKey(name)).filter(Boolean))
+    );
+    if (normalizedTargets.length === 0) return;
+
     // First, load from localStorage cache
-    const cachedBatch = localCache.getCachedBatch(subredditsToLoad);
+    const cachedBatch = localCache.getCachedBatch(normalizedTargets);
     
     // Process cached data immediately
     cachedBatch.forEach((data, subreddit) => {
@@ -199,9 +207,8 @@ export const useSubredditFlairData = (options: UseSubredditFlairDataOptions = {}
     });
 
     // Find subreddits that need fetching
-    const needsFetching = subredditsToLoad.filter(name => {
-      const normalized = name.toLowerCase();
-      return !cachedBatch.has(normalized) && !loadingStartedRef.current.has(normalized);
+    const needsFetching = normalizedTargets.filter(name => {
+      return !cachedBatch.has(name) && !loadingStartedRef.current.has(name);
     });
 
     if (needsFetching.length === 0) {
@@ -209,10 +216,10 @@ export const useSubredditFlairData = (options: UseSubredditFlairDataOptions = {}
     }
 
     // Mark as loading
-    needsFetching.forEach(name => loadingStartedRef.current.add(name.toLowerCase()));
+    needsFetching.forEach(name => loadingStartedRef.current.add(name));
     
     const loadingUpdate: Record<string, boolean> = {};
-    needsFetching.forEach(name => { loadingUpdate[name.toLowerCase()] = true; });
+    needsFetching.forEach(name => { loadingUpdate[name] = true; });
     setCacheLoading(prev => ({ ...prev, ...loadingUpdate }));
 
     // Fetch in batches to avoid overwhelming the API
@@ -246,7 +253,7 @@ export const useSubredditFlairData = (options: UseSubredditFlairDataOptions = {}
 
       // Clear loading state for this batch
       const loadingClear: Record<string, boolean> = {};
-      batch.forEach(name => { loadingClear[name.toLowerCase()] = false; });
+      batch.forEach(name => { loadingClear[name] = false; });
       setCacheLoading(prev => ({ ...prev, ...loadingClear }));
 
       // Small delay between batches to avoid rate limiting
@@ -287,19 +294,22 @@ export const useSubredditFlairData = (options: UseSubredditFlairDataOptions = {}
   
   useEffect(() => {
     if (selectedSubreddits.length === 0 || !isLoaded) return;
+
+    const selectedCanonical = Array.from(
+      new Set(selectedSubreddits.map((subreddit) => normalizeSubredditKey(subreddit)).filter(Boolean))
+    );
     
     // Find newly selected subreddits that aren't in cache
-    const newlySelected = selectedSubreddits.filter(sub => {
-      const normalized = sub.toLowerCase();
-      return !localCache.hasFreshCache(normalized);
+    const newlySelected = selectedCanonical.filter(sub => {
+      return !localCache.hasFreshCache(sub);
     });
     
     // Check if we have new selections
-    const hasNewSelections = selectedSubreddits.some(
+    const hasNewSelections = selectedCanonical.some(
       sub => !previousSelectedRef.current.includes(sub)
     );
     
-    previousSelectedRef.current = selectedSubreddits;
+    previousSelectedRef.current = selectedCanonical;
     
     if (newlySelected.length > 0 && hasNewSelections) {
       // Debounce slightly to avoid rapid-fire requests during multi-select
@@ -320,14 +330,17 @@ export const useSubredditFlairData = (options: UseSubredditFlairDataOptions = {}
 
   // Reload flair data for selected subreddits (force refresh)
   const reloadSelectedData = useCallback(async (selected: string[]) => {
-    if (selected.length === 0 || isReloading) return;
+    const selectedCanonical = Array.from(
+      new Set(selected.map((subreddit) => normalizeSubredditKey(subreddit)).filter(Boolean))
+    );
+    if (selectedCanonical.length === 0 || isReloading) return;
 
     setIsReloading(true);
 
     try {
       const batchSize = 3;
-      for (let i = 0; i < selected.length; i += batchSize) {
-        const batch = selected.slice(i, i + batchSize);
+      for (let i = 0; i < selectedCanonical.length; i += batchSize) {
+        const batch = selectedCanonical.slice(i, i + batchSize);
 
         const batchPromises = batch.map(async (subreddit) => {
           try {
@@ -352,7 +365,7 @@ export const useSubredditFlairData = (options: UseSubredditFlairDataOptions = {}
           }
         });
 
-        if (i + batchSize < selected.length) {
+        if (i + batchSize < selectedCanonical.length) {
           await new Promise(resolve => setTimeout(resolve, 500));
         }
       }

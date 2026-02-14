@@ -6,6 +6,7 @@ import { PostRequirements, SubredditEligibility, RedditUser } from '@/utils/redd
 import { FailedPost } from '@/hooks/useFailedPosts';
 import { ValidationIssue } from '@/lib/preflightValidation';
 import { PerSubredditOverride } from './CustomizePostDialog';
+import { normalizeSubredditKey } from '@/lib/subredditKey';
 
 interface CategoryData {
   categoryName: string;
@@ -149,21 +150,22 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
             {isExpanded && (
               <div className="space-y-2">
                 {subreddits.map((name) => {
+                  const key = normalizeSubredditKey(name);
                   const hasError = !!(showValidationErrors && hasMissingFlair(name));
-                  const failedPost = failedPostsBySubreddit?.[name.toLowerCase()];
+                  const failedPost = failedPostsBySubreddit?.[key];
                   return (
                     <SubredditRow
                       key={name}
                       name={name}
                       hasError={hasError}
                       isSelected={selected.includes(name)}
-                      isLoading={cacheLoading[name.toLowerCase()]}
-                      flairRequired={flairRequired[name]}
-                      flairOptions={flairOptions[name] || []}
-                      subredditRules={subredditRules[name]}
-                      postRequirements={postRequirements[name]}
-                      titleSuffix={titleSuffixValue[name]}
-                      flairValue={flairValue[name]}
+                      isLoading={cacheLoading[key]}
+                      flairRequired={flairRequired[key]}
+                      flairOptions={flairOptions[key] || []}
+                      subredditRules={subredditRules[key]}
+                      postRequirements={postRequirements[key]}
+                      titleSuffix={titleSuffixValue[key]}
+                      flairValue={flairValue[key]}
                       onToggle={onToggle}
                       onFlairChange={onFlairChange}
                       onTitleSuffixChange={onTitleSuffixChange}
@@ -175,7 +177,7 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
                       contentOverride={contentOverrides?.[name]}
                       onCustomize={onCustomize}
                       customizationEnabled={customizationEnabled}
-                      eligibility={eligibilityData?.[name]}
+                      eligibility={eligibilityData?.[key]}
                       userData={userData}
                       postKind={postKind}
                     />
