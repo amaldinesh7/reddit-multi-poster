@@ -88,7 +88,7 @@ const NativeSelect = React.forwardRef<HTMLSelectElement, NativeSelectProps>(
           {...props}
         >
           {placeholder && (
-            <option value="" disabled>
+            <option value="" disabled={!value}>
               {placeholder}
             </option>
           )}

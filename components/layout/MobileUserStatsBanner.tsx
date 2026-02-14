@@ -41,8 +41,9 @@ const getEligibilityStatus = (stats: UserStats): 'good' | 'warning' | 'error' =>
 /**
  * Custom hook for scroll-aware visibility
  * Hides the banner when scrolling down, shows when at top
+ * Applies to all screen sizes
  */
-const useMobileStatsVisibility = () => {
+const useStatsVisibility = () => {
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
   const lastVisible = useRef(true);
@@ -53,16 +54,6 @@ const useMobileStatsVisibility = () => {
 
     const updateVisibility = () => {
       const scrollY = window.scrollY;
-      
-      // Only apply scroll-hide on mobile
-      if (window.innerWidth >= 768) {
-        if (!lastVisible.current) {
-          lastVisible.current = true;
-          setIsVisible(true);
-        }
-        ticking.current = false;
-        return;
-      }
 
       // Show when at top or near top
       if (scrollY < hideThreshold && !lastVisible.current) {
@@ -85,28 +76,10 @@ const useMobileStatsVisibility = () => {
       }
     };
 
-    // Also handle resize
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        if (!lastVisible.current) {
-          lastVisible.current = true;
-          setIsVisible(true);
-        }
-      } else if (window.scrollY < 50 && !lastVisible.current) {
-        lastVisible.current = true;
-        setIsVisible(true);
-      }
-    };
-
-    // Initial check
-    handleResize();
-
     window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleResize, { passive: true });
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -117,7 +90,7 @@ export const MobileUserStatsBanner: React.FC<MobileUserStatsBannerProps> = ({
   userStats,
   className,
 }) => {
-  const isVisible = useMobileStatsVisibility();
+  const isVisible = useStatsVisibility();
 
   if (!userStats) return null;
 

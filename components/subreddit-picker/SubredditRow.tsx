@@ -98,7 +98,8 @@ const SubredditRow = React.memo(({
       if (!isCustomSuffix) {
         onTitleSuffixChange(name, '');
       }
-    } else if (value === '__none__') {
+    } else if (value === '' || value === '__none__') {
+      // Clear selection (empty = placeholder selected)
       setShowCustomInput(false);
       onTitleSuffixChange(name, '');
     } else {
@@ -128,7 +129,7 @@ const SubredditRow = React.memo(({
       }`}
       data-subreddit-row={name}
     >
-      <div className="flex items-center justify-between px-3 sm:px-4 py-4 sm:py-3.5 transition-all duration-75 gap-2">
+      <div className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-2.5 transition-all duration-75 gap-2">
         <SubredditRowMain
           name={name}
           hasError={hasError}

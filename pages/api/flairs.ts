@@ -37,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ]);
     
     // Use is_flair_required from post_requirements as the authoritative source
-    const required = postRequirements.is_flair_required === true;
+    const required = 'is_flair_required' in postRequirements && postRequirements.is_flair_required === true;
     
     addApiBreadcrumb('Flairs fetched', { subreddit, flairCount: flairsResult.flairs.length, required });
     
