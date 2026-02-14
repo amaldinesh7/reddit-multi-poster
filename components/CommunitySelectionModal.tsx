@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
-import { Crown, Loader2 } from 'lucide-react';
+import { Crown, Loader2, X } from 'lucide-react';
 import { trackEvent } from '@/lib/posthog';
 import { usePricing } from '@/hooks/usePricing';
 import ConfirmDialog, { useConfirmDialog } from './ui/confirm-dialog';
@@ -15,6 +14,7 @@ interface Community {
 
 interface CommunitySelectionModalProps {
   open: boolean;
+  onOpenChange?: (open: boolean) => void;
   communities: Community[];
   onConfirm: (selectedIds: string[]) => Promise<void>;
   onUpgrade: () => void;
@@ -38,6 +38,7 @@ const useIsMobile = () => {
 
 const CommunitySelectionModal: React.FC<CommunitySelectionModalProps> = ({
   open,
+  onOpenChange,
   communities,
   onConfirm,
   onUpgrade,
@@ -127,13 +128,17 @@ const CommunitySelectionModal: React.FC<CommunitySelectionModalProps> = ({
   const isBusy = isSubmitting || isLoading;
   const remaining = maxToKeep - selectedCount;
 
+  const handleClose = () => {
+    onOpenChange?.(false);
+  };
+
   // Shared content for both mobile drawer and desktop modal
   const modalContent = (
     <>
       {/* Header */}
       <div className="px-5 pt-2 pb-4">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1 min-w-0">
             <h2 className="text-lg font-semibold tracking-tight">
               Choose {maxToKeep} to keep
             </h2>
@@ -141,9 +146,16 @@ const CommunitySelectionModal: React.FC<CommunitySelectionModalProps> = ({
               Free plan limit reached
             </p>
           </div>
-          <span className={`text-sm tabular-nums ${canConfirm ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+          <span className={`text-sm tabular-nums shrink-0 ${canConfirm ? 'text-emerald-400' : 'text-muted-foreground'}`}>
             {selectedCount} of {maxToKeep}
           </span>
+          <button
+            onClick={handleClose}
+            className="h-8 w-8 shrink-0 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
@@ -229,30 +241,42 @@ const CommunitySelectionModal: React.FC<CommunitySelectionModalProps> = ({
     </>
   );
 
-  // Mobile: Bottom drawer
+  // Mobile: Use same modal approach but styled as bottom sheet for consistency
+  // z-[105] is above MobileStickyQueue (z-[100]) but below profile sheet (z-[110])
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={() => {}}>
-        <DrawerContent className="h-[85dvh] max-h-[85dvh]">
-          <div className="flex h-full min-h-0 flex-col">
-            {/* Drag handle */}
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
-            </div>
-            <DrawerTitle className="sr-only">Choose communities to keep</DrawerTitle>
-            {modalContent}
+      <div className="fixed inset-0 z-[105] flex flex-col justify-end">
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm cursor-pointer"
+          onClick={handleClose}
+          aria-hidden="true"
+        />
+
+        {/* Bottom sheet */}
+        <div
+          className="relative z-10 w-full bg-background rounded-t-2xl border-t border-border/50 flex flex-col max-h-[85dvh] animate-in slide-in-from-bottom-4 duration-200"
+          role="dialog"
+          aria-modal="true"
+        >
+          {/* Drag handle */}
+          <div className="flex justify-center pt-3 pb-1">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
           </div>
-        </DrawerContent>
-      </Drawer>
+          {modalContent}
+        </div>
+      </div>
     );
   }
 
   // Desktop/Tablet: Centered modal
+  // z-[105] is above MobileStickyQueue (z-[100]) but below profile sheet (z-[110])
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop - no click to close (blocking modal) */}
+    <div className="fixed inset-0 z-[105] flex items-center justify-center p-4">
+      {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm cursor-pointer"
+        onClick={handleClose}
         aria-hidden="true"
       />
 
