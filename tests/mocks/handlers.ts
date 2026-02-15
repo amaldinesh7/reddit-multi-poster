@@ -27,17 +27,19 @@ export const mockResponses = {
   },
 
   /**
-   * Mock response for /api/settings/categories endpoint
+   * Mock response for /api/settings/categories endpoint (matches real API shape)
    */
   categoriesDefault: {
-    categories: testData.categories.default,
+    success: true,
+    data: testData.categories.default,
   },
 
   /**
    * Mock response for /api/settings/categories endpoint - empty
    */
   categoriesEmpty: {
-    categories: [],
+    success: true,
+    data: [],
   },
 
   /**
@@ -220,14 +222,17 @@ export const setupMockRoutes = async (page: Page): Promise<void> => {
     } else if (method === 'POST') {
       // Return a new category
       await route.fulfill({
-        status: 200,
+        status: 201,
         contentType: 'application/json',
         body: JSON.stringify({
-          id: `cat-new-${Date.now()}`,
-          name: 'New Category',
-          position: testData.categories.default.length,
-          collapsed: false,
-          user_subreddits: [],
+          success: true,
+          data: {
+            id: `cat-new-${Date.now()}`,
+            name: 'New Category',
+            position: testData.categories.default.length,
+            collapsed: false,
+            user_subreddits: [],
+          },
         }),
       });
     } else {
@@ -240,7 +245,7 @@ export const setupMockRoutes = async (page: Page): Promise<void> => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ success: true }),
+      body: JSON.stringify({ success: true, data: {} }),
     });
   });
 
@@ -249,7 +254,7 @@ export const setupMockRoutes = async (page: Page): Promise<void> => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ success: true }),
+      body: JSON.stringify({ success: true, data: {} }),
     });
   });
 
@@ -258,7 +263,7 @@ export const setupMockRoutes = async (page: Page): Promise<void> => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ success: true }),
+      body: JSON.stringify({ success: true, data: {} }),
     });
   });
 

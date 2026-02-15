@@ -53,7 +53,7 @@ export const test = base.extend<AuthFixtures>({
       },
       {
         name: 'supabase_user_id',
-        value: process.env.TEST_SUPABASE_USER_ID || 'test-user-uuid-12345',
+        value: process.env.TEST_SUPABASE_USER_ID || '00000000-0000-0000-0000-000000000001',
         domain: 'localhost',
         path: '/',
         httpOnly: true,

@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "demo:video": "NEXT_PUBLIC_QUEUE_DEMO_MODE=1 npx playwright test -c playwright.demo.config.ts tests/demo/product-hunt-demo.spec.ts --project=chromium --workers=1 --headed",
+    "demo:export": "node scripts/export-demo-video.cjs",
     "test:contracts": "playwright test tests/contracts --project=chromium",
     "test:e2e:flow": "playwright test tests/flows --project=chromium --grep \"@flow-core|@flow-edge\"",
     "test:e2e:regression": "playwright test --project=chromium --grep \"@flow-regression\"",

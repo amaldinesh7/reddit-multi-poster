@@ -1,0 +1,28 @@
+1
+00:00:00,000 --> 00:00:03,000
+Post once. Reach 30+ communities.
+
+2
+00:00:03,000 --> 00:00:09,000
+Copy/paste. Select flair. Repeat.\nRisk getting flagged if you post too quickly.
+
+3
+00:00:09,000 --> 00:00:18,000
+Paste your media link.\nAdd a title.
+
+4
+00:00:18,000 --> 00:00:30,000
+Pick 2–3 communities.\nHit “Start Posting”.
+
+5
+00:00:30,000 --> 00:00:43,000
+Watch the queue update in real time.\nAll done.
+
+6
+00:00:43,000 --> 00:00:53,000
+Stop copy-pasting.\nStart creating.
+
+7
+00:00:53,000 --> 00:01:00,000
+Try it now: reddit-multi-poster.vercel.app
+

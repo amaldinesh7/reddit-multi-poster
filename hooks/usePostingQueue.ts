@@ -123,6 +123,10 @@ export const usePostingQueue = ({
   hasFlairErrors,
   onPostAttempt,
 }: UsePostingQueueProps): UsePostingQueueReturn => {
+  const isQueueDemoModeEnabled =
+    process.env.NEXT_PUBLIC_QUEUE_DEMO_MODE === 'true' ||
+    process.env.NEXT_PUBLIC_QUEUE_DEMO_MODE === '1';
+
   // Core state
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [running, setRunning] = useState(false);
@@ -179,6 +183,7 @@ export const usePostingQueue = ({
     ));
 
     const hasFiles = batch.some(item => item.file || (item.files && item.files.length > 0));
+    const queueEndpoint = isQueueDemoModeEnabled && !hasFiles ? '/api/queue/demo' : '/api/queue';
 
     let res: Response;
     try {
@@ -207,13 +212,13 @@ export const usePostingQueue = ({
           formData.append('sharedFileCount', sharedFiles.length.toString());
         }
 
-        res = await fetch('/api/queue', {
+        res = await fetch(queueEndpoint, {
           method: 'POST',
           body: formData,
           signal: controller.signal,
         });
       } else {
-        res = await fetch('/api/queue', {
+        res = await fetch(queueEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ items: batch, caption, prefixes }),

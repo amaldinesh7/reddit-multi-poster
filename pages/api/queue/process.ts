@@ -47,10 +47,70 @@ export default async function handler(
   }
 
   try {
+    const demoHeader = req.headers['x-rmp-demo'];
+    const demoHeaderValue = Array.isArray(demoHeader) ? demoHeader[0] : demoHeader;
+    const isDemoRequest =
+      (process.env.NEXT_PUBLIC_QUEUE_DEMO_MODE === 'true' ||
+        process.env.NEXT_PUBLIC_QUEUE_DEMO_MODE === '1') &&
+      demoHeaderValue === '1' &&
+      jobId.startsWith('demo_');
+
     // Get user ID
     const userId = await getUserId(req, res);
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (isDemoRequest) {
+      addApiBreadcrumb('Demo queue processing started', { jobId });
+
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('Connection', 'keep-alive');
+      res.flushHeaders?.();
+
+      const write = (update: JobProgressUpdate) => {
+        res.write(JSON.stringify(update) + '\n');
+        if ('flush' in res && typeof res.flush === 'function') {
+          res.flush();
+        }
+      };
+
+      const sleep = async (ms: number): Promise<void> => {
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, ms);
+        });
+      };
+
+      const demoSubreddits = ['pics', 'images', 'gifs'];
+      write({ type: 'status', jobId, status: 'processing', currentIndex: 0 });
+      await sleep(700);
+
+      for (let index = 0; index < demoSubreddits.length; index++) {
+        const subreddit = demoSubreddits[index];
+
+        write({ type: 'progress', jobId, currentIndex: index });
+        await sleep(900);
+
+        const result: QueueJobResult = {
+          index,
+          subreddit,
+          status: 'success',
+          url: `https://reddit.com/r/${subreddit}/comments/demo${index}`,
+          postedAt: new Date().toISOString(),
+        };
+        write({ type: 'result', jobId, result });
+        await sleep(700);
+
+        if (index < demoSubreddits.length - 1) {
+          write({ type: 'waiting', jobId, waitSeconds: 2 });
+          await sleep(2000);
+        }
+      }
+
+      write({ type: 'complete', jobId });
+      res.end();
+      return;
     }
 
     // Get the job

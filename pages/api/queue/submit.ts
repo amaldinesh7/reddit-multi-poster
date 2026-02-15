@@ -47,6 +47,13 @@ export default async function handler(
   }
 
   try {
+    const demoHeader = req.headers['x-rmp-demo'];
+    const demoHeaderValue = Array.isArray(demoHeader) ? demoHeader[0] : demoHeader;
+    const isDemoRequest =
+      (process.env.NEXT_PUBLIC_QUEUE_DEMO_MODE === 'true' ||
+        process.env.NEXT_PUBLIC_QUEUE_DEMO_MODE === '1') &&
+      demoHeaderValue === '1';
+
     // Get user ID
     const userId = await getUserId(req, res);
     if (!userId) {
@@ -73,15 +80,6 @@ export default async function handler(
       return res.status(400).json({ success: false, error: 'Items must be a non-empty array' });
     }
 
-    // Only enforce limit for FREE users - paid users have no limit
-    const entitlement = await getEntitlement(userId);
-    if (entitlement === 'free' && parsedItems.length > FREE_MAX_POST_ITEMS) {
-      return res.status(400).json({
-        success: false,
-        error: `Free plan allows posting to ${FREE_MAX_POST_ITEMS} subreddits at once. Upgrade for unlimited.`,
-      });
-    }
-
     // Extract caption and prefixes
     const caption = Array.isArray(fields.caption) ? fields.caption[0] : fields.caption || '';
     const prefixesJson = Array.isArray(fields.prefixes) ? fields.prefixes[0] : fields.prefixes;
@@ -94,6 +92,38 @@ export default async function handler(
       }
     }
 
+    // Get shared file count from form data
+    const sharedFileCountField = Array.isArray(fields.sharedFileCount) 
+      ? fields.sharedFileCount[0] 
+      : fields.sharedFileCount;
+    const sharedFileCount = sharedFileCountField ? parseInt(sharedFileCountField as string) : 0;
+
+    // Demo-only short-circuit: never upload files or create DB jobs.
+    // NOTE: This must happen before entitlement/DB checks to keep demo capture safe/deterministic.
+    if (isDemoRequest) {
+      if (sharedFileCount > 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Demo mode does not support file uploads.',
+        });
+      }
+
+      addApiBreadcrumb('Demo queue job submitted', { itemCount: parsedItems.length });
+      return res.status(200).json({
+        success: true,
+        jobId: `demo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      });
+    }
+
+    // Only enforce limit for FREE users - paid users have no limit
+    const entitlement = await getEntitlement(userId);
+    if (entitlement === 'free' && parsedItems.length > FREE_MAX_POST_ITEMS) {
+      return res.status(400).json({
+        success: false,
+        error: `Free plan allows posting to ${FREE_MAX_POST_ITEMS} subreddits at once. Upgrade for unlimited.`,
+      });
+    }
+
     // Generate meaningful folder path for file uploads
     // Format: {username}/{date}/job_{shortId}/
     const redditUsername = req.cookies['reddit_username'] || 'unknown';
@@ -104,12 +134,6 @@ export default async function handler(
     // Process shared files (uploaded once, used by all items)
     const filePaths: QueueFileReference[] = [];
     const jobItems: QueueJobItem[] = [];
-
-    // Get shared file count from form data
-    const sharedFileCountField = Array.isArray(fields.sharedFileCount) 
-      ? fields.sharedFileCount[0] 
-      : fields.sharedFileCount;
-    const sharedFileCount = sharedFileCountField ? parseInt(sharedFileCountField as string) : 0;
 
     // Upload shared files once (itemIndex = -1 indicates shared files)
     for (let fileIndex = 0; fileIndex < sharedFileCount; fileIndex++) {

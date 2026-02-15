@@ -119,6 +119,12 @@ const initialState: QueueJobState = {
   endedAtMs: null,
 };
 
+const isQueueDemoModeEnabled =
+  process.env.NEXT_PUBLIC_QUEUE_DEMO_MODE === 'true' ||
+  process.env.NEXT_PUBLIC_QUEUE_DEMO_MODE === '1';
+
+const demoHeaders = isQueueDemoModeEnabled ? { 'x-rmp-demo': '1' } : undefined;
+
 const isTerminalStatus = (status: QueueJobStatus | null): boolean =>
   status === 'completed' || status === 'failed' || status === 'cancelled';
 
@@ -245,6 +251,7 @@ export function useQueueJob(): UseQueueJobReturn {
     try {
       const response = await fetch(`/api/queue/process?jobId=${jobId}`, {
         method: 'POST',
+        headers: demoHeaders,
         signal: abortControllerRef.current.signal,
       });
 
@@ -433,6 +440,7 @@ export function useQueueJob(): UseQueueJobReturn {
       // Submit to API
       const response = await fetch('/api/queue/submit', {
         method: 'POST',
+        headers: demoHeaders,
         body: formData,
       });
 
@@ -459,7 +467,9 @@ export function useQueueJob(): UseQueueJobReturn {
       }));
 
       // Subscribe to updates and start processing
-      subscribeToJob(jobId);
+      if (!isQueueDemoModeEnabled) {
+        subscribeToJob(jobId);
+      }
       startPolling(jobId);
 
       return jobId;
@@ -539,6 +549,7 @@ export function useQueueJob(): UseQueueJobReturn {
 
       const response = await fetch(`/api/queue/cancel/${jobId}`, {
         method: 'POST',
+        headers: demoHeaders,
       });
 
       const data = await response.json();
@@ -575,7 +586,9 @@ export function useQueueJob(): UseQueueJobReturn {
 
   const resumeJob = useCallback(async (jobId: string): Promise<void> => {
     try {
-      const response = await fetch(`/api/queue/status/${jobId}`);
+      const response = await fetch(`/api/queue/status/${jobId}`, {
+        headers: demoHeaders,
+      });
       const data = await response.json();
 
       if (!response.ok || !data.job) {
