@@ -69,6 +69,103 @@ export const mockResponses = {
       required: false,
     };
   },
+  generateCopy: (kind: 'title' | 'description') => ({
+    success: true,
+    data: {
+      options:
+        kind === 'title'
+          ? [
+              'AI title option one',
+              'AI title option two',
+              'AI title option three',
+            ]
+          : [
+              'AI description option one',
+              'AI description option two',
+              'AI description option three',
+            ],
+      provider: 'fallback',
+      fallbackUsed: true,
+    },
+  }),
+};
+
+type QueueOutcome = 'success' | 'error';
+
+const DEFAULT_DEMO_JOB_ID = 'demo_job_1';
+
+const buildQueueProcessStreamResponse = (
+  subreddits: string[],
+  outcomes: QueueOutcome[] = [],
+  jobId: string = DEFAULT_DEMO_JOB_ID
+): string => {
+  const lines: string[] = [
+    JSON.stringify({
+      type: 'status',
+      jobId,
+      status: 'processing',
+      currentIndex: 0,
+    }),
+  ];
+
+  subreddits.forEach((subreddit, index) => {
+    lines.push(
+      JSON.stringify({
+        type: 'progress',
+        jobId,
+        currentIndex: index,
+      })
+    );
+
+    const outcome = outcomes[index] ?? 'success';
+    if (outcome === 'success') {
+      lines.push(
+        JSON.stringify({
+          type: 'result',
+          jobId,
+          result: {
+            index,
+            subreddit,
+            status: 'success',
+            url: `https://reddit.com/r/${subreddit}/comments/test${index}`,
+            postedAt: new Date().toISOString(),
+          },
+        })
+      );
+    } else {
+      lines.push(
+        JSON.stringify({
+          type: 'result',
+          jobId,
+          result: {
+            index,
+            subreddit,
+            status: 'error',
+            error: 'Post failed',
+          },
+        })
+      );
+    }
+
+    if (index < subreddits.length - 1) {
+      lines.push(
+        JSON.stringify({
+          type: 'waiting',
+          jobId,
+          waitSeconds: 2,
+        })
+      );
+    }
+  });
+
+  lines.push(
+    JSON.stringify({
+      type: 'complete',
+      jobId,
+    })
+  );
+
+  return lines.join('\n');
 };
 
 type QueueOutcome = 'success' | 'error';
@@ -375,6 +472,18 @@ export const setupMockRoutes = async (page: Page): Promise<void> => {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ success: true }),
+    });
+  });
+
+  // Mock /api/ai/generate-copy endpoint
+  await page.route('**/api/ai/generate-copy', async (route: Route) => {
+    const body = route.request().postDataJSON() as { kind?: 'title' | 'description' } | null;
+    const kind = body?.kind === 'description' ? 'description' : 'title';
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(mockResponses.generateCopy(kind)),
     });
   });
 };

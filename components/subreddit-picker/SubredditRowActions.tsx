@@ -23,6 +23,7 @@ import {
   DropdownMenuItemPrimitive,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip } from '@/components/ui/tooltip';
+import { ProUpgradeHint } from '@/components/ui/pro-upgrade-hint';
 import { FailedPost } from '@/hooks/useFailedPosts';
 import { ClassifiedError } from '@/lib/errorClassification';
 import { ValidationIssue } from '@/lib/preflightValidation';
@@ -262,6 +263,22 @@ const SubredditRowActions: React.FC<SubredditRowActionsProps> = ({
             <SlidersHorizontal className="h-3.5 w-3.5" />
           </button>
         </Tooltip>
+      )}
+
+      {showCustomizeButton && !customizationEnabled && (
+        <ProUpgradeHint
+          feature="Custom title & description"
+          side="left"
+          onUpgrade={onRequestUpgrade ? () => onRequestUpgrade() : undefined}
+        >
+          <button
+            type="button"
+            className="p-1.5 rounded-md cursor-pointer transition-colors text-muted-foreground/50"
+            aria-label="Customize content - Pro feature"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+          </button>
+        </ProUpgradeHint>
       )}
     </div>
   );

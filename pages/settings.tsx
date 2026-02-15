@@ -10,6 +10,7 @@ import { useLocalSubredditCache } from '../hooks/useLocalSubredditCache';
 import { useAuth } from '../hooks/useAuth';
 import { useSettingsDnd } from '../hooks/useSettingsDnd';
 import { searchSubreddits as searchSubredditsAPI } from '../lib/api/reddit';
+import { captureClientError } from '../lib/clientErrorHandler';
 import UpgradeModal from '../components/UpgradeModal';
 import TrialEndedModal from '../components/TrialEndedModal';
 import CommunitySelectionModal from '../components/CommunitySelectionModal';
@@ -155,12 +156,24 @@ export default function Settings() {
     }
   }, [refreshAuth]);
 
+  const allSubredditsWithCategory = React.useMemo(
+    () => getAllSubredditsWithCategory(),
+    [getAllSubredditsWithCategory]
+  );
+
   // Handle community selection confirmation (when trial ends and user has >5 communities)
   const handleCommunitySelectionConfirm = React.useCallback(async (selectedIds: string[]) => {
-    const success = await bulkDeleteExcept(selectedIds);
-    if (success) {
-      setShowCommunitySelectionModal(false);
-      await refresh(); // Refresh the data after deletion
+    try {
+      const success = await bulkDeleteExcept(selectedIds);
+      if (success) {
+        setShowCommunitySelectionModal(false);
+        await refresh(); // Refresh the data after deletion
+      }
+    } catch (error) {
+      captureClientError(error, 'settings.handleCommunitySelectionConfirm', {
+        toastTitle: 'Failed to save selection',
+        userMessage: 'Could not remove communities. Please try again.',
+      });
     }
   }, [bulkDeleteExcept, refresh]);
 
@@ -680,7 +693,7 @@ export default function Settings() {
         <CommunitySelectionModal
           open={showCommunitySelectionModal}
           onOpenChange={setShowCommunitySelectionModal}
-          communities={getAllSubredditsWithCategory()}
+          communities={allSubredditsWithCategory}
           onConfirm={handleCommunitySelectionConfirm}
           onUpgrade={handleUpgrade}
           maxToKeep={maxSubreddits}

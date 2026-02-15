@@ -7,9 +7,9 @@ import { trackServerEvent } from '../../../lib/posthog-server';
 const TRIAL_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// For testing: 1 minute trial (set USE_TEST_DURATION to true for testing)
+// Test duration is controlled via the USE_TEST_TRIAL_DURATION env var (never hardcoded)
 const TEST_TRIAL_DURATION_MS = 1 * 60 * 1000; // 1 minute
-const USE_TEST_DURATION = false; // Set to true only for testing
+const USE_TEST_DURATION = process.env.USE_TEST_TRIAL_DURATION === 'true';
 
 interface TrialUserRow {
   entitlement: string;
