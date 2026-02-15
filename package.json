@@ -22,7 +22,8 @@
     "db:reset": "npx supabase db reset",
     "db:push": "npx supabase db push",
     "db:types": "npx supabase gen types typescript --local > types/database.ts",
-    "db:studio": "open http://127.0.0.1:54323"
+    "db:studio": "open http://127.0.0.1:54323",
+    "fetch-reviews": "bash scripts/fetch-coderabbit-reviews.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
