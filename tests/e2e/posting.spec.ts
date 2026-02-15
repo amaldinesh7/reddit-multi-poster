@@ -4,6 +4,7 @@ import {
   setupMockRoutes,
   setupQueueMockSuccess,
   setupQueueMockMixed,
+  setupQueueMockHanging,
   setupQueueMockNetworkError,
   setupQueueMockUnauthorized,
   mockResponses,
@@ -23,6 +24,26 @@ import {
 test.describe('Multi-Subreddit Posting', () => {
   test.beforeEach(async ({ authenticatedPage }) => {
     await setupMockRoutes(authenticatedPage);
+  });
+
+  test('global title AI flow applies selected option', async ({ authenticatedPage }) => {
+    await authenticatedPage.goto('/');
+
+    const aiButton = authenticatedPage.getByRole('button', { name: /generate title options with ai/i });
+    await expect(aiButton).toBeVisible();
+    await aiButton.click();
+
+    await expect(authenticatedPage.getByText('AI Title Generator')).toBeVisible();
+
+    await authenticatedPage.getByLabel('Optional brief').fill('Make it practical and short');
+    await authenticatedPage.getByRole('button', { name: /generate 3 options/i }).click();
+    await expect(authenticatedPage.getByText('fallback')).toBeVisible();
+
+    const option = authenticatedPage.getByRole('button', { name: 'AI title option two' });
+    await expect(option).toBeVisible();
+    await option.click();
+
+    await expect(authenticatedPage.getByPlaceholder(/post title/i)).toHaveValue('AI title option two');
   });
 
   test('home page displays post composer correctly', async ({ authenticatedPage }) => {
@@ -205,15 +226,7 @@ test.describe('Posting Queue Flow', () => {
     await authenticatedPage.getByRole('checkbox', { name: /images/i }).check();
     
     // Setup a slow mock that we can cancel
-    await authenticatedPage.route('**/api/queue', async route => {
-      // Send started but then hang
-      await route.fulfill({
-        status: 200,
-        contentType: 'text/plain',
-        body: JSON.stringify({ status: 'started', total: 2 }) + '\n' +
-              JSON.stringify({ index: 0, status: 'posting', subreddit: 'pics' }) + '\n',
-      });
-    });
+    await setupQueueMockHanging(authenticatedPage);
     
     // Click post button
     await authenticatedPage.getByRole('button', { name: /post to 2 communit/i }).click();

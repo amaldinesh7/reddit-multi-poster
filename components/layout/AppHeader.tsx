@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { ChevronDown, User, Settings, LogOut, Shield, Sun, Moon, Monitor, Infinity, ArrowLeft, HelpCircle } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
-import type { Theme } from '@/contexts/ThemeContext';
+import { ChevronDown, User, Settings, LogOut, Shield, Infinity, ArrowLeft, HelpCircle } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -18,9 +17,10 @@ interface UserStats {
 interface AppHeaderProps {
   userName?: string;
   userAvatar?: string;
-  onLogout: () => void;
+  onLogout?: () => void;
   isAdmin?: boolean;
-  entitlement?: 'free' | 'paid';
+  entitlement?: 'free' | 'trial' | 'paid';
+  trialDaysLeft?: number | null;
   onUpgrade?: () => void;
   upgradeLoading?: boolean;
   userStats?: UserStats;
@@ -103,6 +103,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onLogout,
   isAdmin = false,
   entitlement,
+  trialDaysLeft = null,
   onUpgrade,
   upgradeLoading = false,
   userStats: _userStats,
@@ -111,22 +112,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   showBackButton = false,
   onBack,
 }) => {
-  const { theme, setTheme } = useTheme();
   const { isVisible, isAtTop } = useScrollDirection();
   const showUpgrade = entitlement !== 'paid' && onUpgrade;
+  const hasProAccess = entitlement === 'paid' || entitlement === 'trial';
   const trimmedUserName = userName?.trim() || '';
   const showAdminIcon = isAdmin && pageTitle === 'Admin Panel';
-
-  // Theme cycle for mobile tap-to-switch button
-  const THEME_CYCLE: Theme[] = ['light', 'dark', 'system'];
-  const THEME_ICONS: Record<Theme, typeof Sun> = { light: Sun, dark: Moon, system: Monitor };
-  const ThemeIcon = THEME_ICONS[theme];
-
-  const handleCycleTheme = () => {
-    const idx = THEME_CYCLE.indexOf(theme);
-    const next = THEME_CYCLE[(idx + 1) % THEME_CYCLE.length];
-    setTheme(next);
-  };
 
   const handleViewProfile = () => {
     if (!trimmedUserName) return;
@@ -181,21 +171,23 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             </Button>
           )}
           <div className="flex min-w-0 shrink-0 items-center gap-2.5">
-            <a
-              href="/"
-              aria-label="Go to post screen"
-              className={cn(
-                "relative h-9 w-9 shrink-0 overflow-hidden rounded-lg flex items-center justify-center",
-                "cursor-pointer",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              )}
-            >
-              <img 
-                src="/logo.png" 
-                alt="Reddit Multi Poster" 
-                className="h-full w-full object-contain" 
-              />
-            </a>
+            {!pageTitle && (
+              <a
+                href="/"
+                aria-label="Go to post screen"
+                className={cn(
+                  "relative h-9 w-9 shrink-0 overflow-hidden rounded-lg flex items-center justify-center",
+                  "cursor-pointer",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                )}
+              >
+                <img 
+                  src="/logo.png" 
+                  alt="Reddit Multi Poster" 
+                  className="h-full w-full object-contain" 
+                />
+              </a>
+            )}
             {pageTitle ? (
               <div className="flex items-center gap-2 min-w-0">
                 {showAdminIcon && <Shield className="w-4 h-4 text-cyan-400" aria-hidden="true" />}
@@ -208,11 +200,31 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <span 
                   className={cn(
                     "truncate font-semibold tracking-tight",
-                    entitlement === 'paid' && "font-display font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-violet-400 bg-clip-text text-transparent"
+                    hasProAccess && "font-display font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-violet-400 bg-clip-text text-transparent"
                   )}
                 >
                   Multi Poster
                 </span>
+                {/* Trial badge - text badge in amber to create urgency */}
+                {entitlement === 'trial' && (
+                  <span 
+                    className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                    aria-label={`Trial${trialDaysLeft ? ` - ${trialDaysLeft} days left` : ''}`}
+                  >
+                    Trial{trialDaysLeft ? ` • ${trialDaysLeft}d` : ''}
+                  </span>
+                )}
+                {/* Pro badge - show full text */}
+                {entitlement === 'paid' && (
+                  <span 
+                    className="relative inline-flex items-center text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-gradient-to-r from-violet-500/20 via-purple-500/25 to-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/40 dark:border-violet-400/25 shadow-sm shadow-violet-500/25 overflow-hidden"
+                    aria-label="Pro plan active"
+                  >
+                    <span className="relative z-10">Pro</span>
+                    <span className="absolute inset-0 animate-pro-shimmer" aria-hidden="true" />
+                  </span>
+                )}
+                {/* Go Unlimited button - shown after trial/pro badge */}
                 {showUpgrade && (
                   <button
                     type="button"
@@ -235,15 +247,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     <span>{upgradeLoading ? 'Opening checkout…' : 'Go Unlimited'}</span>
                   </button>
                 )}
-                {entitlement === 'paid' && (
-                  <span 
-                    className="relative inline-flex items-center text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-gradient-to-r from-violet-500/20 via-purple-500/25 to-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/40 dark:border-violet-400/25 shadow-sm shadow-violet-500/25 overflow-hidden"
-                    aria-label="Pro plan active"
-                  >
-                    <span className="relative z-10">Pro</span>
-                    <span className="absolute inset-0 animate-pro-shimmer" aria-hidden="true" />
-                  </span>
-                )}
               </div>
             )}
           </div>
@@ -251,56 +254,43 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           {/* Desktop: User Stats removed (now shown in sub-header banner) */}
 
           <div className="flex min-w-0 shrink items-center gap-2 sm:gap-3 ml-auto">
-            
-
+            {/* Mobile: Go Unlimited button - icon-only for trial users, full button for free users */}
             {showUpgrade && (
               <button
                 type="button"
                 onClick={onUpgrade}
                 disabled={upgradeLoading}
                 className={cn(
-                  "md:hidden shrink-0 flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer",
+                  "md:hidden shrink-0 flex items-center justify-center cursor-pointer",
                   "disabled:opacity-50 disabled:cursor-not-allowed",
-                  "rounded-md px-3.5 py-1.5 font-semibold",
+                  "rounded-md font-semibold",
                   "text-white border border-violet-700/40",
                   "bg-violet-800/90",
                   "transition-all duration-200",
                   "hover:bg-violet-800",
                   "shadow-[0_0_0_1px_rgba(124,58,237,0.4)]",
                   "hover:shadow-[0_0_0_3px_rgba(124,58,237,0.28)]",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  // Icon-only on mobile when on trial, full button for free users
+                  entitlement === 'trial' 
+                    ? "p-2 min-h-[36px] min-w-[36px]" 
+                    : "gap-1.5 px-3.5 py-1.5 text-xs sm:text-sm"
                 )}
                 aria-label="Go Unlimited"
               >
                 <Infinity className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">{upgradeLoading ? 'Opening checkout…' : 'Go Unlimited'}</span>
-                <span className="sm:hidden">{upgradeLoading ? '…' : 'Go Unlimited'}</span>
+                {/* Show text only for free users (not on trial) */}
+                {entitlement !== 'trial' && (
+                  <>
+                    <span className="hidden sm:inline">{upgradeLoading ? 'Opening checkout…' : 'Go Unlimited'}</span>
+                    <span className="sm:hidden">{upgradeLoading ? '…' : 'Go Unlimited'}</span>
+                  </>
+                )}
               </button>
             )}
             {headerActions}
-            {/* Mobile-only: Theme cycle button */}
-            <button
-              type="button"
-              onClick={handleCycleTheme}
-              className={cn(
-                "md:hidden min-h-[44px] min-w-[44px]",
-                "flex items-center justify-center",
-                "cursor-pointer active:scale-95"
-              )}
-              aria-label={`Theme: ${theme}. Tap to switch.`}
-            >
-              <ThemeIcon className="w-[18px] h-[18px] text-muted-foreground" aria-hidden="true" />
-            </button>
-            {/* Desktop-only: Theme cycle button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCycleTheme}
-              className="hidden md:inline-flex min-h-[44px] min-w-[44px] p-2 cursor-pointer"
-              aria-label={`Theme: ${theme}. Click to switch.`}
-            >
-              <ThemeIcon className="w-[18px] h-[18px] text-muted-foreground" aria-hidden="true" />
-            </Button>
+            {/* Theme toggle button with animated sun/moon icon */}
+            <ThemeToggle />
             {/* Desktop-only: User dropdown (profile/settings/theme/logout moved to bottom nav on mobile) */}
             <div className="hidden md:flex">
             <DropdownMenu
@@ -347,11 +337,15 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                   Admin Panel
                 </DropdownMenuItem>
               )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onLogout} className="text-red-400">
-                <LogOut className="h-4 w-4 mr-2" aria-hidden="true" />
-                Logout
-              </DropdownMenuItem>
+              {onLogout && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onLogout} className="text-red-400">
+                    <LogOut className="h-4 w-4 mr-2" aria-hidden="true" />
+                    Logout
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenu>
             </div>
           </div>

@@ -35,6 +35,7 @@ export interface SubredditRowProps {
   contentOverride?: PerSubredditOverride;
   onCustomize?: (name: string) => void;
   customizationEnabled?: boolean;
+  onRequestUpgrade?: (context?: { title?: string; message: string }) => void;
   eligibility?: SubredditEligibility;
   userData?: RedditUser;
   postKind?: 'self' | 'link' | 'image' | 'video' | 'gallery';

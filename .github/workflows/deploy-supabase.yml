@@ -21,10 +21,42 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.20.0
 
       - name: Link to Supabase project
         run: supabase link --project-ref $PROJECT_ID
+
+      - name: Repair migration history (mark orphaned remote migrations as reverted)
+        run: |
+          # Get list of remote migrations not in local directory
+          REMOTE_MIGRATIONS=$(supabase migration list 2>/dev/null | grep -E '^\s*[0-9]+' | awk '{print $1}' || true)
+          LOCAL_MIGRATIONS=$(ls supabase/migrations/*.sql 2>/dev/null | xargs -I {} basename {} .sql | sed 's/_.*$//' || true)
+          
+          # Collect orphaned migrations
+          ORPHANED=()
+          for migration in $REMOTE_MIGRATIONS; do
+            if ! echo "$LOCAL_MIGRATIONS" | grep -q "^${migration}"; then
+              ORPHANED+=("$migration")
+            fi
+          done
+          
+          ORPHAN_COUNT=${#ORPHANED[@]}
+          MAX_ORPHAN_THRESHOLD=3
+          
+          if [ "$ORPHAN_COUNT" -eq 0 ]; then
+            echo "No orphaned migrations found."
+          elif [ "$ORPHAN_COUNT" -gt "$MAX_ORPHAN_THRESHOLD" ]; then
+            echo "::error::Found $ORPHAN_COUNT orphaned migrations (threshold: $MAX_ORPHAN_THRESHOLD). Aborting to prevent accidental mass-revert."
+            echo "Orphaned migrations: ${ORPHANED[*]}"
+            exit 1
+          else
+            echo "Found $ORPHAN_COUNT orphaned migration(s), within threshold. Reverting..."
+            for migration in "${ORPHANED[@]}"; do
+              echo "Marking orphaned migration $migration as reverted..."
+              supabase migration repair --status reverted "$migration" || true
+            done
+          fi
+        continue-on-error: true
 
       - name: Push migrations to production
         run: supabase db push

@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getUserDetails, isAdmin } from '../../lib/apiAuth';
+import { checkAdminAuth } from '../../lib/apiAuth';
 import { createServerSupabaseClient, type PostLog } from '../../lib/supabase';
 
 // ============================================================================
@@ -74,15 +74,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Get user details for admin check
-  const { redditUsername } = await getUserDetails(req, res);
+  // Check admin auth (password or Reddit username)
+  const { isAdmin } = await checkAdminAuth(req, res);
   
-  if (!redditUsername) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  // Check if user is admin
-  if (!isAdmin(redditUsername)) {
+  if (!isAdmin) {
     return res.status(403).json({ error: 'Forbidden - Admin access required' });
   }
 

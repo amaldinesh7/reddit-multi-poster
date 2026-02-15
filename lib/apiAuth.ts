@@ -1,7 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import crypto from 'crypto';
 import { upsertUser, getUserByRedditId, type SupabaseUser } from './supabase';
 import { redditClient, getIdentity, refreshAccessToken } from '../utils/reddit';
 import { serialize } from 'cookie';
+
+// Session expiry for admin tokens (7 days)
+const ADMIN_SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Check if a user is an admin based on their Reddit username.
@@ -11,6 +15,110 @@ export const isAdmin = (redditUsername: string): boolean => {
   const adminUsername = process.env.ADMIN_REDDIT_USERNAME;
   if (!adminUsername) return false;
   return adminUsername.toLowerCase() === redditUsername.toLowerCase();
+};
+
+/**
+ * Check if a password matches the admin password using constant-time comparison.
+ * Uses ADMIN_PASSWORD environment variable.
+ * Returns false if ADMIN_PASSWORD is not set.
+ */
+export const isAdminPassword = (password: string): boolean => {
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword || !password) return false;
+  
+  // Hash both values so buffers are always the same length,
+  // preventing timing side-channel leaking the password length.
+  const adminHash = crypto.createHash('sha256').update(adminPassword).digest();
+  const passwordHash = crypto.createHash('sha256').update(password).digest();
+  
+  return crypto.timingSafeEqual(adminHash, passwordHash);
+};
+
+/**
+ * Create a signed admin session token.
+ * Token format: timestamp:signature
+ */
+export const createAdminSessionToken = (timestamp: number): string => {
+  const secret = process.env.ADMIN_SESSION_SECRET;
+  if (!secret) {
+    throw new Error('ADMIN_SESSION_SECRET is not configured');
+  }
+  
+  const data = `admin:${timestamp}`;
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(data)
+    .digest('hex');
+  
+  return `${timestamp}:${signature}`;
+};
+
+/**
+ * Verify an admin session token.
+ * Returns true if signature is valid and token is not expired.
+ */
+export const verifyAdminSessionToken = (token: string): boolean => {
+  const secret = process.env.ADMIN_SESSION_SECRET;
+  if (!secret || !token) return false;
+  
+  const parts = token.split(':');
+  if (parts.length !== 2) return false;
+  
+  const [timestampStr, providedSignature] = parts;
+  const timestamp = parseInt(timestampStr, 10);
+  
+  if (!Number.isFinite(timestamp)) return false;
+  
+  // Check expiry
+  const now = Date.now();
+  if (now - timestamp > ADMIN_SESSION_EXPIRY_MS) return false;
+  
+  // Verify signature
+  const data = `admin:${timestamp}`;
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(data)
+    .digest('hex');
+  
+  // Use constant-time comparison for signature
+  const expectedBuffer = Buffer.from(expectedSignature);
+  const providedBuffer = Buffer.from(providedSignature);
+  
+  if (expectedBuffer.length !== providedBuffer.length) return false;
+  
+  return crypto.timingSafeEqual(expectedBuffer, providedBuffer);
+};
+
+/**
+ * Check if request has valid admin auth (either Reddit username or session token).
+ * Checks in order:
+ * 1. admin_session cookie (signed token)
+ * 2. X-Admin-Password header (for direct API access)
+ * 3. Reddit username (requires login)
+ */
+export const checkAdminAuth = async (
+  req: NextApiRequest,
+  res: NextApiResponse
+): Promise<{ isAdmin: boolean; method: 'password' | 'reddit' | null }> => {
+  // Check session token from cookie (preferred secure method)
+  const sessionCookie = req.cookies['admin_session'];
+  if (sessionCookie && verifyAdminSessionToken(sessionCookie)) {
+    return { isAdmin: true, method: 'password' };
+  }
+
+  // Check password from header (for direct API access)
+  const passwordHeader = req.headers['x-admin-password'];
+  if (typeof passwordHeader === 'string' && isAdminPassword(passwordHeader)) {
+    return { isAdmin: true, method: 'password' };
+  }
+
+  // Fallback to Reddit username check
+  const { redditUsername } = await getUserDetails(req, res);
+  if (redditUsername && isAdmin(redditUsername)) {
+    return { isAdmin: true, method: 'reddit' };
+  }
+
+  return { isAdmin: false, method: null };
 };
 
 /**

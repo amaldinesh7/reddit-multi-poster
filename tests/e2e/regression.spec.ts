@@ -266,6 +266,51 @@ test.describe('Regression - Form State Persistence', () => {
   });
 });
 
+test.describe('Regression - AI Customize Flow', () => {
+  test.beforeEach(async ({ authenticatedPage }) => {
+    await setupMockRoutes(authenticatedPage);
+    await authenticatedPage.route('**/api/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...mockResponses.meAuthenticated,
+          entitlement: 'paid',
+          limits: {
+            maxSubreddits: 999,
+            maxPostItems: 999,
+            temporarySelectionEnabled: true,
+          },
+        }),
+      });
+    });
+  });
+
+  test('custom title and description AI flows apply selected options', async ({ authenticatedPage }) => {
+    await authenticatedPage.goto('/');
+    await authenticatedPage.waitForSelector('text=pics', { timeout: 5000 });
+    await authenticatedPage.getByRole('checkbox', { name: /pics/i }).check();
+
+    await authenticatedPage.getByRole('button', { name: /customize content for this community/i }).first().click();
+    await expect(authenticatedPage.getByText(/customize for r\/pics/i)).toBeVisible();
+
+    await expect(authenticatedPage.getByRole('button', { name: /generate custom title options with ai/i })).toHaveCount(0);
+    await expect(authenticatedPage.getByRole('button', { name: /generate custom description options with ai/i })).toHaveCount(0);
+
+    await authenticatedPage.getByLabel('Custom title').click();
+    await authenticatedPage.getByRole('button', { name: /generate custom title options with ai/i }).click();
+    await authenticatedPage.getByRole('button', { name: /generate 3 options/i }).click();
+    await authenticatedPage.getByRole('button', { name: 'AI title option one' }).click();
+    await expect(authenticatedPage.getByPlaceholder(/custom title for this community/i)).toHaveValue('AI title option one');
+
+    await authenticatedPage.getByLabel('Custom description').click();
+    await authenticatedPage.getByRole('button', { name: /generate custom description options with ai/i }).click();
+    await authenticatedPage.getByRole('button', { name: /generate 3 options/i }).click();
+    await authenticatedPage.getByRole('button', { name: 'AI description option one' }).click();
+    await expect(authenticatedPage.getByPlaceholder(/custom description for this community/i)).toHaveValue('AI description option one');
+  });
+});
+
 test.describe('Regression - Responsive Design', () => {
   test.beforeEach(async ({ authenticatedPage }) => {
     await setupMockRoutes(authenticatedPage);

@@ -71,46 +71,103 @@ export const mockResponses = {
       required: false,
     };
   },
+  generateCopy: (kind: 'title' | 'description') => ({
+    success: true,
+    data: {
+      options:
+        kind === 'title'
+          ? [
+              'AI title option one',
+              'AI title option two',
+              'AI title option three',
+            ]
+          : [
+              'AI description option one',
+              'AI description option two',
+              'AI description option three',
+            ],
+      provider: 'fallback',
+      fallbackUsed: true,
+    },
+  }),
+};
 
-  /**
-   * Mock response for /api/reddit/subreddit-info endpoint (UnifiedSubredditData).
-   * This prevents server-side calls to Reddit during E2E runs.
-   */
-  subredditInfo: (subredditName: string) => {
-    const normalized = subredditName.toLowerCase().replace(/^r\//, '');
-    const cache = mockResponses.subredditCache(normalized);
+type QueueOutcome = 'success' | 'error';
 
-    return {
-      success: true,
-      data: {
-        subreddit: normalized,
-        flairs: cache.flairs,
-        flairRequired: cache.required,
-        rules: {
-          requiresGenderTag: false,
-          requiresContentTag: false,
-          genderTags: [],
-          contentTags: [],
-          rules: [],
-          submitText: '',
-        },
-        titleTags: [],
-        postRequirements: {
-          is_flair_required: cache.required,
-          title_text_max_length: 300,
-          title_text_min_length: 1,
-        },
-        subredditType: 'public',
-        restrictPosting: false,
-        submissionType: 'any',
-        allowImages: true,
-        allowVideos: true,
-        allowGifs: true,
-        cachedAt: new Date().toISOString(),
-        cacheVersion: 1,
-      },
-    };
-  },
+const DEFAULT_DEMO_JOB_ID = 'demo_job_1';
+
+const buildQueueProcessStreamResponse = (
+  subreddits: string[],
+  outcomes: QueueOutcome[] = [],
+  jobId: string = DEFAULT_DEMO_JOB_ID
+): string => {
+  const lines: string[] = [
+    JSON.stringify({
+      type: 'status',
+      jobId,
+      status: 'processing',
+      currentIndex: 0,
+    }),
+  ];
+
+  subreddits.forEach((subreddit, index) => {
+    lines.push(
+      JSON.stringify({
+        type: 'progress',
+        jobId,
+        currentIndex: index,
+      })
+    );
+
+    const outcome = outcomes[index] ?? 'success';
+    if (outcome === 'success') {
+      lines.push(
+        JSON.stringify({
+          type: 'result',
+          jobId,
+          result: {
+            index,
+            subreddit,
+            status: 'success',
+            url: `https://reddit.com/r/${subreddit}/comments/test${index}`,
+            postedAt: new Date().toISOString(),
+          },
+        })
+      );
+    } else {
+      lines.push(
+        JSON.stringify({
+          type: 'result',
+          jobId,
+          result: {
+            index,
+            subreddit,
+            status: 'error',
+            error: 'Post failed',
+          },
+        })
+      );
+    }
+
+    if (index < subreddits.length - 1) {
+      lines.push(
+        JSON.stringify({
+          type: 'waiting',
+          jobId,
+          waitSeconds: 2,
+        })
+      );
+    }
+  });
+
+  lines.push(
+    JSON.stringify({
+      type: 'complete',
+      jobId,
+    })
+  );
+
+  return lines.join('\n');
 };
 
 /**
@@ -142,20 +199,13 @@ export const setupMockRoutes = async (page: Page): Promise<void> => {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        pricing: { region: 'us_canada', amount: 9, currency: 'USD', formatted: '$9.00' },
+        pricing: {
+          region: 'us_canada',
+          amount: 9,
+          currency: 'USD',
+          formatted: '$9.00',
+        },
       }),
-    });
-  });
-
-  // Mock /api/reddit/subreddit-info to avoid live Reddit calls during tests.
-  await page.route('**/api/reddit/subreddit-info*', async (route: Route) => {
-    const url = new URL(route.request().url());
-    const name = url.searchParams.get('name') || '';
-
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(mockResponses.subredditInfo(name)),
     });
   });
 
@@ -292,12 +342,75 @@ export const setupMockRoutes = async (page: Page): Promise<void> => {
     });
   });
 
+  // Mock /api/reddit/subreddit-info endpoint
+  await page.route('**/api/reddit/subreddit-info*', async (route: Route) => {
+    const url = new URL(route.request().url());
+    const subreddit = (url.searchParams.get('name') || '').replace(/^r\//i, '').toLowerCase();
+    const cache = mockResponses.subredditCache(subreddit);
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          subreddit,
+          flairs: cache.flairs,
+          flairRequired: cache.required,
+          rules: {
+            requiresGenderTag: false,
+            requiresContentTag: false,
+            genderTags: [],
+            contentTags: [],
+            rules: [],
+            submitText: '',
+          },
+          titleTags: [],
+          postRequirements: {
+            is_flair_required: cache.required,
+            title_text_max_length: 300,
+            title_text_min_length: 1,
+          },
+          subredditType: 'public',
+          restrictPosting: false,
+          submissionType: 'any',
+          allowImages: true,
+          allowVideos: true,
+          allowGifs: true,
+          cachedAt: new Date().toISOString(),
+          cacheVersion: 1,
+        },
+      }),
+    });
+  });
+
+  // Default cancel endpoint for stop-flow tests.
+  await page.route('**/api/queue/cancel/*', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true }),
+    });
+  });
+
   // Mock /api/auth/logout endpoint
   await page.route('**/api/auth/logout', async (route: Route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ success: true }),
+    });
+  });
+
+  // Mock /api/ai/generate-copy endpoint
+  await page.route('**/api/ai/generate-copy', async (route: Route) => {
+    const body = route.request().postDataJSON() as { kind?: 'title' | 'description' } | null;
+    const kind = body?.kind === 'description' ? 'description' : 'title';
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(mockResponses.generateCopy(kind)),
     });
   });
 };
@@ -309,9 +422,26 @@ export const setupQueueMockSuccess = async (
   page: Page,
   subreddits: string[] = ['pics', 'images']
 ): Promise<void> => {
+  await page.route('**/api/queue/submit', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, jobId: DEFAULT_DEMO_JOB_ID }),
+    });
+  });
+
+  await page.route('**/api/queue/process*', async (route: Route) => {
+    const streamResponse = buildQueueProcessStreamResponse(subreddits, [], DEFAULT_DEMO_JOB_ID);
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/plain',
+      body: streamResponse,
+    });
+  });
+
+  // Backwards compatibility for tests that still mock or call /api/queue directly.
   await page.route('**/api/queue', async (route: Route) => {
     const streamResponse = generateQueueStreamResponse(subreddits);
-    
     await route.fulfill({
       status: 200,
       contentType: 'text/plain',
@@ -328,9 +458,25 @@ export const setupQueueMockMixed = async (
   subreddits: string[],
   outcomes: ('success' | 'error')[]
 ): Promise<void> => {
+  await page.route('**/api/queue/submit', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, jobId: DEFAULT_DEMO_JOB_ID }),
+    });
+  });
+
+  await page.route('**/api/queue/process*', async (route: Route) => {
+    const streamResponse = buildQueueProcessStreamResponse(subreddits, outcomes, DEFAULT_DEMO_JOB_ID);
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/plain',
+      body: streamResponse,
+    });
+  });
+
   await page.route('**/api/queue', async (route: Route) => {
     const streamResponse = generateQueueStreamResponse(subreddits, outcomes);
-    
     await route.fulfill({
       status: 200,
       contentType: 'text/plain',
@@ -343,8 +489,38 @@ export const setupQueueMockMixed = async (
  * Setup mock for the posting queue endpoint that hangs (for cancellation tests).
  */
 export const setupQueueMockHanging = async (page: Page): Promise<void> => {
+  await page.route('**/api/queue/submit', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, jobId: DEFAULT_DEMO_JOB_ID }),
+    });
+  });
+
+  await page.route('**/api/queue/process*', async (route: Route) => {
+    const streamResponse =
+      JSON.stringify({
+        type: 'status',
+        jobId: DEFAULT_DEMO_JOB_ID,
+        status: 'processing',
+        currentIndex: 0,
+      }) +
+      '\n' +
+      JSON.stringify({
+        type: 'progress',
+        jobId: DEFAULT_DEMO_JOB_ID,
+        currentIndex: 0,
+      }) +
+      '\n';
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/plain',
+      body: streamResponse,
+    });
+  });
+
   await page.route('**/api/queue', async (route: Route) => {
-    // Send initial response then hang
     await route.fulfill({
       status: 200,
       contentType: 'text/plain',
@@ -357,6 +533,14 @@ export const setupQueueMockHanging = async (page: Page): Promise<void> => {
  * Setup mock for rate limited queue response.
  */
 export const setupQueueMockRateLimited = async (page: Page): Promise<void> => {
+  await page.route('**/api/queue/submit', async (route: Route) => {
+    await route.fulfill({
+      status: 429,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: false, error: 'Rate limited' }),
+    });
+  });
+
   await page.route('**/api/queue', async (route: Route) => {
     await route.fulfill({
       status: 429,
@@ -370,6 +554,14 @@ export const setupQueueMockRateLimited = async (page: Page): Promise<void> => {
  * Setup mock for unauthorized queue response.
  */
 export const setupQueueMockUnauthorized = async (page: Page): Promise<void> => {
+  await page.route('**/api/queue/submit', async (route: Route) => {
+    await route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: false, error: 'Unauthorized' }),
+    });
+  });
+
   await page.route('**/api/queue', async (route: Route) => {
     await route.fulfill({
       status: 401,
@@ -383,6 +575,10 @@ export const setupQueueMockUnauthorized = async (page: Page): Promise<void> => {
  * Setup mock for network failure.
  */
 export const setupQueueMockNetworkError = async (page: Page): Promise<void> => {
+  await page.route('**/api/queue/submit', async (route: Route) => {
+    await route.abort('failed');
+  });
+
   await page.route('**/api/queue', async (route: Route) => {
     await route.abort('failed');
   });

@@ -1026,6 +1026,34 @@ export async function getWikiPage(client: AxiosInstance, subreddit: string, page
  * @param subreddit - Subreddit name (without r/)
  * @returns Enhanced subreddit info with all text content for requirement parsing
  */
+/**
+ * Get user's recent submissions (posts) from Reddit
+ * @param client - Axios client with Reddit OAuth
+ * @param username - Reddit username
+ * @param limit - Number of posts to fetch (max 100)
+ * @returns Array of post titles with subreddit info
+ */
+export async function getUserSubmissions(
+  client: AxiosInstance,
+  username: string,
+  limit: number = 10
+): Promise<{ title: string; subreddit: string }[]> {
+  try {
+    const { data } = await client.get(`/user/${username}/submitted`, {
+      params: { limit, sort: 'new', raw_json: 1 },
+    });
+    
+    const children = data?.data?.children || [];
+    return children.map((child: any) => ({
+      title: child.data?.title || '',
+      subreddit: child.data?.subreddit || '',
+    })).filter((post: { title: string }) => post.title);
+  } catch (error) {
+    console.error(`Failed to get submissions for u/${username}:`, error);
+    return [];
+  }
+}
+
 export async function getEnhancedSubredditInfo(
   client: AxiosInstance, 
   subreddit: string

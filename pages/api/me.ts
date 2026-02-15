@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import * as Sentry from '@sentry/nextjs';
 import { getIdentity, listMySubreddits, redditClient, refreshAccessToken } from '../../utils/reddit';
 import { serialize } from 'cookie';
-import { getEntitlement, getLimits } from '../../lib/entitlement';
+import { getEntitlementState, getLimits, markTrialEndedNotified } from '../../lib/entitlement';
 import { handleApiError, addApiBreadcrumb } from '../../lib/apiErrorHandler';
 
 /** Normalize non-finite values for JSON serialization (Infinity becomes MAX_SAFE_INTEGER) */
@@ -45,15 +45,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const fetchSubs = req.query.include_subs === 'true';
       const subs = fetchSubs ? await listMySubreddits(client) : [];
       
-      const entitlement = supabaseUserId ? await getEntitlement(supabaseUserId) : 'free';
-      const limits = getLimits(entitlement);
+      const entitlementState = supabaseUserId
+        ? await getEntitlementState(supabaseUserId)
+        : {
+            entitlement: 'free' as const,
+            trialEndsAt: null,
+            trialDaysLeft: null,
+            showTrialEndedPopup: false,
+          };
+      const limits = getLimits(entitlementState.entitlement);
+
+      if (supabaseUserId && entitlementState.showTrialEndedPopup) {
+        await markTrialEndedNotified(supabaseUserId);
+      }
 
       return res.status(200).json({
         authenticated: true,
         me,
         subs,
         userId: supabaseUserId || null,
-        entitlement,
+        entitlement: entitlementState.entitlement,
+        trialEndsAt: entitlementState.trialEndsAt,
+        trialDaysLeft: entitlementState.trialDaysLeft,
+        showTrialEndedPopup: entitlementState.showTrialEndedPopup,
         limits: {
           maxSubreddits: normalizeForJson(limits.maxSubreddits),
           maxPostItems: normalizeForJson(limits.maxPostItems),
@@ -84,15 +98,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const fetchSubs = req.query.include_subs === 'true';
         const subs = fetchSubs ? await listMySubreddits(client2) : [];
         
-        const entitlement = supabaseUserId ? await getEntitlement(supabaseUserId) : 'free';
-        const limits = getLimits(entitlement);
+        const entitlementState = supabaseUserId
+          ? await getEntitlementState(supabaseUserId)
+          : {
+              entitlement: 'free' as const,
+              trialEndsAt: null,
+              trialDaysLeft: null,
+              showTrialEndedPopup: false,
+            };
+        const limits = getLimits(entitlementState.entitlement);
+
+        if (supabaseUserId && entitlementState.showTrialEndedPopup) {
+          await markTrialEndedNotified(supabaseUserId);
+        }
 
         return res.status(200).json({
           authenticated: true,
           me,
           subs,
           userId: supabaseUserId || null,
-          entitlement,
+          entitlement: entitlementState.entitlement,
+          trialEndsAt: entitlementState.trialEndsAt,
+          trialDaysLeft: entitlementState.trialDaysLeft,
+          showTrialEndedPopup: entitlementState.showTrialEndedPopup,
           limits: {
             maxSubreddits: normalizeForJson(limits.maxSubreddits),
             maxPostItems: normalizeForJson(limits.maxPostItems),

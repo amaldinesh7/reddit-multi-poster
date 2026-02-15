@@ -1,7 +1,9 @@
 import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { Textarea } from '@/components/ui/textarea';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Crown, Sparkles } from 'lucide-react';
 import { usePersistentState } from '@/hooks/usePersistentState';
+import CopyGenerationDialog from '@/components/ai/CopyGenerationDialog';
+import { ProUpgradeHint } from '@/components/ui/pro-upgrade-hint';
 
 interface Props {
   value: string;
@@ -11,14 +13,32 @@ interface Props {
   prefixes: { f: boolean; c: boolean };
   onPrefixesChange: (prefixes: { f: boolean; c: boolean }) => void;
   resetSignal?: number;
+  hasProAccess?: boolean;
+  onRequestUpgrade?: () => void;
+  aiContext?: {
+    selectedSubreddits?: string[];
+    mediaType?: 'self' | 'link' | 'image' | 'video' | 'gallery';
+  };
 }
 
 export interface PostComposerRef {
   focusTitle: () => void;
 }
 
-const PostComposer = forwardRef<PostComposerRef, Props>(function PostComposer({ value, onChange, body, onBodyChange, prefixes, onPrefixesChange, resetSignal }, ref) {
+const PostComposer = forwardRef<PostComposerRef, Props>(function PostComposer({
+  value,
+  onChange,
+  body,
+  onBodyChange,
+  prefixes,
+  onPrefixesChange,
+  resetSignal,
+  hasProAccess,
+  onRequestUpgrade,
+  aiContext,
+}, ref) {
   const [showBody, setShowBody] = usePersistentState<boolean>('rmp_show_body', false);
+  const [isAiDialogOpen, setIsAiDialogOpen] = React.useState(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const count = value.length;
@@ -89,14 +109,43 @@ const PostComposer = forwardRef<PostComposerRef, Props>(function PostComposer({ 
     <div className="space-y-1">
       {/* Title Input */}
       <div>
-        <Textarea
-          ref={titleRef}
-          placeholder="Post title"
-          value={value}
-          onChange={(e) => handleChange(e.target.value)}
-          className="resize-none min-h-[40px] overflow-hidden"
-          rows={1}
-        />
+        <div className="relative">
+          <Textarea
+            ref={titleRef}
+            placeholder="Post title"
+            value={value}
+            onChange={(e) => handleChange(e.target.value)}
+            className="resize-none min-h-[40px] overflow-hidden pr-14"
+            rows={1}
+          />
+          {hasProAccess ? (
+            <button
+              type="button"
+              onClick={() => setIsAiDialogOpen(true)}
+              className="absolute right-2 top-2 inline-flex h-7 items-center gap-1 rounded-md border border-border bg-background/90 px-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-background cursor-pointer"
+              aria-label="Generate title options with AI"
+              title="Generate title options with AI"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">AI</span>
+            </button>
+          ) : (
+            <ProUpgradeHint
+              feature="AI title generation"
+              side="left"
+              onUpgrade={onRequestUpgrade}
+            >
+              <button
+                type="button"
+                className="absolute right-2 top-2 inline-flex h-7 items-center gap-1 rounded-md border border-border bg-background/90 px-2 text-xs font-medium text-muted-foreground/50 cursor-pointer"
+                aria-label="AI title generation - Pro feature"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <Crown className="h-3 w-3" />
+              </button>
+            </ProUpgradeHint>
+          )}
+        </div>
         <div className="flex justify-end mt-1">
           <span className={`text-xs ${count > limit * 0.9 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
             {count}/{limit}
@@ -138,6 +187,20 @@ const PostComposer = forwardRef<PostComposerRef, Props>(function PostComposer({ 
           </div>
         )}
       </div>
+
+      {hasProAccess && (
+        <CopyGenerationDialog
+          open={isAiDialogOpen}
+          onOpenChange={setIsAiDialogOpen}
+          kind="title"
+          onApply={onChange}
+          baseText={value}
+          globalTitle={value}
+          globalBody={body}
+          selectedSubreddits={aiContext?.selectedSubreddits}
+          mediaType={aiContext?.mediaType}
+        />
+      )}
     </div>
   );
 });

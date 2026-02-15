@@ -23,6 +23,7 @@ import {
   DropdownMenuItemPrimitive,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip } from '@/components/ui/tooltip';
+import { ProUpgradeHint } from '@/components/ui/pro-upgrade-hint';
 import { FailedPost } from '@/hooks/useFailedPosts';
 import { ClassifiedError } from '@/lib/errorClassification';
 import { ValidationIssue } from '@/lib/preflightValidation';
@@ -48,6 +49,7 @@ interface SubredditRowActionsProps {
   customizationEnabled?: boolean;
   contentOverride?: PerSubredditOverride;
   onCustomize?: (name: string) => void;
+  onRequestUpgrade?: (context?: { title?: string; message: string }) => void;
   onRetryPost?: (id: string) => void;
   onEditPost?: (post: FailedPost) => void;
   onRemovePost?: (id: string) => void;
@@ -94,6 +96,7 @@ const SubredditRowActions: React.FC<SubredditRowActionsProps> = ({
   customizationEnabled,
   contentOverride,
   onCustomize,
+  onRequestUpgrade,
   onRetryPost,
   onEditPost,
   onRemovePost,
@@ -112,7 +115,9 @@ const SubredditRowActions: React.FC<SubredditRowActionsProps> = ({
     setIsValidationMenuOpen(true);
   }, [openValidationDetailsSignal, hasValidationIssues, failedPost]);
 
-  if (!isSelected || !(customizationEnabled || hasValidationIssues || failedPost || canExpand)) {
+  // Always show customize button (even for free users), plus validation/failed/expand controls
+  const showCustomizeButton = onCustomize || onRequestUpgrade;
+  if (!isSelected || !(showCustomizeButton || hasValidationIssues || failedPost || canExpand)) {
     return null;
   }
 
@@ -228,20 +233,52 @@ const SubredditRowActions: React.FC<SubredditRowActionsProps> = ({
         </button>
       )}
 
-      {customizationEnabled && onCustomize && (
-        <Tooltip content="Customize title & description for this community" side="left">
+      {showCustomizeButton && (
+        <Tooltip 
+          content={
+            customizationEnabled 
+              ? "Customize title & description for this community" 
+              : "Customize title & description - Pro feature"
+          } 
+          side="left"
+        >
           <button
-            onClick={() => onCustomize(name)}
+            onClick={() => {
+              if (customizationEnabled && onCustomize) {
+                onCustomize(name);
+              } else if (onRequestUpgrade) {
+                onRequestUpgrade({
+                  title: 'Customize Content',
+                  message: 'Customize title & description per community with Pro.',
+                });
+              }
+            }}
             className={`p-1.5 rounded-md cursor-pointer transition-colors ${
               contentOverride && (contentOverride.title || contentOverride.body)
                 ? 'bg-violet-500/15 text-violet-400 hover:bg-violet-500/25'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted'
             }`}
-            aria-label="Customize content for this community"
+            aria-label={customizationEnabled ? "Customize content for this community" : "Customize content - Pro feature"}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
           </button>
         </Tooltip>
+      )}
+
+      {showCustomizeButton && !customizationEnabled && (
+        <ProUpgradeHint
+          feature="Custom title & description"
+          side="left"
+          onUpgrade={onRequestUpgrade ? () => onRequestUpgrade() : undefined}
+        >
+          <button
+            type="button"
+            className="p-1.5 rounded-md cursor-pointer transition-colors text-muted-foreground/50"
+            aria-label="Customize content - Pro feature"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+          </button>
+        </ProUpgradeHint>
       )}
     </div>
   );

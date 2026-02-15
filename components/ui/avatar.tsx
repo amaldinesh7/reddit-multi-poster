@@ -20,6 +20,9 @@ function Avatar({ src, alt, fallback, size = 'md', className }: AvatarProps) {
   const [error, setError] = React.useState(false)
   const { cls, px } = sizeMap[size]
   
+  // Reddit CDN blocks Next.js image optimization, use unoptimized for these URLs
+  const isRedditCdn = src?.includes('redditmedia.com') || src?.includes('redditstatic.com')
+  
   const initials = fallback 
     ? fallback.slice(0, 2).toUpperCase() 
     : alt?.slice(0, 2).toUpperCase() || '?'
@@ -41,6 +44,7 @@ function Avatar({ src, alt, fallback, size = 'md', className }: AvatarProps) {
           sizes={`${px}px`}
           className="w-full h-full object-cover"
           onError={() => setError(true)}
+          unoptimized={isRedditCdn}
         />
       ) : (
         <span className="font-medium text-muted-foreground">{initials}</span>

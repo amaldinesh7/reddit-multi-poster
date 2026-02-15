@@ -51,6 +51,8 @@ interface SubredditCategoryListProps {
   onCustomize?: (name: string) => void;
   /** Whether customization is enabled (PRO feature) */
   customizationEnabled?: boolean;
+  /** Trigger upgrade flow for gated actions */
+  onRequestUpgrade?: (context?: { title?: string; message: string }) => void;
   onToggle: (name: string) => void;
   onToggleCategory: (categoryName: string) => void;
   onSelectAllInCategory: (subreddits: string[], isAllSelected: boolean) => void;
@@ -86,6 +88,7 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
   contentOverrides,
   onCustomize,
   customizationEnabled,
+  onRequestUpgrade,
   onToggle,
   onToggleCategory,
   onSelectAllInCategory,
@@ -202,6 +205,7 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
                       contentOverride={contentOverrides?.[name]}
                       onCustomize={onCustomize}
                       customizationEnabled={customizationEnabled}
+                      onRequestUpgrade={onRequestUpgrade}
                       eligibility={eligibilityData?.[key]}
                       userData={userData}
                       postKind={postKind}

@@ -46,7 +46,7 @@ const SubredditRowControls: React.FC<SubredditRowControlsProps> = ({
 
   return (
     <div
-      className="flex items-center gap-2 px-3 py-2.5 bg-gradient-to-b from-zinc-50/50 to-zinc-200/50 dark:from-zinc-800/30 dark:to-zinc-900/60"
+      className="flex items-center gap-2 px-3 py-2.5 bg-zinc-100/80 dark:bg-zinc-800/50 border-t border-border/40"
       onClick={onControlsClick}
     >
       {flairOptions.length > 0 && (
