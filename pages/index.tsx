@@ -957,6 +957,14 @@ export default function Home() {
                     prefixes={prefixes}
                     onPrefixesChange={setPrefixes}
                     resetSignal={benchResetCounter}
+                    hasProAccess={entitlement === 'paid' || entitlement === 'trial'}
+                    onRequestUpgrade={() => {
+                      setUpgradeModalContext({
+                        title: 'AI Title Generation',
+                        message: 'Generate engaging titles and descriptions with AI-powered tools.',
+                      });
+                      setShowUpgradeModal(true);
+                    }}
                     aiContext={{
                       selectedSubreddits: selectedSubs,
                       mediaType: currentPostKind,

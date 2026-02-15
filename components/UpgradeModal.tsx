@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from './ui/button';
-import { X, Crown, Zap, Infinity as InfinityIcon, Check, Loader2, Timer } from 'lucide-react';
+import { X, Crown, Zap, Infinity as InfinityIcon, Check, Loader2, Timer, Sparkles } from 'lucide-react';
 import { trackEvent } from '@/lib/posthog';
 import { usePricing } from '@/hooks/usePricing';
 
@@ -72,6 +72,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
     'Unlimited communities',
     'Post to as many communities as you want at once',
     'Custom title & description for each community',
+    'AI-powered title & description generation',
     'No limits',
     'Pay once',
   ];
@@ -87,7 +88,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
 
       {/* Modal */}
       <div
-        className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-border/50 bg-card shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200"
+        className="relative z-10 w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border border-border/50 bg-card shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
         aria-labelledby="upgrade-modal-title"
@@ -177,6 +178,8 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
                   <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600">
                     {benefit.includes('Unlimited') ? (
                       <InfinityIcon className="h-3 w-3 text-white" />
+                    ) : benefit.includes('AI') ? (
+                      <Sparkles className="h-3 w-3 text-white" />
                     ) : (
                       <Check className="h-3 w-3 text-white" />
                     )}

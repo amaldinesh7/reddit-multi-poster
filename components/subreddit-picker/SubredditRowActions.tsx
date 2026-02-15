@@ -23,6 +23,7 @@ import {
   DropdownMenuItemPrimitive,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip } from '@/components/ui/tooltip';
+import { ProUpgradeHint } from '@/components/ui/pro-upgrade-hint';
 import { FailedPost } from '@/hooks/useFailedPosts';
 import { ClassifiedError } from '@/lib/errorClassification';
 import { ValidationIssue } from '@/lib/preflightValidation';
@@ -232,24 +233,12 @@ const SubredditRowActions: React.FC<SubredditRowActionsProps> = ({
         </button>
       )}
 
-      {showCustomizeButton && (
-        <Tooltip 
-          content={
-            customizationEnabled 
-              ? "Customize title & description for this community" 
-              : "Customize title & description - Pro feature"
-          } 
-          side="left"
-        >
+      {showCustomizeButton && customizationEnabled && (
+        <Tooltip content="Customize title & description for this community" side="left">
           <button
             onClick={() => {
-              if (customizationEnabled && onCustomize) {
+              if (onCustomize) {
                 onCustomize(name);
-              } else if (onRequestUpgrade) {
-                onRequestUpgrade({
-                  title: 'Customize Content',
-                  message: 'Customize title & description per community with Pro.',
-                });
               }
             }}
             className={`p-1.5 rounded-md cursor-pointer transition-colors ${
@@ -257,11 +246,27 @@ const SubredditRowActions: React.FC<SubredditRowActionsProps> = ({
                 ? 'bg-violet-500/15 text-violet-400 hover:bg-violet-500/25'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted'
             }`}
-            aria-label={customizationEnabled ? "Customize content for this community" : "Customize content - Pro feature"}
+            aria-label="Customize content for this community"
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
           </button>
         </Tooltip>
+      )}
+
+      {showCustomizeButton && !customizationEnabled && (
+        <ProUpgradeHint
+          feature="Custom title & description"
+          side="left"
+          onUpgrade={onRequestUpgrade ? () => onRequestUpgrade() : undefined}
+        >
+          <button
+            type="button"
+            className="p-1.5 rounded-md cursor-pointer transition-colors text-muted-foreground/50"
+            aria-label="Customize content - Pro feature"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+          </button>
+        </ProUpgradeHint>
       )}
     </div>
   );

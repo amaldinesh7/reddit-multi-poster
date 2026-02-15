@@ -2,7 +2,7 @@ import React from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import axios from 'axios';
-import { Upload, Layers } from 'lucide-react';
+import { Upload, Layers, Sparkles } from 'lucide-react';
 import { trackEvent } from '@/lib/posthog';
 
 interface MeResponse {
@@ -55,6 +55,11 @@ export default function Login() {
       icon: Layers,
       title: 'See progress',
       description: 'Quick, reliable updates on what went live',
+    },
+    {
+      icon: Sparkles,
+      title: 'AI-powered writing',
+      description: 'Generate engaging titles and descriptions with AI',
     },
   ];
 
