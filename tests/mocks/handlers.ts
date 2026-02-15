@@ -168,6 +168,84 @@ const buildQueueProcessStreamResponse = (
   return lines.join('\n');
 };
 
+type QueueOutcome = 'success' | 'error';
+
+const DEFAULT_DEMO_JOB_ID = 'demo_job_1';
+
+const buildQueueProcessStreamResponse = (
+  subreddits: string[],
+  outcomes: QueueOutcome[] = [],
+  jobId: string = DEFAULT_DEMO_JOB_ID
+): string => {
+  const lines: string[] = [
+    JSON.stringify({
+      type: 'status',
+      jobId,
+      status: 'processing',
+      currentIndex: 0,
+    }),
+  ];
+
+  subreddits.forEach((subreddit, index) => {
+    lines.push(
+      JSON.stringify({
+        type: 'progress',
+        jobId,
+        currentIndex: index,
+      })
+    );
+
+    const outcome = outcomes[index] ?? 'success';
+    if (outcome === 'success') {
+      lines.push(
+        JSON.stringify({
+          type: 'result',
+          jobId,
+          result: {
+            index,
+            subreddit,
+            status: 'success',
+            url: `https://reddit.com/r/${subreddit}/comments/test${index}`,
+            postedAt: new Date().toISOString(),
+          },
+        })
+      );
+    } else {
+      lines.push(
+        JSON.stringify({
+          type: 'result',
+          jobId,
+          result: {
+            index,
+            subreddit,
+            status: 'error',
+            error: 'Post failed',
+          },
+        })
+      );
+    }
+
+    if (index < subreddits.length - 1) {
+      lines.push(
+        JSON.stringify({
+          type: 'waiting',
+          jobId,
+          waitSeconds: 2,
+        })
+      );
+    }
+  });
+
+  lines.push(
+    JSON.stringify({
+      type: 'complete',
+      jobId,
+    })
+  );
+
+  return lines.join('\n');
+};
+
 /**
  * Setup all mock routes for a fully mocked test environment.
  * This provides a consistent baseline for testing UI behavior.
