@@ -200,6 +200,8 @@ const generateWithGroq = async (input: GenerateCopyInput, count: number): Promis
 
   const tone = input.tone || 'straightforward';
   const hasPreviousTitles = Boolean(input.previousTitles && input.previousTitles.length > 0);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -215,7 +217,9 @@ const generateWithGroq = async (input: GenerateCopyInput, count: number): Promis
       temperature: 0.5,
       max_tokens: 900,
     }),
+    signal: controller.signal,
   });
+  clearTimeout(timeout);
 
   if (!response.ok) {
     throw new Error(`Groq request failed with status ${response.status}`);
@@ -238,6 +242,8 @@ const generateWithGemini = async (input: GenerateCopyInput, count: number): Prom
   const hasPreviousTitles = Boolean(input.previousTitles && input.previousTitles.length > 0);
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_GEMINI_MODEL}:generateContent?key=${apiKey}`;
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
@@ -258,7 +264,9 @@ const generateWithGemini = async (input: GenerateCopyInput, count: number): Prom
         },
       ],
     }),
+    signal: controller.signal,
   });
+  clearTimeout(timeout);
 
   if (!response.ok) {
     throw new Error(`Gemini request failed with status ${response.status}`);

@@ -26,13 +26,12 @@ export const isAdminPassword = (password: string): boolean => {
   const adminPassword = process.env.ADMIN_PASSWORD;
   if (!adminPassword || !password) return false;
   
-  const adminBuffer = Buffer.from(adminPassword);
-  const passwordBuffer = Buffer.from(password);
+  // Hash both values so buffers are always the same length,
+  // preventing timing side-channel leaking the password length.
+  const adminHash = crypto.createHash('sha256').update(adminPassword).digest();
+  const passwordHash = crypto.createHash('sha256').update(password).digest();
   
-  // Lengths must match for timingSafeEqual
-  if (adminBuffer.length !== passwordBuffer.length) return false;
-  
-  return crypto.timingSafeEqual(adminBuffer, passwordBuffer);
+  return crypto.timingSafeEqual(adminHash, passwordHash);
 };
 
 /**

@@ -292,7 +292,7 @@ test.describe('Regression - AI Customize Flow', () => {
     await authenticatedPage.getByRole('checkbox', { name: /pics/i }).check();
 
     await authenticatedPage.getByRole('button', { name: /customize content for this community/i }).first().click();
-    await expect(authenticatedPage.getByText(/customize for r\\/pics/i)).toBeVisible();
+    await expect(authenticatedPage.getByText(/customize for r\/pics/i)).toBeVisible();
 
     await expect(authenticatedPage.getByRole('button', { name: /generate custom title options with ai/i })).toHaveCount(0);
     await expect(authenticatedPage.getByRole('button', { name: /generate custom description options with ai/i })).toHaveCount(0);

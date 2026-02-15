@@ -286,9 +286,7 @@ const CopyGenerationDialog: React.FC<CopyGenerationDialogProps> = ({
       </div>
 
       {/* Use my posts checkbox */}
-      <div className="flex flex-wrap items-center justify-between gap-2 ptAI title generator is a pro feature, henc4 disable it and show the uogarde. also we cna show a tooltip of laout to upagre, we can do the ame thing in subreddit row condfigue then showing the whoe modal, 
-
-also updwte the pro features with ai titgle generation both in login, upgrade modal -4">
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-4">
         <label className="flex items-center gap-2 cursor-pointer">
           <Checkbox
             checked={useMyPosts}

@@ -107,6 +107,7 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
   const displayBody = useCustomBody ? customBody : globalBody;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -296,6 +297,7 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
           </Button>
         </DialogFooter>
       </DialogContent>
+    </Dialog>
 
       {aiTargetField && (
         <CopyGenerationDialog
@@ -320,7 +322,7 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
           subreddit={subredditName}
         />
       )}
-    </Dialog>
+    </>
   );
 };
 

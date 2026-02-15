@@ -96,13 +96,13 @@ const DesktopHint: React.FC<ProUpgradeHintProps> = ({
   return (
     <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
       <PopoverPrimitive.Trigger asChild>
-        <div
-          className="contents"
+        <span
+          className="inline"
           onMouseEnter={handleOpen}
           onMouseLeave={handleClose}
         >
           {children}
-        </div>
+        </span>
       </PopoverPrimitive.Trigger>
       <PopoverPrimitive.Portal>
         <PopoverPrimitive.Content

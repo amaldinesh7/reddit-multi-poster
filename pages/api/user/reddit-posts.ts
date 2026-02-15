@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { serialize } from 'cookie';
 import { redditClient, refreshAccessToken, getIdentity, getUserSubmissions } from '../../../utils/reddit';
 
 interface ApiResponse {
@@ -46,6 +47,14 @@ export default async function handler(
     if (!token && refresh) {
       const t = await refreshAccessToken(refresh);
       token = t.access_token;
+      // Persist the refreshed access token to cookies
+      res.setHeader('Set-Cookie', serialize('reddit_access', token, {
+        path: '/',
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: t.expires_in - 10,
+      }));
     }
 
     if (!token) {

@@ -729,8 +729,12 @@ export default function Home() {
       source: 'home',
     });
     refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showTrialEndedPopup]);
+  }, [showTrialEndedPopup, refresh]);
+
+  const allSubredditsWithCategory = React.useMemo(
+    () => getAllSubredditsWithCategory(),
+    [getAllSubredditsWithCategory]
+  );
 
   // Calculate user stats for header display
   const userStats = React.useMemo(() => {
@@ -1291,7 +1295,7 @@ export default function Home() {
       <CommunitySelectionModal
         open={showCommunitySelectionModal}
         onOpenChange={setShowCommunitySelectionModal}
-        communities={getAllSubredditsWithCategory()}
+        communities={allSubredditsWithCategory}
         onConfirm={handleCommunitySelectionConfirm}
         onUpgrade={handleUpgrade}
         maxToKeep={FREE_MAX_SUBREDDITS}
