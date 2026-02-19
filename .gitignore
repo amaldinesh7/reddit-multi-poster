@@ -14,10 +14,13 @@
 /coverage
 /playwright-report/
 /test-results/
+/demo-output/
+/demo-audio/
 
 # next.js
 /.next/
 /out/
+/out/internal-research/
 
 # production
 /build

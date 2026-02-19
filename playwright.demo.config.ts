@@ -5,7 +5,7 @@ export default defineConfig({
   ...baseConfig,
   webServer: {
     ...baseConfig.webServer,
-    command: 'PORT=3100 npm run dev',
+    command: 'rm -rf .next/cache/webpack && PORT=3100 npm run dev',
     url: 'http://localhost:3100',
     reuseExistingServer: false,
   },
