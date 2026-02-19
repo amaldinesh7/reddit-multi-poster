@@ -1,0 +1,58 @@
+name: Deploy to Oracle Cloud
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Oracle Cloud VM
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            set -e
+            
+            echo "=== Starting deployment ==="
+            cd ~/reddit-multi-poster
+            
+            echo "=== Pulling latest code ==="
+            git fetch origin main
+            git reset --hard origin/main
+            
+            echo "=== Installing dependencies ==="
+            npm ci --production
+            
+            echo "=== Building application ==="
+            npm run build
+            
+            echo "=== Restarting application ==="
+            pm2 restart reddit-poster --update-env || pm2 start npm --name "reddit-poster" -- start
+            
+            echo "=== Deployment complete ==="
+            pm2 status
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          port: 22
+          script: |
+            sleep 5
+            curl -sf http://localhost:3000/api/health || echo "Health check endpoint not available"
+            pm2 status reddit-poster
