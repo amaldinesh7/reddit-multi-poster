@@ -27,17 +27,19 @@ export const mockResponses = {
   },
 
   /**
-   * Mock response for /api/settings/categories endpoint
+   * Mock response for /api/settings/categories endpoint (matches real API shape)
    */
   categoriesDefault: {
-    categories: testData.categories.default,
+    success: true,
+    data: testData.categories.default,
   },
 
   /**
    * Mock response for /api/settings/categories endpoint - empty
    */
   categoriesEmpty: {
-    categories: [],
+    success: true,
+    data: [],
   },
 
   /**
@@ -93,6 +95,67 @@ export const mockResponses = {
 type QueueOutcome = 'success' | 'error';
 
 const DEFAULT_DEMO_JOB_ID = 'demo_job_1';
+const NEW_CATEGORY_FALLBACK_NAME = 'New Category';
+
+interface MockSubreddit {
+  id: string;
+  subreddit_name: string;
+  position: number;
+  category_id: string;
+}
+
+interface MockCategory {
+  id: string;
+  name: string;
+  position: number;
+  collapsed: boolean;
+  user_subreddits: MockSubreddit[];
+}
+
+interface MockApiError {
+  code: string;
+  message: string;
+}
+
+const cloneInitialCategories = (): MockCategory[] => {
+  return testData.categories.default.map((category) => ({
+    id: category.id,
+    name: category.name,
+    position: category.position,
+    collapsed: category.collapsed,
+    user_subreddits: category.user_subreddits.map((subreddit) => ({
+      id: subreddit.id,
+      subreddit_name: subreddit.subreddit_name,
+      position: subreddit.position,
+      category_id: subreddit.category_id,
+    })),
+  }));
+};
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return message;
+    }
+  }
+  return fallback;
+};
+
+const fulfillApiError = async (
+  route: Route,
+  status: number,
+  error: MockApiError
+): Promise<void> => {
+  await route.fulfill({
+    status,
+    contentType: 'application/json',
+    body: JSON.stringify({ success: false, error }),
+  });
+};
+
+const normalizeSubredditName = (value: string): string =>
+  value.trim().replace(/^r\//i, '').toLowerCase();
 
 const buildQueueProcessStreamResponse = (
   subreddits: string[],
@@ -173,6 +236,10 @@ const buildQueueProcessStreamResponse = (
  * This provides a consistent baseline for testing UI behavior.
  */
 export const setupMockRoutes = async (page: Page): Promise<void> => {
+  const categoriesState = cloneInitialCategories();
+  let categoryCounter = 0;
+  let subredditCounter = 0;
+
   // Mock /api/me endpoint
   await page.route('**/api/me', async (route: Route) => {
     await route.fulfill({
@@ -215,50 +282,271 @@ export const setupMockRoutes = async (page: Page): Promise<void> => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(mockResponses.categoriesDefault),
+        body: JSON.stringify({
+          success: true,
+          data: categoriesState,
+        }),
       });
     } else if (method === 'POST') {
-      // Return a new category
+      const body = route.request().postDataJSON() as { name?: string } | null;
+      const requestedName = typeof body?.name === 'string' ? body.name.trim() : '';
+      const name = requestedName || NEW_CATEGORY_FALLBACK_NAME;
+
+      const nextPosition =
+        categoriesState.length > 0
+          ? Math.max(...categoriesState.map((category) => category.position)) + 1
+          : 0;
+      categoryCounter += 1;
+
+      const newCategory: MockCategory = {
+        id: `cat-new-${Date.now()}-${categoryCounter}`,
+        name,
+        position: nextPosition,
+        collapsed: false,
+        user_subreddits: [],
+      };
+      categoriesState.push(newCategory);
+
       await route.fulfill({
-        status: 200,
+        status: 201,
         contentType: 'application/json',
         body: JSON.stringify({
-          id: `cat-new-${Date.now()}`,
-          name: 'New Category',
-          position: testData.categories.default.length,
-          collapsed: false,
-          user_subreddits: [],
+          success: true,
+          data: newCategory,
         }),
       });
     } else {
-      await route.fulfill({ status: 200 });
+      await fulfillApiError(route, 405, {
+        code: 'METHOD_NOT_ALLOWED',
+        message: `Method ${method} not allowed`,
+      });
     }
   });
 
   // Mock /api/settings/categories/:id endpoint
   await page.route('**/api/settings/categories/*', async (route: Route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ success: true }),
+    const method = route.request().method();
+    const url = new URL(route.request().url());
+    const categoryId = url.pathname.split('/').pop();
+
+    if (!categoryId) {
+      await fulfillApiError(route, 400, {
+        code: 'INVALID_INPUT',
+        message: 'Category ID is required',
+      });
+      return;
+    }
+
+    const category = categoriesState.find((entry) => entry.id === categoryId);
+    if (!category) {
+      await fulfillApiError(route, 404, {
+        code: 'NOT_FOUND',
+        message: 'Category not found',
+      });
+      return;
+    }
+
+    if (method === 'PUT') {
+      const body = route.request().postDataJSON() as {
+        name?: string;
+        position?: number;
+        collapsed?: boolean;
+      } | null;
+      const updates: Partial<MockCategory> = {};
+      if (typeof body?.name === 'string' && body.name.trim().length > 0) {
+        updates.name = body.name.trim();
+      }
+      if (typeof body?.position === 'number') {
+        updates.position = body.position;
+      }
+      if (typeof body?.collapsed === 'boolean') {
+        updates.collapsed = body.collapsed;
+      }
+
+      Object.assign(category, updates);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: category }),
+      });
+      return;
+    }
+
+    if (method === 'DELETE') {
+      const categoryIndex = categoriesState.findIndex((entry) => entry.id === categoryId);
+      if (categoryIndex >= 0) {
+        categoriesState.splice(categoryIndex, 1);
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: { deleted: true } }),
+      });
+      return;
+    }
+
+    await fulfillApiError(route, 405, {
+      code: 'METHOD_NOT_ALLOWED',
+      message: `Method ${method} not allowed`,
     });
   });
 
   // Mock /api/settings/subreddits endpoint
   await page.route('**/api/settings/subreddits', async (route: Route) => {
+    const method = route.request().method();
+
+    if (method !== 'POST') {
+      await fulfillApiError(route, 405, {
+        code: 'METHOD_NOT_ALLOWED',
+        message: `Method ${method} not allowed`,
+      });
+      return;
+    }
+
+    const body = route.request().postDataJSON() as {
+      category_id?: string;
+      subreddit_name?: string;
+    } | null;
+    const categoryId = body?.category_id;
+    const subredditName = typeof body?.subreddit_name === 'string' ? body.subreddit_name : '';
+
+    if (!categoryId || !subredditName.trim()) {
+      await fulfillApiError(route, 400, {
+        code: 'INVALID_INPUT',
+        message: 'category_id and subreddit_name are required',
+      });
+      return;
+    }
+
+    const targetCategory = categoriesState.find((category) => category.id === categoryId);
+    if (!targetCategory) {
+      await fulfillApiError(route, 404, {
+        code: 'NOT_FOUND',
+        message: 'Category not found',
+      });
+      return;
+    }
+
+    const normalizedName = normalizeSubredditName(subredditName);
+    const duplicate = categoriesState.some((category) =>
+      category.user_subreddits.some(
+        (subreddit) => normalizeSubredditName(subreddit.subreddit_name) === normalizedName
+      )
+    );
+    if (duplicate) {
+      await fulfillApiError(route, 409, {
+        code: 'DUPLICATE_SUBREDDIT',
+        message: `r/${normalizedName} is already in your lists`,
+      });
+      return;
+    }
+
+    const nextPosition =
+      targetCategory.user_subreddits.length > 0
+        ? Math.max(...targetCategory.user_subreddits.map((subreddit) => subreddit.position)) + 1
+        : 0;
+    subredditCounter += 1;
+
+    const newSubreddit: MockSubreddit = {
+      id: `sub-new-${Date.now()}-${subredditCounter}`,
+      subreddit_name: normalizedName,
+      position: nextPosition,
+      category_id: categoryId,
+    };
+    targetCategory.user_subreddits.push(newSubreddit);
+
     await route.fulfill({
-      status: 200,
+      status: 201,
       contentType: 'application/json',
-      body: JSON.stringify({ success: true }),
+      body: JSON.stringify({ success: true, data: newSubreddit }),
     });
   });
 
   // Mock /api/settings/subreddits/:id endpoint
   await page.route('**/api/settings/subreddits/*', async (route: Route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ success: true }),
+    const method = route.request().method();
+    const url = new URL(route.request().url());
+    const subredditId = url.pathname.split('/').pop();
+
+    if (!subredditId) {
+      await fulfillApiError(route, 400, {
+        code: 'INVALID_INPUT',
+        message: 'Subreddit ID is required',
+      });
+      return;
+    }
+
+    let sourceCategory: MockCategory | undefined;
+    let subredditIndex = -1;
+    for (const category of categoriesState) {
+      const index = category.user_subreddits.findIndex((entry) => entry.id === subredditId);
+      if (index >= 0) {
+        sourceCategory = category;
+        subredditIndex = index;
+        break;
+      }
+    }
+
+    if (!sourceCategory || subredditIndex < 0) {
+      await fulfillApiError(route, 404, {
+        code: 'NOT_FOUND',
+        message: 'Subreddit not found',
+      });
+      return;
+    }
+
+    const currentSubreddit = sourceCategory.user_subreddits[subredditIndex];
+
+    if (method === 'PUT') {
+      const body = route.request().postDataJSON() as {
+        subreddit_name?: string;
+        position?: number;
+        category_id?: string;
+      } | null;
+
+      if (typeof body?.subreddit_name === 'string' && body.subreddit_name.trim().length > 0) {
+        currentSubreddit.subreddit_name = normalizeSubredditName(body.subreddit_name);
+      }
+      if (typeof body?.position === 'number') {
+        currentSubreddit.position = body.position;
+      }
+      if (typeof body?.category_id === 'string' && body.category_id !== sourceCategory.id) {
+        const nextCategory = categoriesState.find((category) => category.id === body.category_id);
+        if (!nextCategory) {
+          await fulfillApiError(route, 403, {
+            code: 'FORBIDDEN',
+            message: 'Cannot move to that category',
+          });
+          return;
+        }
+
+        sourceCategory.user_subreddits.splice(subredditIndex, 1);
+        currentSubreddit.category_id = nextCategory.id;
+        currentSubreddit.position = nextCategory.user_subreddits.length;
+        nextCategory.user_subreddits.push(currentSubreddit);
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: currentSubreddit }),
+      });
+      return;
+    }
+
+    if (method === 'DELETE') {
+      sourceCategory.user_subreddits.splice(subredditIndex, 1);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: { deleted: true } }),
+      });
+      return;
+    }
+
+    await fulfillApiError(route, 405, {
+      code: 'METHOD_NOT_ALLOWED',
+      message: `Method ${method} not allowed`,
     });
   });
 
@@ -276,11 +564,18 @@ export const setupMockRoutes = async (page: Page): Promise<void> => {
     const url = new URL(route.request().url());
     const query = url.searchParams.get('q') || '';
     
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(mockResponses.searchSubreddits(query)),
-    });
+    try {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockResponses.searchSubreddits(query)),
+      });
+    } catch (error) {
+      await fulfillApiError(route, 500, {
+        code: 'INTERNAL_ERROR',
+        message: getErrorMessage(error, 'Failed to fetch search results'),
+      });
+    }
   });
 
   // Mock /api/cache/subreddit/:name endpoint
