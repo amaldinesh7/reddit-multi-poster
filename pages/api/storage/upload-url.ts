@@ -1,6 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]';
 import {
   createSignedUploadUrl,
   ALLOWED_MIME_TYPES,
@@ -36,8 +34,9 @@ export default async function handler(
   }
 
   try {
-    const session = await getServerSession(req, res, authOptions);
-    if (!session?.user) {
+    const access = req.cookies['reddit_access'];
+    const supabaseUserId = req.cookies['supabase_user_id'];
+    if (!access) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
