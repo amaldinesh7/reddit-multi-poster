@@ -21,6 +21,7 @@ import {
 } from '@/lib/queueJob';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { captureClientError } from '@/lib/clientErrorHandler';
+import { useDirectUpload, UploadedFile } from './useDirectUpload';
 
 // ============================================================================
 // Types
@@ -36,6 +37,8 @@ export interface QueueJobState {
   isSubmitting: boolean;
   isProcessing: boolean;
   isConnected: boolean;
+  isUploading: boolean;
+  uploadProgress: { current: number; total: number; fileName: string } | null;
   waitingSeconds: number | null;
   startedAtMs: number | null;
   endedAtMs: number | null;
@@ -114,9 +117,17 @@ const initialState: QueueJobState = {
   isSubmitting: false,
   isProcessing: false,
   isConnected: false,
+  isUploading: false,
+  uploadProgress: null,
   waitingSeconds: null,
   startedAtMs: null,
   endedAtMs: null,
+};
+
+const generateJobFolder = (username: string): string => {
+  const date = new Date().toISOString().split('T')[0];
+  const shortId = Math.random().toString(36).substring(2, 10);
+  return `${username}/${date}/job_${shortId}`;
 };
 
 const isTerminalStatus = (status: QueueJobStatus | null): boolean =>
@@ -153,12 +164,22 @@ const mergeResultsByIndex = (
 
 export function useQueueJob(): UseQueueJobReturn {
   const [state, setState] = useState<QueueJobState>(initialState);
+  const { uploadFiles, isUploading, progress: uploadProgress, error: uploadError } = useDirectUpload();
   
   // Refs for cleanup
   const channelRef = useRef<RealtimeChannel | null>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const isProcessingRef = useRef(false);
+
+  // Sync upload state
+  useEffect(() => {
+    setState(prev => ({
+      ...prev,
+      isUploading,
+      uploadProgress,
+    }));
+  }, [isUploading, uploadProgress]);
 
   // ============================================================================
   // Realtime Subscription
@@ -393,9 +414,6 @@ export function useQueueJob(): UseQueueJobReturn {
     }));
 
     try {
-      // Build FormData
-      const formData = new FormData();
-      
       // Add items (without File objects)
       const itemsForServer = submission.items.map(item => ({
         subreddit: item.subreddit,
@@ -406,11 +424,8 @@ export function useQueueJob(): UseQueueJobReturn {
         url: item.url,
         text: item.text,
       }));
-      formData.append('items', JSON.stringify(itemsForServer));
-      formData.append('caption', submission.caption);
-      formData.append('prefixes', JSON.stringify(submission.prefixes));
 
-      // Add shared files (uploaded once, used by all items)
+      // Collect shared files (uploaded once, used by all items)
       const firstItemWithFiles = submission.items.find(item => item.files?.length || item.file);
       const sharedFiles = firstItemWithFiles
         ? (firstItemWithFiles.files || (firstItemWithFiles.file ? [firstItemWithFiles.file] : []))
@@ -423,17 +438,36 @@ export function useQueueJob(): UseQueueJobReturn {
         throw new Error('Please attach a media file for image, video, or gallery posts.');
       }
 
+      // Generate job folder for direct uploads
+      const jobFolder = generateJobFolder('user');
+      let uploadedFiles: UploadedFile[] = [];
+
+      // Upload files directly to Supabase Storage (bypasses Vercel 4.5MB limit)
       if (sharedFiles.length > 0) {
-        sharedFiles.forEach((file, fileIndex) => {
-          formData.append(`sharedFile_${fileIndex}`, file);
-        });
-        formData.append('sharedFileCount', sharedFiles.length.toString());
+        uploadedFiles = await uploadFiles(sharedFiles, jobFolder, -1);
       }
 
-      // Submit to API
+      // Build request body (metadata only - no file binaries)
+      const requestBody = {
+        items: itemsForServer,
+        caption: submission.caption,
+        prefixes: submission.prefixes,
+        jobFolder,
+        storagePaths: uploadedFiles.map(f => ({
+          storagePath: f.storagePath,
+          fileName: f.fileName,
+          mimeType: f.mimeType,
+          fileSize: f.fileSize,
+          itemIndex: f.itemIndex,
+          fileIndex: f.fileIndex,
+        })),
+      };
+
+      // Submit to API (lightweight JSON, no file binaries)
       const response = await fetch('/api/queue/submit', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
@@ -453,6 +487,8 @@ export function useQueueJob(): UseQueueJobReturn {
         results: [],
         currentIndex: 0,
         isSubmitting: false,
+        isUploading: false,
+        uploadProgress: null,
         error: null,
         startedAtMs: Date.now(),
         endedAtMs: null,
@@ -472,12 +508,14 @@ export function useQueueJob(): UseQueueJobReturn {
       setState(prev => ({
         ...prev,
         isSubmitting: false,
+        isUploading: false,
+        uploadProgress: null,
         error: errorMessage,
         endedAtMs: prev.endedAtMs ?? Date.now(),
       }));
       return null;
     }
-  }, [subscribeToJob, startPolling]);
+  }, [subscribeToJob, startPolling, uploadFiles]);
 
   // ============================================================================
   // Retry Single Item
@@ -594,6 +632,8 @@ export function useQueueJob(): UseQueueJobReturn {
         isSubmitting: false,
         isProcessing: job.status === 'processing',
         isConnected: false,
+        isUploading: false,
+        uploadProgress: null,
         waitingSeconds: null,
         startedAtMs: job.started_at ? Date.parse(job.started_at) : null,
         endedAtMs: isTerminalStatus(job.status)

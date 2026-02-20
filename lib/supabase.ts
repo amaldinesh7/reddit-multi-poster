@@ -390,3 +390,81 @@ export async function getQueueFileSignedUrl(
   
   return data.signedUrl;
 }
+
+/**
+ * Allowed MIME types for queue file uploads.
+ * Matches the storage bucket policy configuration.
+ */
+export const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'video/mp4',
+  'video/quicktime',
+  'video/webm',
+];
+
+/**
+ * Maximum file size for uploads (25MB to match bucket policy).
+ */
+export const MAX_FILE_SIZE = 25 * 1024 * 1024;
+
+/**
+ * Create a signed upload URL for direct browser-to-storage uploads.
+ * This allows clients to upload files directly to Supabase Storage,
+ * bypassing the Next.js API payload limits (Vercel 4.5MB limit).
+ * 
+ * @param storagePath - The target storage path for the file
+ * @returns Object containing the signed upload URL and token
+ */
+export async function createSignedUploadUrl(
+  storagePath: string
+): Promise<{ signedUrl: string; token: string; path: string }> {
+  const client = createServerSupabaseClient();
+  
+  const { data, error } = await client.storage
+    .from(QUEUE_FILES_BUCKET)
+    .createSignedUploadUrl(storagePath);
+  
+  if (error) {
+    console.error('Failed to create signed upload URL:', error);
+    throw new Error(`Failed to create signed upload URL: ${error.message}`);
+  }
+  
+  return {
+    signedUrl: data.signedUrl,
+    token: data.token,
+    path: storagePath,
+  };
+}
+
+/**
+ * Verify that a file exists in storage.
+ * Used to validate storage paths before processing queue jobs.
+ * 
+ * @param storagePath - The storage path to verify
+ * @returns True if the file exists
+ */
+export async function verifyQueueFileExists(storagePath: string): Promise<boolean> {
+  const client = createServerSupabaseClient();
+  
+  // Extract folder path and filename from the full path
+  const lastSlashIndex = storagePath.lastIndexOf('/');
+  const folderPath = storagePath.substring(0, lastSlashIndex);
+  const fileName = storagePath.substring(lastSlashIndex + 1);
+  
+  const { data, error } = await client.storage
+    .from(QUEUE_FILES_BUCKET)
+    .list(folderPath, {
+      search: fileName,
+      limit: 1,
+    });
+  
+  if (error) {
+    console.error('Failed to verify queue file:', error);
+    return false;
+  }
+  
+  return data && data.length > 0 && data.some(f => f.name === fileName);
+}
