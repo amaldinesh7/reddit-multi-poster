@@ -1207,8 +1207,9 @@ export default function Home() {
                         )}
                       </div>
                       {reviewCtaMode === 'missing_essentials' && (
-                        <p 
-                          className="text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                        <button 
+                          type="button"
+                          className="text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors bg-transparent border-0 p-0 text-left"
                           onClick={() => {
                             if (!hasTitle) {
                               postComposerRef.current?.focusTitle();
@@ -1216,7 +1217,7 @@ export default function Home() {
                           }}
                         >
                           Add a title and choose at least one destination.
-                        </p>
+                        </button>
                       )}
                     </div>
                   </div>

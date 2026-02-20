@@ -1,4 +1,5 @@
 import React from 'react';
+import NextImage from 'next/image';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import { Upload, Image, Video, Link, X, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -157,11 +158,11 @@ export default function MediaUpload({ onUrl, onFile, mode, resetSignal }: Props)
                   {selectedFiles.map((file, index) => (
                     <div key={index} className="relative group">
                       {previewUrls[index] && (
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-md overflow-hidden bg-secondary">
+                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-md overflow-hidden bg-secondary">
                           {file.type.startsWith('video/') ? (
                             <video src={previewUrls[index]} className="w-full h-full object-cover" muted />
                           ) : (
-                            <img src={previewUrls[index]} alt="" className="w-full h-full object-cover" />
+                            <NextImage src={previewUrls[index]} alt="" fill unoptimized className="object-cover" />
                           )}
                         </div>
                       )}

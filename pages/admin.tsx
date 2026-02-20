@@ -264,12 +264,12 @@ export default function AdminPanel() {
             <form onSubmit={handlePasswordLogin} className="space-y-4">
               <div className="relative">
                 <Input
+                  ref={(el) => { el?.focus(); }}
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Admin password"
                   className="pr-10"
-                  autoFocus
                   disabled={isSubmittingPassword}
                 />
                 <button

@@ -21,34 +21,32 @@ interface SubredditChartProps {
   className?: string;
 }
 
-const SubredditChart: React.FC<SubredditChartProps> = ({ data, className = '' }) => {
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload }: {
-    active?: boolean;
-    payload?: Array<{ payload: SubredditData }>;
-  }) => {
-    if (!active || !payload || !payload[0]) return null;
+const SubredditChartTooltip = ({ active, payload }: {
+  active?: boolean;
+  payload?: Array<{ payload: SubredditData }>;
+}) => {
+  if (!active || !payload || !payload[0]) return null;
 
-    const item = payload[0].payload;
-    
-    return (
-      <div className="rounded-lg border border-border bg-popover p-3 shadow-lg">
-        <p className="text-sm font-medium mb-2">r/{item.subreddit}</p>
-        <div className="space-y-1 text-xs">
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-muted-foreground">Posts: </span>
-            <span className="font-medium">{item.count}</span>
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-muted-foreground">Success: </span>
-            <span className="font-medium">{item.successRate}%</span>
-          </div>
+  const item = payload[0].payload;
+  
+  return (
+    <div className="rounded-lg border border-border bg-popover p-3 shadow-lg">
+      <p className="text-sm font-medium mb-2">r/{item.subreddit}</p>
+      <div className="space-y-1 text-xs">
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-muted-foreground">Posts: </span>
+          <span className="font-medium">{item.count}</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-muted-foreground">Success: </span>
+          <span className="font-medium">{item.successRate}%</span>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
-  // Get color based on success rate
+const SubredditChart: React.FC<SubredditChartProps> = ({ data, className = '' }) => {
   const getBarColor = (successRate: number) => {
     if (successRate >= 90) return '#10b981'; // emerald
     if (successRate >= 70) return '#f59e0b'; // amber
@@ -91,7 +89,7 @@ const SubredditChart: React.FC<SubredditChartProps> = ({ data, className = '' })
                 width={100}
                 tickFormatter={(value) => `r/${value.length > 12 ? value.slice(0, 12) + '...' : value}`}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+              <Tooltip content={<SubredditChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
               <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                 {data.map((entry, index) => (
                   <Cell key={index} fill={getBarColor(entry.successRate)} />

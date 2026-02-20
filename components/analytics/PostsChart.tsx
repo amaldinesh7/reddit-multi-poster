@@ -21,43 +21,42 @@ interface PostsChartProps {
   className?: string;
 }
 
-const PostsChart: React.FC<PostsChartProps> = ({ data, className = '' }) => {
-  // Format date for display
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
+const formatChartDate = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
 
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload, label }: {
-    active?: boolean;
-    payload?: Array<{ value: number; dataKey: string; color: string }>;
-    label?: string;
-  }) => {
-    if (!active || !payload || !label) return null;
+const PostsChartTooltip = ({ active, payload, label }: {
+  active?: boolean;
+  payload?: Array<{ value: number; dataKey: string; color: string }>;
+  label?: string;
+}) => {
+  if (!active || !payload || !label) return null;
 
-    const total = payload.reduce((sum, p) => sum + p.value, 0);
-    
-    return (
-      <div className="rounded-lg border border-border bg-popover p-3 shadow-lg">
-        <p className="text-sm font-medium mb-2">{formatDate(label)}</p>
-        {payload.map((entry, index) => (
-          <div key={index} className="flex items-center gap-2 text-xs">
-            <div
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span className="text-muted-foreground capitalize">{entry.dataKey}:</span>
-            <span className="font-medium">{entry.value}</span>
-          </div>
-        ))}
-        <div className="mt-2 pt-2 border-t border-border text-xs">
-          <span className="text-muted-foreground">Total: </span>
-          <span className="font-medium">{total}</span>
+  const total = payload.reduce((sum, p) => sum + p.value, 0);
+  
+  return (
+    <div className="rounded-lg border border-border bg-popover p-3 shadow-lg">
+      <p className="text-sm font-medium mb-2">{formatChartDate(label)}</p>
+      {payload.map((entry) => (
+        <div key={entry.dataKey} className="flex items-center gap-2 text-xs">
+          <div
+            className="w-2 h-2 rounded-full"
+            style={{ backgroundColor: entry.color }}
+          />
+          <span className="text-muted-foreground capitalize">{entry.dataKey}:</span>
+          <span className="font-medium">{entry.value}</span>
         </div>
+      ))}
+      <div className="mt-2 pt-2 border-t border-border text-xs">
+        <span className="text-muted-foreground">Total: </span>
+        <span className="font-medium">{total}</span>
       </div>
-    );
-  };
+    </div>
+  );
+};
+
+const PostsChart: React.FC<PostsChartProps> = ({ data, className = '' }) => {
 
   return (
     <div className={`rounded-xl border border-border/50 bg-card p-5 ${className}`}>
@@ -83,7 +82,7 @@ const PostsChart: React.FC<PostsChartProps> = ({ data, className = '' }) => {
             <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
             <XAxis
               dataKey="date"
-              tickFormatter={formatDate}
+              tickFormatter={formatChartDate}
               tick={{ fontSize: 11 }}
               tickLine={false}
               axisLine={false}
@@ -97,7 +96,7 @@ const PostsChart: React.FC<PostsChartProps> = ({ data, className = '' }) => {
               className="text-muted-foreground"
               allowDecimals={false}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<PostsChartTooltip />} />
             <Legend
               wrapperStyle={{ fontSize: '12px' }}
               iconType="circle"

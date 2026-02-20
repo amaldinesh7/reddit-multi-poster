@@ -2,7 +2,9 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import useSWR from 'swr';
 import { useAuth } from '@/hooks/useAuth';
+import { fetcher } from '@/lib/swr';
 import { MessageSquare, Bug, HelpCircle, Loader2, ChevronDown, Mail, ArrowLeft } from 'lucide-react';
 import { AppHeader, AppFooter } from '@/components/layout';
 import { cn } from '@/lib/utils';
@@ -209,89 +211,32 @@ const TabButton: React.FC<{
 const HelpPage: React.FC = () => {
   const router = useRouter();
   const { isAuthenticated, isLoading, me, logout, entitlement } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [ssoToken, setSsoToken] = useState<string | null>(null);
   const [cannyLoaded, setCannyLoaded] = useState(false);
-  const [loadingToken, setLoadingToken] = useState(true);
   const [cannyError, setCannyError] = useState<string | null>(null);
 
+  const shouldFetchAuth = isAuthenticated && !!me?.name;
+
+  const { data: adminData } = useSWR<{ isAdminByUsername?: boolean }>(
+    shouldFetchAuth ? '/api/admin-check' : null,
+    fetcher
+  );
+  const isAdmin = adminData?.isAdminByUsername === true;
+
+  const { data: ssoData, isLoading: loadingToken } = useSWR<{ ssoToken?: string }>(
+    shouldFetchAuth ? '/api/canny-sso' : null,
+    fetcher
+  );
+  const ssoToken = ssoData?.ssoToken ?? null;
+
   // Get active tab from URL query parameter, default to 'faq'
-  // Use router.isReady to ensure query params are available
   const tabFromQuery = router.isReady ? (router.query.tab as string | undefined) : undefined;
   const activeTab: TabType = tabFromQuery && (['faq', 'features', 'bugs'] as const).includes(tabFromQuery as TabType)
     ? (tabFromQuery as TabType)
     : 'faq';
 
-  // Handle tab change - update URL
   const handleTabChange = useCallback((tab: TabType) => {
     router.push({ pathname: '/help', query: { tab } }, undefined, { shallow: true });
   }, [router]);
-
-  // No authentication redirect - help page is public
-
-  // Check admin status (for header display only, not for access control)
-  // Only check if user is authenticated
-  useEffect(() => {
-    if (!isAuthenticated || !me?.name) return;
-    const checkAdmin = async () => {
-      try {
-        const res = await fetch('/api/admin-check');
-        if (res.ok) {
-          const data: unknown = await res.json();
-          // Only show admin menu if user is admin by Reddit username (not password)
-          if (
-            typeof data === 'object' &&
-            data !== null &&
-            'isAdminByUsername' in data &&
-            (data as { isAdminByUsername: unknown }).isAdminByUsername === true
-          ) {
-            setIsAdmin(true);
-          } else {
-            setIsAdmin(false);
-          }
-        }
-      } catch {
-        // Silently fail - admin status is not critical for this page
-      }
-    };
-    checkAdmin();
-  }, [isAuthenticated, me?.name]);
-
-  // Fetch Canny SSO token for authenticated users
-  // Unauthenticated users can still use Canny boards anonymously
-  useEffect(() => {
-    // If not authenticated, skip SSO token fetch but still allow loading to complete
-    if (!isAuthenticated) {
-      setLoadingToken(false);
-      return;
-    }
-    
-    if (!me?.name) return;
-
-    const fetchSsoToken = async () => {
-      try {
-        const res = await fetch('/api/canny-sso');
-        if (res.ok) {
-          const data: unknown = await res.json();
-          if (
-            typeof data === 'object' &&
-            data !== null &&
-            'ssoToken' in data &&
-            typeof (data as { ssoToken: unknown }).ssoToken === 'string'
-          ) {
-            setSsoToken((data as { ssoToken: string }).ssoToken);
-          }
-        }
-      } catch {
-        // SSO token fetch failed - widget will work without user identification
-        console.error('Failed to fetch Canny SSO token');
-      } finally {
-        setLoadingToken(false);
-      }
-    };
-
-    fetchSsoToken();
-  }, [isAuthenticated, me?.name]);
 
   // Load Canny SDK
   useEffect(() => {

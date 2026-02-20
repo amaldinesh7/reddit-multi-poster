@@ -1,12 +1,14 @@
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { BarChart3, CheckCircle2, XCircle, Users } from 'lucide-react';
 import {
   StatsCard,
-  PostsChart,
-  SubredditChart,
   RecentPostsTable,
 } from '@/components/analytics';
 import { TopPostersLeaderboard } from './TopPostersLeaderboard';
+
+const PostsChart = dynamic(() => import('@/components/analytics/PostsChart'), { ssr: false });
+const SubredditChart = dynamic(() => import('@/components/analytics/SubredditChart'), { ssr: false });
 
 interface TopPoster {
   userId: string;

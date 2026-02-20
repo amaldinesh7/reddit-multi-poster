@@ -8,7 +8,12 @@ import { SubredditsTab } from '@/components/internal/research/SubredditsTab';
 import { PipelineTab } from '@/components/internal/research/PipelineTab';
 import { DiscoveryTab } from '@/components/internal/research/DiscoveryTab';
 import { ResultsTab } from '@/components/internal/research/ResultsTab';
-import { AnalyticsTab } from '@/components/internal/research/AnalyticsTab';
+import dynamic from 'next/dynamic';
+
+const AnalyticsTab = dynamic(
+  () => import('@/components/internal/research/AnalyticsTab').then(mod => ({ default: mod.AnalyticsTab })),
+  { ssr: false }
+);
 
 export default function InternalResearchPage() {
   const enabled = isInternalResearchClientEnabled();

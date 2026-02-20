@@ -107,6 +107,28 @@ const StatItem = ({ icon, label, value, status = 'good', tooltip }: StatItemProp
 };
 
 // ============================================================================
+// StatusOrb Component
+// ============================================================================
+
+const STATUS_ORB_COLORS = {
+  good: 'bg-emerald-500 animate-eligibility-pulse',
+  warning: 'bg-amber-500 animate-eligibility-pulse-warning',
+  error: 'bg-red-500 animate-eligibility-pulse-blocked',
+} as const;
+
+const STATUS_ORB_LABELS = {
+  good: 'Ready to post',
+  warning: 'Some restrictions may apply',
+  error: 'Posting may be restricted',
+} as const;
+
+const StatusOrb = ({ status }: { status: 'good' | 'warning' | 'error' }) => (
+  <Tooltip content={<p className="text-xs font-medium">{STATUS_ORB_LABELS[status]}</p>} side="bottom">
+    <div className={`w-2 h-2 rounded-full ${STATUS_ORB_COLORS[status]} cursor-default`} />
+  </Tooltip>
+);
+
+// ============================================================================
 // Main Component
 // ============================================================================
 
@@ -124,42 +146,11 @@ export const UserEligibilityIndicator = ({
   const emailVerified = user.has_verified_email ?? false;
   const overallStatus = getOverallStatus(user);
 
-  // Determine status for each metric
-  const karmaStatus: 'good' | 'warning' | 'error' = 
-    totalKarma < 10 ? 'error' : totalKarma < 100 ? 'warning' : 'good';
-  
-  const ageStatus: 'good' | 'warning' | 'error' = 
-    accountAge.days < 3 ? 'error' : accountAge.days < 7 ? 'warning' : 'good';
-  
-  const emailStatus: 'good' | 'warning' | 'error' = 
-    emailVerified ? 'good' : 'warning';
-
-  // Status indicator orb
-  const StatusOrb = () => {
-    const orbColors = {
-      good: 'bg-emerald-500 animate-eligibility-pulse',
-      warning: 'bg-amber-500 animate-eligibility-pulse-warning',
-      error: 'bg-red-500 animate-eligibility-pulse-blocked',
-    };
-    
-    const statusLabels = {
-      good: 'Ready to post',
-      warning: 'Some restrictions may apply',
-      error: 'Posting may be restricted',
-    };
-
-    return (
-      <Tooltip content={<p className="text-xs font-medium">{statusLabels[overallStatus]}</p>} side="bottom">
-        <div className={`w-2 h-2 rounded-full ${orbColors[overallStatus]} cursor-default`} />
-      </Tooltip>
-    );
-  };
-
   // Compact version - just shows status orb and karma
   if (compact) {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
-        <StatusOrb />
+        <StatusOrb status={overallStatus} />
         <span className="text-xs text-muted-foreground font-mono-admin">
           {totalKarma.toLocaleString()} karma
         </span>
@@ -187,7 +178,7 @@ export const UserEligibilityIndicator = ({
       side="bottom"
     >
       <div className={`flex items-center gap-2 cursor-default ${className}`}>
-        <StatusOrb />
+        <StatusOrb status={overallStatus} />
         <span className="text-xs text-muted-foreground">
           {totalKarma.toLocaleString()} karma
         </span>

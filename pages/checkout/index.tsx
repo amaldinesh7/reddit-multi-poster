@@ -21,7 +21,6 @@ import { SWR_KEYS } from '@/lib/swr';
 import { usePricing } from '@/hooks/usePricing';
 import type { PricingInfo } from '@/lib/pricing';
 
-// Import Dodo Payments SDK types
 interface CheckoutBreakdownData {
   subTotal?: number;
   discount?: number;
@@ -39,8 +38,7 @@ interface CheckoutEvent {
   };
 }
 
-// SDK will be loaded dynamically
-let DodoPayments: {
+type DodoPaymentsSDK = {
   Initialize: (options: {
     mode: 'test' | 'live';
     displayType: 'inline' | 'overlay';
@@ -64,12 +62,23 @@ let DodoPayments: {
     close: () => void;
     isOpen: () => boolean;
   };
-} | null = null;
+};
+
+let DodoPayments: DodoPaymentsSDK | null = null;
 
 type CheckoutStatus = 'loading' | 'ready' | 'opening' | 'processing' | 'succeeded' | 'failed' | 'error';
 
-export default function CheckoutPage() {
-  const router = useRouter();
+interface UseCheckoutInitResult {
+  status: CheckoutStatus;
+  setStatus: React.Dispatch<React.SetStateAction<CheckoutStatus>>;
+  error: string | null;
+  setError: React.Dispatch<React.SetStateAction<string | null>>;
+  checkoutUrl: string | null;
+  sessionPricing: PricingInfo | null;
+  sdkInitialized: boolean;
+}
+
+const useCheckoutInit = (router: ReturnType<typeof useRouter>): UseCheckoutInitResult => {
   const [status, setStatus] = useState<CheckoutStatus>('loading');
   const statusRef = useRef<CheckoutStatus>(status);
   const [error, setError] = useState<string | null>(null);
@@ -78,24 +87,19 @@ export default function CheckoutPage() {
   const [sessionPricing, setSessionPricing] = useState<PricingInfo | null>(null);
   const [sdkInitialized, setSdkInitialized] = useState(false);
   const initRef = useRef(false);
-  const { pricing: pricingFromGeo } = usePricing();
 
-  // Keep statusRef in sync with status state
+  const isDodoLiveMode = process.env.NEXT_PUBLIC_DODO_PAYMENTS_ENVIRONMENT === 'live_mode';
+
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
 
-  // Default to test mode for safety - only use live mode when explicitly set
-  const isDodoLiveMode = process.env.NEXT_PUBLIC_DODO_PAYMENTS_ENVIRONMENT === 'live_mode';
-
-  // Initialize checkout session and SDK
   useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
 
     const init = async () => {
       try {
-        // 1. Create checkout session
         const { data } = await axios.post<{ checkout_url: string; session_id?: string; pricing?: PricingInfo }>(
           '/api/checkout/create-session'
         );
@@ -109,7 +113,6 @@ export default function CheckoutPage() {
         setCheckoutUrl(data.checkout_url);
         setSessionPricing(data.pricing ?? null);
 
-        // 2. Load and initialize Dodo SDK
         const sdk = await import('dodopayments-checkout');
         DodoPayments = sdk.DodoPayments;
 
@@ -117,15 +120,12 @@ export default function CheckoutPage() {
           mode: isDodoLiveMode ? 'live' : 'test',
           displayType: 'overlay',
           onEvent: (event: CheckoutEvent) => {
-            console.log('Dodo checkout event:', event.event_type, event);
-
             switch (event.event_type) {
               case 'checkout.opened':
                 setStatus('opening');
                 break;
 
               case 'checkout.form_ready':
-                // Form is ready for input
                 break;
 
               case 'checkout.pay_button_clicked':
@@ -133,10 +133,6 @@ export default function CheckoutPage() {
                 break;
 
               case 'checkout.closed':
-                // User closed the overlay - go back to ready state
-                // Use statusRef.current to get latest status (avoids stale closure)
-                // Preserve 'failed' and 'error' states so error message stays visible
-                // Also check errorRef in case error was set but status update is pending
                 if (
                   statusRef.current !== 'succeeded' && 
                   statusRef.current !== 'processing' && 
@@ -153,8 +149,6 @@ export default function CheckoutPage() {
                 if (statusData?.status === 'succeeded') {
                   setStatus('succeeded');
                   errorRef.current = null;
-                  // Refresh auth cache so entitlement updates immediately
-                  // The webhook updates the DB, this refreshes the frontend cache
                   mutate(SWR_KEYS.AUTH);
                 } else if (statusData?.status === 'failed') {
                   const errorMessage = 'Payment failed. Please try again with a different payment method.';
@@ -171,7 +165,6 @@ export default function CheckoutPage() {
               }
 
               case 'checkout.redirect_requested': {
-                // Handle 3DS or other redirects
                 const redirectData = event.data?.message as { redirect_to?: string };
                 if (redirectData?.redirect_to) {
                   window.location.href = redirectData.redirect_to;
@@ -224,6 +217,14 @@ export default function CheckoutPage() {
 
     init();
   }, [router, isDodoLiveMode]);
+
+  return { status, setStatus, error, setError, checkoutUrl, sessionPricing, sdkInitialized };
+};
+
+export default function CheckoutPage() {
+  const router = useRouter();
+  const { status, setStatus, error, checkoutUrl, sessionPricing, sdkInitialized } = useCheckoutInit(router);
+  const { pricing: pricingFromGeo } = usePricing();
 
   // Handle opening the checkout overlay
   const handlePay = useCallback(() => {

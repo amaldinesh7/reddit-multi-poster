@@ -125,10 +125,10 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
           {editingCategory ? (
             <div className="flex items-center gap-2 flex-1">
               <Input
+                ref={(el) => { el?.focus(); }}
                 defaultValue={category.name}
                 onKeyPress={handleKeyPress}
                 onBlur={(e) => handleUpdateCategoryName(e.target.value)}
-                autoFocus
                 className="h-8 bg-secondary/50 border-border/50"
                 aria-label="Edit category name"
               />

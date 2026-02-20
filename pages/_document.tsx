@@ -1,4 +1,5 @@
 import { Html, Head, Main, NextScript } from "next/document";
+import Script from "next/script";
 
 const Document = (): JSX.Element => {
   // JSON-LD structured data for SEO
@@ -37,12 +38,16 @@ const Document = (): JSX.Element => {
     <Html lang="en" suppressHydrationWarning>
       <Head>
         {/* JSON-LD Structured Data */}
-        <script
+        <Script
+          id="structured-data"
           type="application/ld+json"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
         
-        <script
+        <Script
+          id="theme-detection"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(){var t=localStorage.getItem('reddit-multi-poster-theme');var r=t==='light'?'light':'dark';document.documentElement.classList.toggle('dark',r==='dark');})();`,
           }}
