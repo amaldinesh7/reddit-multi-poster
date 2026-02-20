@@ -632,6 +632,8 @@ export function useQueueJob(): UseQueueJobReturn {
         isSubmitting: false,
         isProcessing: job.status === 'processing',
         isConnected: false,
+        isUploading: false,
+        uploadProgress: null,
         waitingSeconds: null,
         startedAtMs: job.started_at ? Date.parse(job.started_at) : null,
         endedAtMs: isTerminalStatus(job.status)
