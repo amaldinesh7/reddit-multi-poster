@@ -17,6 +17,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   
   res.setHeader('Set-Cookie', [
     serialize('reddit_access', '', cookieOptions),
+    serialize('reddit_scope', '', cookieOptions),
     serialize('reddit_refresh', '', cookieOptions),
     serialize('supabase_user_id', '', cookieOptions),
     serialize('reddit_oauth_state', '', { path: '/', maxAge: 0 }),

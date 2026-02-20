@@ -100,7 +100,7 @@ export function getAuthUrl(state: string) {
   url.searchParams.set('state', state);
   url.searchParams.set('redirect_uri', process.env.REDDIT_REDIRECT_URI!);
   url.searchParams.set('duration', 'permanent');
-  url.searchParams.set('scope', 'identity submit read flair mysubreddits');
+  url.searchParams.set('scope', 'identity submit read flair mysubreddits history privatemessages');
   return url.toString();
 }
 
@@ -156,6 +156,7 @@ export function redditClient(accessToken: string): AxiosInstance {
   assertEnv();
   const client = axios.create({
     baseURL: REDDIT_API,
+    timeout: 15_000,
     headers: {
       'Authorization': `Bearer ${accessToken}`,
       'User-Agent': process.env.REDDIT_USER_AGENT!,

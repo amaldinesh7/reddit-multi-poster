@@ -154,6 +154,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ...cookieOptions,
         maxAge: token.expires_in - 10,
       }),
+      serialize('reddit_scope', token.scope ?? '', {
+        ...cookieOptions,
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      }),
       token.refresh_token
         ? serialize('reddit_refresh', token.refresh_token, {
             ...cookieOptions,
