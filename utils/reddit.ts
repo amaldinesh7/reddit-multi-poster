@@ -100,7 +100,7 @@ export function getAuthUrl(state: string) {
   url.searchParams.set('state', state);
   url.searchParams.set('redirect_uri', process.env.REDDIT_REDIRECT_URI!);
   url.searchParams.set('duration', 'permanent');
-  url.searchParams.set('scope', 'identity submit read flair mysubreddits history');
+  url.searchParams.set('scope', 'identity submit read flair mysubreddits history privatemessages');
   return url.toString();
 }
 

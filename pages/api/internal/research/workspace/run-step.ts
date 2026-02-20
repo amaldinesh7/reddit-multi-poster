@@ -13,7 +13,12 @@ import {
   getSubredditPostCount,
 } from '@/lib/internal/research/db';
 import { getResearchAccessToken } from '@/lib/internal/research/auth';
-import type { ResearchJobConfig, ResearchStep } from '@/lib/internal/research/types';
+import {
+  COLLECT_BATCH_SIZES,
+  type CollectBatchSize,
+  type ResearchJobConfig,
+  type ResearchStep,
+} from '@/lib/internal/research/types';
 import {
   runStepCollectPosts,
   runStepProfileUsers,
@@ -21,6 +26,15 @@ import {
 } from '@/lib/internal/research/worker';
 
 const VALID_STEPS: ResearchStep[] = ['collect_posts', 'profile_users', 'score_rank'];
+
+export const parseCollectBatchSize = (raw: unknown): CollectBatchSize => {
+  if (raw === undefined || raw === null || raw === '') return 10;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || !COLLECT_BATCH_SIZES.includes(value as CollectBatchSize)) {
+    throw new Error(`Invalid batchSize. Must be one of: ${COLLECT_BATCH_SIZES.join(', ')}`);
+  }
+  return value as CollectBatchSize;
+};
 
 const safeRun = (jobId: string, fn: () => Promise<void>, afterRun?: () => void): void => {
   fn()
@@ -109,14 +123,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (requestedStep === 'collect_posts') {
+      const batchSize = parseCollectBatchSize(req.body?.batchSize);
+      const pendingSubreddits = getWorkspaceSubreddits()
+        .filter((subreddit) => subreddit.scanStatus === 'pending')
+        .sort((a, b) => new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime());
+
+      if (pendingSubreddits.length === 0) {
+        res.status(400).json({ error: 'No pending subreddits to scan. Add new subreddits first.' });
+        return;
+      }
+
+      const targetSubreddits = pendingSubreddits.slice(0, batchSize).map((subreddit) => subreddit.subreddit);
+      const collectConfig: ResearchJobConfig = { ...config, subreddits: targetSubreddits };
+
       const afterCollect = (): void => {
-        const wsSubs = getWorkspaceSubreddits();
-        for (const ws of wsSubs) {
-          const count = getSubredditPostCount(jobId, ws.subreddit);
-          if (count > 0) markWorkspaceSubredditScanned(ws.subreddit, count);
+        for (const subreddit of targetSubreddits) {
+          const count = getSubredditPostCount(jobId, subreddit);
+          markWorkspaceSubredditScanned(subreddit, count);
         }
       };
-      safeRun(jobId, () => runStepCollectPosts(jobId, token, config), afterCollect);
+      safeRun(jobId, () => runStepCollectPosts(jobId, token, collectConfig), afterCollect);
+      res.status(202).json({
+        ok: true,
+        step: requestedStep,
+        jobId,
+        batchSize,
+        targetCount: targetSubreddits.length,
+      });
+      return;
     } else {
       const rawConcurrency = Number(req.body?.concurrency);
       const concurrency = Number.isFinite(rawConcurrency) && rawConcurrency > 0

@@ -8,6 +8,7 @@ import { SubredditsTab } from '@/components/internal/research/SubredditsTab';
 import { PipelineTab } from '@/components/internal/research/PipelineTab';
 import { DiscoveryTab } from '@/components/internal/research/DiscoveryTab';
 import { ResultsTab } from '@/components/internal/research/ResultsTab';
+import { AnalyticsTab } from '@/components/internal/research/AnalyticsTab';
 
 export default function InternalResearchPage() {
   const enabled = isInternalResearchClientEnabled();
@@ -91,6 +92,9 @@ export default function InternalResearchPage() {
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="analytics" className="cursor-pointer">
+            Analytics
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="subreddits">
@@ -110,6 +114,8 @@ export default function InternalResearchPage() {
             job={r.job}
             wsStats={r.wsStats}
             runningStep={r.runningStep}
+            collectBatchSize={r.collectBatchSize}
+            setCollectBatchSize={r.setCollectBatchSize}
             handleRunStep={r.handleRunStep}
             handleCancel={r.handleCancel}
           />
@@ -151,6 +157,30 @@ export default function InternalResearchPage() {
             handleSaveNote={r.handleSaveNote}
             handleRunStep={r.handleRunStep}
             runningStep={r.runningStep}
+            outreachTemplate={r.outreachTemplate}
+            loadOutreachTemplate={r.loadOutreachTemplate}
+            handleSendOutreachMessages={r.handleSendOutreachMessages}
+            handleSyncOutreachReplies={r.handleSyncOutreachReplies}
+          />
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <AnalyticsTab
+            summary={r.analyticsSummary}
+            loading={r.analyticsLoading}
+            syncing={r.analyticsSyncing}
+            error={r.analyticsError}
+            message={r.analyticsMessage}
+            lookbackDays={r.analyticsLookbackDays}
+            setLookbackDays={r.setAnalyticsLookbackDays}
+            minPostAgeHours={r.analyticsMinPostAgeHours}
+            setMinPostAgeHours={r.setAnalyticsMinPostAgeHours}
+            timezone={r.analyticsTimezone}
+            setTimezone={r.setAnalyticsTimezone}
+            minPostsPerUser={r.analyticsMinPostsPerUser}
+            setMinPostsPerUser={r.setAnalyticsMinPostsPerUser}
+            handleRefreshSummary={r.handleRefreshAnalyticsSummary}
+            handleRefreshEngagement={() => r.handleRefreshAnalyticsEngagement('missing_only').then(() => undefined)}
           />
         </TabsContent>
       </Tabs>

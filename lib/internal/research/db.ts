@@ -2,6 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import Database from 'better-sqlite3';
 import type {
+  AnalyticsRefreshMode,
+  OutreachMessageStatus,
+  OutreachStatus,
+  OutreachTemplate,
   PatternEvidence,
   ResearchCandidate,
   ResearchJobConfig,
@@ -14,6 +18,9 @@ import type {
 
 const DB_DIR = path.join(process.cwd(), 'out', 'internal-research');
 const DB_PATH = path.join(DB_DIR, 'research.sqlite');
+const DEFAULT_OUTREACH_SUBJECT = 'Quick question about your posts in {{top_channel}}';
+const DEFAULT_OUTREACH_BODY =
+  'Hey u/{{username}},\n\nI saw your recent posts in {{top_channel}} and wanted to share a quick idea.\n\nWould you be open to a short chat?\n\nThanks!';
 
 let dbInstance: Database.Database | null = null;
 
@@ -48,6 +55,10 @@ const ensureDb = (): Database.Database => {
       created_utc INTEGER NOT NULL,
       is_nsfw INTEGER NOT NULL,
       crosspost_parent TEXT,
+      score INTEGER,
+      num_comments INTEGER,
+      upvote_ratio REAL,
+      engagement_synced_at TEXT,
       PRIMARY KEY(job_id, post_id)
     );
     CREATE TABLE IF NOT EXISTS research_user_profiles (
@@ -84,6 +95,27 @@ const ensureDb = (): Database.Database => {
       created_at TEXT NOT NULL,
       PRIMARY KEY(job_id, username)
     );
+    CREATE TABLE IF NOT EXISTS research_outreach_messages (
+      id TEXT PRIMARY KEY,
+      username TEXT NOT NULL,
+      status TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      body TEXT NOT NULL,
+      suggested_channel TEXT NOT NULL,
+      lead_score REAL NOT NULL,
+      reddit_message_fullname TEXT,
+      error_message TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS research_outreach_replies (
+      reddit_reply_fullname TEXT PRIMARY KEY,
+      username TEXT NOT NULL,
+      reddit_parent_fullname TEXT,
+      subject TEXT NOT NULL,
+      body TEXT NOT NULL,
+      created_utc INTEGER NOT NULL,
+      created_at TEXT NOT NULL
+    );
     CREATE INDEX IF NOT EXISTS idx_research_posts_job_subreddit
       ON research_subreddit_posts (job_id, subreddit);
     CREATE INDEX IF NOT EXISTS idx_research_profiles_job_user
@@ -92,6 +124,14 @@ const ensureDb = (): Database.Database => {
       ON research_user_patterns (job_id, username);
     CREATE INDEX IF NOT EXISTS idx_research_patterns_job_score
       ON research_user_patterns (job_id, overall_score DESC);
+    CREATE INDEX IF NOT EXISTS idx_research_outreach_messages_user_created
+      ON research_outreach_messages (username, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_research_outreach_messages_fullname
+      ON research_outreach_messages (reddit_message_fullname);
+    CREATE INDEX IF NOT EXISTS idx_research_outreach_replies_user_created
+      ON research_outreach_replies (username, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_research_outreach_replies_parent
+      ON research_outreach_replies (reddit_parent_fullname);
   `);
 
   // Migrations for existing DBs
@@ -108,6 +148,24 @@ const ensureDb = (): Database.Database => {
     }
   } catch {
     // table may not exist yet, CREATE TABLE above handles it
+  }
+
+  try {
+    const postCols = db.pragma('table_info(research_subreddit_posts)') as Array<{ name: string }>;
+    if (!postCols.some((c) => c.name === 'score')) {
+      db.exec('ALTER TABLE research_subreddit_posts ADD COLUMN score INTEGER');
+    }
+    if (!postCols.some((c) => c.name === 'num_comments')) {
+      db.exec('ALTER TABLE research_subreddit_posts ADD COLUMN num_comments INTEGER');
+    }
+    if (!postCols.some((c) => c.name === 'upvote_ratio')) {
+      db.exec('ALTER TABLE research_subreddit_posts ADD COLUMN upvote_ratio REAL');
+    }
+    if (!postCols.some((c) => c.name === 'engagement_synced_at')) {
+      db.exec('ALTER TABLE research_subreddit_posts ADD COLUMN engagement_synced_at TEXT');
+    }
+  } catch {
+    // table may not exist yet
   }
 
   try {
@@ -130,6 +188,17 @@ const ensureDb = (): Database.Database => {
   } catch {
     // table may not exist yet
   }
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_research_posts_created_utc
+      ON research_subreddit_posts (created_utc DESC);
+    CREATE INDEX IF NOT EXISTS idx_research_posts_author_created
+      ON research_subreddit_posts (author, created_utc DESC);
+    CREATE INDEX IF NOT EXISTS idx_research_posts_score
+      ON research_subreddit_posts (score);
+    CREATE INDEX IF NOT EXISTS idx_research_posts_num_comments
+      ON research_subreddit_posts (num_comments);
+  `);
 
   // ---- Workspace tables (global, not job-scoped) -------------------------
   db.exec(`
@@ -339,12 +408,15 @@ export const insertSubredditPost = (record: {
   createdUtc: number;
   isNsfw: number;
   crosspostParent: string | null;
+  score: number | null;
+  numComments: number | null;
+  upvoteRatio: number | null;
 }): void => {
   const db = ensureDb();
   db.prepare(`
     INSERT OR IGNORE INTO research_subreddit_posts
-    (job_id, subreddit, post_id, author, title, normalized_title, url, created_utc, is_nsfw, crosspost_parent)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (job_id, subreddit, post_id, author, title, normalized_title, url, created_utc, is_nsfw, crosspost_parent, score, num_comments, upvote_ratio, engagement_synced_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     record.jobId,
     record.subreddit,
@@ -355,7 +427,11 @@ export const insertSubredditPost = (record: {
     record.url,
     record.createdUtc,
     record.isNsfw,
-    record.crosspostParent
+    record.crosspostParent,
+    record.score,
+    record.numComments,
+    record.upvoteRatio,
+    new Date().toISOString()
   );
 };
 
@@ -387,6 +463,126 @@ export const getGlobalSubredditPostCount = (subreddit: string): number => {
        WHERE LOWER(subreddit) = LOWER(?)`
     )
     .get(subreddit) as { count: number } | undefined;
+  return row?.count ?? 0;
+};
+
+export const listAnalyticsPosts = (filters: {
+  lookbackDays: number;
+  minPostAgeHours: number;
+}): Array<{
+  postId: string;
+  author: string;
+  createdUtc: number;
+  score: number | null;
+  numComments: number | null;
+  upvoteRatio: number | null;
+}> => {
+  const db = ensureDb();
+  const conditions: string[] = [];
+  const values: number[] = [];
+  const nowUtc = Math.floor(Date.now() / 1000);
+
+  if (filters.lookbackDays > 0) {
+    conditions.push('created_utc >= ?');
+    values.push(nowUtc - filters.lookbackDays * 86400);
+  }
+  if (filters.minPostAgeHours > 0) {
+    conditions.push('created_utc <= ?');
+    values.push(nowUtc - filters.minPostAgeHours * 3600);
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const rows = db.prepare(`
+    SELECT
+      post_id,
+      MIN(author) AS author,
+      MAX(created_utc) AS created_utc,
+      MAX(score) AS score,
+      MAX(num_comments) AS num_comments,
+      MAX(upvote_ratio) AS upvote_ratio
+    FROM research_subreddit_posts
+    ${where}
+    GROUP BY post_id
+    ORDER BY created_utc DESC
+  `).all(...values) as Array<Record<string, unknown>>;
+
+  return rows.map((row) => ({
+    postId: String(row.post_id),
+    author: String(row.author),
+    createdUtc: Number(row.created_utc),
+    score: row.score === null || row.score === undefined ? null : Number(row.score),
+    numComments: row.num_comments === null || row.num_comments === undefined
+      ? null
+      : Number(row.num_comments),
+    upvoteRatio: row.upvote_ratio === null || row.upvote_ratio === undefined
+      ? null
+      : Number(row.upvote_ratio),
+  }));
+};
+
+export const listPostIdsForEngagementRefresh = (
+  mode: AnalyticsRefreshMode,
+  maxPosts: number
+): Array<{ postId: string; createdUtc: number }> => {
+  const db = ensureDb();
+  if (mode === 'recent_only') {
+    const rows = db.prepare(`
+      SELECT post_id, MAX(created_utc) AS created_utc
+      FROM research_subreddit_posts
+      GROUP BY post_id
+      ORDER BY created_utc DESC
+      LIMIT ?
+    `).all(maxPosts) as Array<{ post_id: string; created_utc: number }>;
+    return rows.map((row) => ({ postId: row.post_id, createdUtc: row.created_utc }));
+  }
+
+  const rows = db.prepare(`
+    SELECT post_id, MAX(created_utc) AS created_utc
+    FROM research_subreddit_posts
+    GROUP BY post_id
+    HAVING SUM(CASE WHEN score IS NULL OR num_comments IS NULL THEN 1 ELSE 0 END) > 0
+    ORDER BY created_utc DESC
+    LIMIT ?
+  `).all(maxPosts) as Array<{ post_id: string; created_utc: number }>;
+  return rows.map((row) => ({ postId: row.post_id, createdUtc: row.created_utc }));
+};
+
+export const updatePostEngagementByPostId = (record: {
+  postId: string;
+  score: number | null;
+  numComments: number | null;
+  upvoteRatio: number | null;
+}): number => {
+  const db = ensureDb();
+  const result = db.prepare(`
+    UPDATE research_subreddit_posts
+    SET
+      score = ?,
+      num_comments = ?,
+      upvote_ratio = ?,
+      engagement_synced_at = ?
+    WHERE post_id = ?
+  `).run(
+    record.score,
+    record.numComments,
+    record.upvoteRatio,
+    new Date().toISOString(),
+    record.postId
+  );
+  return result.changes;
+};
+
+export const countPostsMissingEngagement = (): number => {
+  const db = ensureDb();
+  const row = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM (
+      SELECT post_id
+      FROM research_subreddit_posts
+      GROUP BY post_id
+      HAVING SUM(CASE WHEN score IS NULL OR num_comments IS NULL THEN 1 ELSE 0 END) > 0
+    ) missing
+  `).get() as { count: number };
   return row?.count ?? 0;
 };
 
@@ -557,6 +753,190 @@ export const updateOutreachNote = (
   `).run(noteText, jobId, username);
 };
 
+export const insertOutreachMessage = (record: {
+  id: string;
+  username: string;
+  status: OutreachMessageStatus;
+  subject: string;
+  body: string;
+  suggestedChannel: string;
+  leadScore: number;
+  redditMessageFullname: string | null;
+  errorMessage: string | null;
+}): void => {
+  const db = ensureDb();
+  db.prepare(`
+    INSERT INTO research_outreach_messages
+    (id, username, status, subject, body, suggested_channel, lead_score, reddit_message_fullname, error_message, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    record.id,
+    record.username,
+    record.status,
+    record.subject,
+    record.body,
+    record.suggestedChannel,
+    record.leadScore,
+    record.redditMessageFullname,
+    record.errorMessage,
+    new Date().toISOString()
+  );
+};
+
+export const upsertOutreachReply = (record: {
+  redditReplyFullname: string;
+  username: string;
+  redditParentFullname: string | null;
+  subject: string;
+  body: string;
+  createdUtc: number;
+}): boolean => {
+  const db = ensureDb();
+  const result = db.prepare(`
+    INSERT OR IGNORE INTO research_outreach_replies
+    (reddit_reply_fullname, username, reddit_parent_fullname, subject, body, created_utc, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    record.redditReplyFullname,
+    record.username,
+    record.redditParentFullname,
+    record.subject,
+    record.body,
+    record.createdUtc,
+    new Date().toISOString()
+  );
+  return result.changes > 0;
+};
+
+export const listOutreachSentMessages = (
+  limit: number = 500
+): Array<{
+  username: string;
+  redditMessageFullname: string;
+  subject: string;
+  createdAt: string;
+}> => {
+  const db = ensureDb();
+  const rows = db.prepare(`
+    SELECT username, reddit_message_fullname, subject, created_at
+    FROM research_outreach_messages
+    WHERE status = 'sent' AND reddit_message_fullname IS NOT NULL
+    ORDER BY created_at DESC
+    LIMIT ?
+  `).all(limit) as Array<Record<string, unknown>>;
+  return rows.map((row) => ({
+    username: String(row.username),
+    redditMessageFullname: String(row.reddit_message_fullname),
+    subject: String(row.subject),
+    createdAt: String(row.created_at),
+  }));
+};
+
+export const getOutreachSummaryByUsernames = (
+  usernames: string[]
+): Map<string, {
+  outreachStatus: OutreachStatus;
+  lastSentAt: string | null;
+  lastReplyAt: string | null;
+  replyCount: number;
+  lastReplyExcerpt: string;
+}> => {
+  const summary = new Map<string, {
+    outreachStatus: OutreachStatus;
+    lastSentAt: string | null;
+    lastReplyAt: string | null;
+    replyCount: number;
+    lastReplyExcerpt: string;
+  }>();
+
+  if (usernames.length === 0) return summary;
+
+  const db = ensureDb();
+  const placeholders = usernames.map(() => '?').join(', ');
+
+  const latestMessageRows = db.prepare(`
+    SELECT username, status, created_at
+    FROM (
+      SELECT username, status, created_at,
+             ROW_NUMBER() OVER (PARTITION BY username ORDER BY created_at DESC) AS rn
+      FROM research_outreach_messages
+      WHERE username IN (${placeholders})
+    ) ranked
+    WHERE rn = 1
+  `).all(...usernames) as Array<Record<string, unknown>>;
+
+  const replyRows = db.prepare(`
+    SELECT username,
+           COUNT(*) AS reply_count,
+           MAX(created_at) AS last_reply_at,
+           (
+             SELECT substr(r2.body, 1, 140)
+             FROM research_outreach_replies r2
+             WHERE r2.username = r.username
+             ORDER BY r2.created_utc DESC, r2.created_at DESC
+             LIMIT 1
+           ) AS last_reply_excerpt
+    FROM research_outreach_replies r
+    WHERE username IN (${placeholders})
+    GROUP BY username
+  `).all(...usernames) as Array<Record<string, unknown>>;
+
+  for (const username of usernames) {
+    summary.set(username, {
+      outreachStatus: 'not_contacted',
+      lastSentAt: null,
+      lastReplyAt: null,
+      replyCount: 0,
+      lastReplyExcerpt: '',
+    });
+  }
+
+  for (const row of latestMessageRows) {
+    const username = String(row.username);
+    const current = summary.get(username);
+    if (!current) continue;
+    const status = String(row.status) === 'failed' ? 'failed' : 'sent';
+    summary.set(username, {
+      ...current,
+      outreachStatus: status,
+      lastSentAt: row.created_at ? String(row.created_at) : null,
+    });
+  }
+
+  for (const row of replyRows) {
+    const username = String(row.username);
+    const current = summary.get(username);
+    if (!current) continue;
+    const replyCount = Number(row.reply_count ?? 0);
+    summary.set(username, {
+      ...current,
+      outreachStatus: replyCount > 0 ? 'replied' : current.outreachStatus,
+      lastReplyAt: row.last_reply_at ? String(row.last_reply_at) : null,
+      replyCount,
+      lastReplyExcerpt: String(row.last_reply_excerpt ?? ''),
+    });
+  }
+
+  return summary;
+};
+
+const addOutreachSummary = (rows: ResearchCandidate[]): ResearchCandidate[] => {
+  const usernames = rows.map((row) => row.username);
+  const summary = getOutreachSummaryByUsernames(usernames);
+  return rows.map((row) => {
+    const outreach = summary.get(row.username);
+    if (!outreach) return row;
+    return {
+      ...row,
+      outreachStatus: outreach.outreachStatus,
+      lastSentAt: outreach.lastSentAt,
+      lastReplyAt: outreach.lastReplyAt,
+      replyCount: outreach.replyCount,
+      lastReplyExcerpt: outreach.lastReplyExcerpt,
+    };
+  });
+};
+
 // ---------------------------------------------------------------------------
 // Candidate query
 // ---------------------------------------------------------------------------
@@ -594,7 +974,7 @@ export const queryCandidates = (
   `).all(...values, query.pageSize, offset) as Array<Record<string, unknown>>;
   return {
     total: totalRow?.count ?? 0,
-    rows: rows.map((row) => ({
+    rows: addOutreachSummary(rows.map((row) => ({
       username: String(row.username),
       frequencyScore: Number(row.frequency_score),
       duplicateScore: Number(row.duplicate_score),
@@ -611,7 +991,7 @@ export const queryCandidates = (
       evidence: JSON.parse(String(row.evidence_json)) as PatternEvidence,
       suggestedChannel: String(row.suggested_channel ?? ''),
       noteText: String(row.note_text ?? ''),
-    })),
+    }))),
   };
 };
 
@@ -630,8 +1010,8 @@ export const copyPostsFromPreviousJobs = (
   const lowerSubreddits = subreddits.map((s) => s.toLowerCase());
   const result = db.prepare(`
     INSERT OR IGNORE INTO research_subreddit_posts
-      (job_id, subreddit, post_id, author, title, normalized_title, url, created_utc, is_nsfw, crosspost_parent)
-    SELECT ?, subreddit, post_id, author, title, normalized_title, url, created_utc, is_nsfw, crosspost_parent
+      (job_id, subreddit, post_id, author, title, normalized_title, url, created_utc, is_nsfw, crosspost_parent, score, num_comments, upvote_ratio, engagement_synced_at)
+    SELECT ?, subreddit, post_id, author, title, normalized_title, url, created_utc, is_nsfw, crosspost_parent, score, num_comments, upvote_ratio, engagement_synced_at
     FROM research_subreddit_posts
     WHERE job_id != ? AND LOWER(subreddit) IN (${placeholders})
   `).run(targetJobId, targetJobId, ...lowerSubreddits);
@@ -844,6 +1224,17 @@ export const setWorkspaceState = (key: string, value: string): void => {
   db.prepare('INSERT INTO research_workspace_state (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value);
 };
 
+export const getOutreachTemplate = (): OutreachTemplate => ({
+  subjectTemplate: getWorkspaceState('outreach_template_subject') ?? DEFAULT_OUTREACH_SUBJECT,
+  bodyTemplate: getWorkspaceState('outreach_template_body') ?? DEFAULT_OUTREACH_BODY,
+});
+
+export const updateOutreachTemplate = (template: OutreachTemplate): OutreachTemplate => {
+  setWorkspaceState('outreach_template_subject', template.subjectTemplate);
+  setWorkspaceState('outreach_template_body', template.bodyTemplate);
+  return getOutreachTemplate();
+};
+
 export const getActiveJobId = (): string | null => getWorkspaceState('active_job_id');
 
 export const setActiveJobId = (jobId: string): void => setWorkspaceState('active_job_id', jobId);
@@ -1021,7 +1412,7 @@ export const queryGlobalCandidates = (
 
   return {
     total: totalRow?.count ?? 0,
-    rows: rows.map((row) => ({
+    rows: addOutreachSummary(rows.map((row) => ({
       username: String(row.username),
       frequencyScore: Number(row.frequency_score),
       duplicateScore: Number(row.duplicate_score),
@@ -1038,7 +1429,7 @@ export const queryGlobalCandidates = (
       evidence: JSON.parse(String(row.evidence_json || '{}')) as PatternEvidence,
       suggestedChannel: String(row.suggested_channel ?? ''),
       noteText: String(row.note_text ?? ''),
-    })),
+    }))),
   };
 };
 

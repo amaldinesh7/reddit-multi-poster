@@ -1,6 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
+  AnalyticsRefreshMode,
+  AnalyticsRefreshPayload,
+  AnalyticsSummaryPayload,
+  CollectBatchSize,
   JobPayload,
+  OutreachRecipient,
+  OutreachSyncPayload,
+  OutreachTemplate,
   ProfileRow,
   DiscoveredSubredditRow,
   ResearchStep,
@@ -33,6 +40,8 @@ export interface UseResearchJobReturn {
   isActive: boolean;
   elapsedText: string;
   error: string;
+  collectBatchSize: CollectBatchSize;
+  setCollectBatchSize: (value: CollectBatchSize) => void;
 
   // Profiles (global)
   profiles: ProfileRow[];
@@ -67,6 +76,20 @@ export interface UseResearchJobReturn {
   setDuplicateOnly: (v: boolean) => void;
   nsfwOnly: boolean;
   setNsfwOnly: (v: boolean) => void;
+  outreachTemplate: OutreachTemplate;
+  analyticsSummary: AnalyticsSummaryPayload | null;
+  analyticsLoading: boolean;
+  analyticsSyncing: boolean;
+  analyticsError: string;
+  analyticsMessage: string;
+  analyticsLookbackDays: number;
+  setAnalyticsLookbackDays: (value: number) => void;
+  analyticsMinPostAgeHours: number;
+  setAnalyticsMinPostAgeHours: (value: number) => void;
+  analyticsTimezone: string;
+  setAnalyticsTimezone: (value: string) => void;
+  analyticsMinPostsPerUser: string;
+  setAnalyticsMinPostsPerUser: (value: string) => void;
 
   // Handlers
   handleRunStep: (step: ResearchStep) => Promise<void>;
@@ -76,6 +99,17 @@ export interface UseResearchJobReturn {
   handleCopyTopChannels: () => Promise<void>;
   handleAddDiscoveredSub: (sub: string) => Promise<void>;
   handleAddAllDiscovered: () => Promise<void>;
+  handleSendOutreachMessages: (
+    recipients: OutreachRecipient[],
+    template: OutreachTemplate
+  ) => Promise<{ sent: number; failed: number; total: number } | null>;
+  handleSyncOutreachReplies: () => Promise<OutreachSyncPayload | null>;
+  loadOutreachTemplate: () => Promise<void>;
+  loadAnalyticsSummary: () => Promise<void>;
+  handleRefreshAnalyticsSummary: () => Promise<void>;
+  handleRefreshAnalyticsEngagement: (
+    mode?: AnalyticsRefreshMode
+  ) => Promise<AnalyticsRefreshPayload | null>;
 }
 
 // ---------------------------------------------------------------------------
@@ -85,6 +119,10 @@ export interface UseResearchJobReturn {
 const PROFILES_PAGE_SIZE = 25;
 const DISCOVERED_PAGE_SIZE = 20;
 const RESULTS_PAGE_SIZE = 25;
+const DEFAULT_ANALYTICS_LOOKBACK_DAYS = 90;
+const DEFAULT_ANALYTICS_MIN_POST_AGE_HOURS = 24;
+const DEFAULT_ANALYTICS_TIMEZONE = 'UTC';
+const DEFAULT_ANALYTICS_MIN_POSTS_PER_USER = '5';
 
 export const useResearchJob = (): UseResearchJobReturn => {
   // -- Workspace state
@@ -96,6 +134,7 @@ export const useResearchJob = (): UseResearchJobReturn => {
   // -- Active job state (derived from workspace stats)
   const [job, setJob] = useState<JobPayload | null>(null);
   const [runningStep, setRunningStep] = useState<ResearchStep | null>(null);
+  const [collectBatchSize, setCollectBatchSize] = useState<CollectBatchSize>(10);
 
   // -- Profiles state (global)
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
@@ -116,6 +155,19 @@ export const useResearchJob = (): UseResearchJobReturn => {
   const [minSubreddits, setMinSubreddits] = useState('0');
   const [duplicateOnly, setDuplicateOnly] = useState(false);
   const [nsfwOnly, setNsfwOnly] = useState(false);
+  const [outreachTemplate, setOutreachTemplate] = useState<OutreachTemplate>({
+    subjectTemplate: '',
+    bodyTemplate: '',
+  });
+  const [analyticsSummary, setAnalyticsSummary] = useState<AnalyticsSummaryPayload | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsSyncing, setAnalyticsSyncing] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState('');
+  const [analyticsMessage, setAnalyticsMessage] = useState('');
+  const [analyticsLookbackDays, setAnalyticsLookbackDays] = useState(DEFAULT_ANALYTICS_LOOKBACK_DAYS);
+  const [analyticsMinPostAgeHours, setAnalyticsMinPostAgeHours] = useState(DEFAULT_ANALYTICS_MIN_POST_AGE_HOURS);
+  const [analyticsTimezone, setAnalyticsTimezone] = useState(DEFAULT_ANALYTICS_TIMEZONE);
+  const [analyticsMinPostsPerUser, setAnalyticsMinPostsPerUser] = useState(DEFAULT_ANALYTICS_MIN_POSTS_PER_USER);
 
   // -- UI state
   const [error, setError] = useState('');
@@ -215,6 +267,44 @@ export const useResearchJob = (): UseResearchJobReturn => {
     } catch { /* retry */ }
   }, []);
 
+  const loadOutreachTemplate = useCallback(async (): Promise<void> => {
+    try {
+      const response = await fetch('/api/internal/research/workspace/outreach/template');
+      const data = await response.json();
+      if (response.ok) {
+        setOutreachTemplate({
+          subjectTemplate: typeof data.subjectTemplate === 'string' ? data.subjectTemplate : '',
+          bodyTemplate: typeof data.bodyTemplate === 'string' ? data.bodyTemplate : '',
+        });
+      }
+    } catch { /* retry */ }
+  }, []);
+
+  const loadAnalyticsSummary = useCallback(async (): Promise<void> => {
+    const minPostsPerUserNumber = Math.max(1, Number(analyticsMinPostsPerUser) || 5);
+    setAnalyticsLoading(true);
+    setAnalyticsError('');
+    try {
+      const query = new URLSearchParams({
+        lookbackDays: String(analyticsLookbackDays),
+        minPostAgeHours: String(analyticsMinPostAgeHours),
+        timezone: analyticsTimezone,
+        minPostsPerUser: String(minPostsPerUserNumber),
+      });
+      const response = await fetch(`/api/internal/research/workspace/analytics/summary?${query.toString()}`);
+      const data = await response.json();
+      if (!response.ok) {
+        setAnalyticsError(data.error ?? 'Failed to load analytics summary');
+        return;
+      }
+      setAnalyticsSummary(data as AnalyticsSummaryPayload);
+    } catch {
+      setAnalyticsError('Network error loading analytics summary');
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [analyticsLookbackDays, analyticsMinPostAgeHours, analyticsTimezone, analyticsMinPostsPerUser]);
+
   // -----------------------------------------------------------------------
   // Handlers
   // -----------------------------------------------------------------------
@@ -260,11 +350,12 @@ export const useResearchJob = (): UseResearchJobReturn => {
     }
   };
 
-  const handleRunStep = async (step: ResearchStep): Promise<void> => {
+  const handleRunStep = useCallback(async (step: ResearchStep): Promise<void> => {
     setRunningStep(step);
     setError('');
     try {
       const body: Record<string, unknown> = { step };
+      if (step === 'collect_posts') body.batchSize = collectBatchSize;
       if (step === 'profile_users') body.concurrency = 3;
       const response = await fetch('/api/internal/research/workspace/run-step', {
         method: 'POST',
@@ -280,7 +371,7 @@ export const useResearchJob = (): UseResearchJobReturn => {
       setError('Network error starting step');
       setRunningStep(null);
     }
-  };
+  }, [collectBatchSize]);
 
   const handleCancel = async (): Promise<void> => {
     const activeJobId = wsStats?.activeJobId;
@@ -363,6 +454,108 @@ export const useResearchJob = (): UseResearchJobReturn => {
     }
   };
 
+  const handleSendOutreachMessages = async (
+    recipients: OutreachRecipient[],
+    template: OutreachTemplate
+  ): Promise<{ sent: number; failed: number; total: number } | null> => {
+    setError('');
+    try {
+      const response = await fetch('/api/internal/research/workspace/outreach/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients,
+          subjectTemplate: template.subjectTemplate,
+          bodyTemplate: template.bodyTemplate,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error ?? 'Failed to send outreach messages');
+        return null;
+      }
+      setOutreachTemplate(template);
+      await loadResults();
+      return {
+        sent: Number(data.sent ?? 0),
+        failed: Number(data.failed ?? 0),
+        total: Number(data.total ?? recipients.length),
+      };
+    } catch {
+      setError('Network error sending outreach messages');
+      return null;
+    }
+  };
+
+  const handleSyncOutreachReplies = async (): Promise<OutreachSyncPayload | null> => {
+    setError('');
+    try {
+      const response = await fetch('/api/internal/research/workspace/outreach/sync', {
+        method: 'POST',
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error ?? 'Failed to sync outreach replies');
+        return null;
+      }
+      await loadResults();
+      return {
+        fetched: Number(data.fetched ?? 0),
+        matched: Number(data.matched ?? 0),
+        inserted: Number(data.inserted ?? 0),
+      };
+    } catch {
+      setError('Network error syncing outreach replies');
+      return null;
+    }
+  };
+
+  const handleRefreshAnalyticsSummary = async (): Promise<void> => {
+    await loadAnalyticsSummary();
+  };
+
+  const handleRefreshAnalyticsEngagement = async (
+    mode: AnalyticsRefreshMode = 'missing_only'
+  ): Promise<AnalyticsRefreshPayload | null> => {
+    setAnalyticsSyncing(true);
+    setAnalyticsError('');
+    try {
+      const response = await fetch('/api/internal/research/workspace/analytics/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode,
+          maxPosts: 500,
+          batchSize: 25,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setAnalyticsError(data.error ?? 'Failed to refresh analytics engagement');
+        return null;
+      }
+
+      const payload: AnalyticsRefreshPayload = {
+        scanned: Number(data.scanned ?? 0),
+        updated: Number(data.updated ?? 0),
+        skipped: Number(data.skipped ?? 0),
+        failed: Number(data.failed ?? 0),
+        remainingMissing: Number(data.remainingMissing ?? 0),
+      };
+
+      setAnalyticsMessage(
+        `Refreshed ${payload.updated}/${payload.scanned} posts. Remaining missing: ${payload.remainingMissing}.`
+      );
+      await loadAnalyticsSummary();
+      return payload;
+    } catch {
+      setAnalyticsError('Network error refreshing analytics engagement');
+      return null;
+    } finally {
+      setAnalyticsSyncing(false);
+    }
+  };
+
   // -----------------------------------------------------------------------
   // Effects
   // -----------------------------------------------------------------------
@@ -374,6 +567,8 @@ export const useResearchJob = (): UseResearchJobReturn => {
     loadProfiles().catch(() => undefined);
     loadResults().catch(() => undefined);
     loadDiscoveredSubs().catch(() => undefined);
+    loadOutreachTemplate().catch(() => undefined);
+    loadAnalyticsSummary().catch(() => undefined);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Poll workspace stats while a step is running
@@ -412,6 +607,7 @@ export const useResearchJob = (): UseResearchJobReturn => {
     subredditsInput, setSubredditsInput, addingSubreddits,
     handleAddSubreddits, handleRemoveSubreddit,
     job, runningStep, phase, isActive, elapsedText, error,
+    collectBatchSize, setCollectBatchSize,
     profiles, profilesTotal, profilesPage, setProfilesPage,
     profilesPageSize: PROFILES_PAGE_SIZE, profilesTotalPages,
     discoveredSubs, addingSubs, discoveredPage, setDiscoveredPage,
@@ -420,8 +616,16 @@ export const useResearchJob = (): UseResearchJobReturn => {
     results, totalResults, page, setPage, totalPages,
     minScore, setMinScore, minSubreddits, setMinSubreddits,
     duplicateOnly, setDuplicateOnly, nsfwOnly, setNsfwOnly,
+    outreachTemplate,
+    analyticsSummary, analyticsLoading, analyticsSyncing, analyticsError, analyticsMessage,
+    analyticsLookbackDays, setAnalyticsLookbackDays,
+    analyticsMinPostAgeHours, setAnalyticsMinPostAgeHours,
+    analyticsTimezone, setAnalyticsTimezone,
+    analyticsMinPostsPerUser, setAnalyticsMinPostsPerUser,
     handleRunStep, handleCancel, handleForceRestart,
     handleSaveNote, handleCopyTopChannels,
     handleAddDiscoveredSub, handleAddAllDiscovered,
+    handleSendOutreachMessages, handleSyncOutreachReplies, loadOutreachTemplate,
+    loadAnalyticsSummary, handleRefreshAnalyticsSummary, handleRefreshAnalyticsEngagement,
   };
 };

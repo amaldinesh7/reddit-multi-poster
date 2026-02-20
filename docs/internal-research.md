@@ -25,10 +25,15 @@ This internal tool scans selected subreddits, analyzes user posting patterns, an
    - `npm run dev`
 2. Open:
    - `/internal/research`
-3. Enter up to 20 subreddits and start a scan.
-4. Polling updates progress in UI.
-5. Review candidate table and export CSV.
-6. If a run fails (network/rate-limit), start again with the same config:
+3. Enter subreddits in the Subreddits tab.
+4. In Pipeline, run **Collect Posts** in predefined batches (`5`, `10`, `20`, `50` pending subreddits per run).
+5. Run **Profile Users** and **Score & Rank**.
+6. In Results, select leads and send bulk Reddit PM outreach messages.
+7. Use **Sync Replies** (manual) to pull inbox replies and update outreach status.
+8. Open **Analytics** tab to analyze posting time/frequency and engagement correlations.
+9. Click **Refresh Engagement** to backfill missing upvote/comment metrics, then **Recompute**.
+10. Polling updates progress in UI.
+11. If a run fails (network/rate-limit), start again with the same config:
    - the latest failed/cancelled job is resumed,
    - cached subreddit posts and profiled users are reused.
 
@@ -42,8 +47,32 @@ This internal tool scans selected subreddits, analyzes user posting patterns, an
   - `research_user_profiles`
   - `research_user_patterns`
   - `research_outreach_notes`
+  - `research_outreach_messages`
+  - `research_outreach_replies`
+
+## Analytics details
+
+- Analytics is computed in-app from local SQLite data only.
+- Controls:
+  - `lookbackDays`: `30`, `60`, `90`, `180`
+  - `minPostAgeHours`: `12`, `24`, `48`
+  - `timezone`: `UTC`, `America/New_York`, `America/Los_Angeles`
+  - `minPostsPerUser`: minimum posts required for user-level frequency/correlation
+- Correlation method:
+  - Spearman rho (non-parametric, robust to non-linear scales)
+- Output includes:
+  - hourly and day-of-week posting volume
+  - hour×day heatmap
+  - frequency bins and engagement summary
+  - best posting windows
+  - caveats when engagement coverage is low
+- Engagement refresh:
+  - manual only (`/workspace/analytics/refresh`)
+  - no background polling or scheduler
 
 ## Notes
 
 - This is for internal research only.
-- Messaging/outreach is manual; no automated contact flow is included.
+- Outreach sending uses Reddit private messages (`/api/compose`) and is manually triggered only.
+- Reply tracking is manual sync only (`Sync Replies` button); no background polling.
+- OAuth must include `privatemessages` scope for send/sync actions.

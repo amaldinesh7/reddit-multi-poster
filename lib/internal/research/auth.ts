@@ -13,15 +13,24 @@ export const getResearchAccessToken = async (
 
   try {
     const token = await refreshAccessToken(refresh);
+    const cookieOptions = {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      secure: process.env.NODE_ENV === 'production',
+    };
     res.setHeader(
       'Set-Cookie',
-      serialize('reddit_access', token.access_token, {
-        path: '/',
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: token.expires_in - 10,
-      })
+      [
+        serialize('reddit_access', token.access_token, {
+          ...cookieOptions,
+          maxAge: token.expires_in - 10,
+        }),
+        serialize('reddit_scope', token.scope ?? '', {
+          ...cookieOptions,
+          maxAge: 60 * 60 * 24 * 7,
+        }),
+      ]
     );
     return token.access_token;
   } catch {

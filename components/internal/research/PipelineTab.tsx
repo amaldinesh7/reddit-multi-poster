@@ -1,6 +1,14 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type {
+  CollectBatchSize,
   JobPayload,
   ResearchStep,
   WorkspaceStats,
@@ -21,6 +29,8 @@ interface PipelineTabProps {
   job: JobPayload | null;
   wsStats: WorkspaceStats | null;
   runningStep: ResearchStep | null;
+  collectBatchSize: CollectBatchSize;
+  setCollectBatchSize: (value: CollectBatchSize) => void;
   handleRunStep: (step: ResearchStep) => Promise<void>;
   handleCancel: () => Promise<void>;
 }
@@ -33,6 +43,8 @@ export const PipelineTab = ({
   job,
   wsStats,
   runningStep,
+  collectBatchSize,
+  setCollectBatchSize,
   handleRunStep,
   handleCancel,
 }: PipelineTabProps) => {
@@ -107,6 +119,33 @@ export const PipelineTab = ({
                 )}
 
               <div className="flex items-center gap-2">
+                {!isRunning && stepDef.key === 'collect_posts' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Batch</span>
+                    <Select
+                      value={String(collectBatchSize)}
+                      onValueChange={(value) => {
+                        const parsed = Number(value);
+                        if (parsed === 5 || parsed === 10 || parsed === 20 || parsed === 50) {
+                          setCollectBatchSize(parsed as CollectBatchSize);
+                        }
+                      }}
+                    >
+                      <SelectTrigger
+                        className="h-8 w-[120px] text-xs"
+                        aria-label="Collect posts batch size"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5 subreddits</SelectItem>
+                        <SelectItem value="10">10 subreddits</SelectItem>
+                        <SelectItem value="20">20 subreddits</SelectItem>
+                        <SelectItem value="50">50 subreddits</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 {!isRunning && (
                   <Button
                     size="sm"

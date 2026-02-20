@@ -1,5 +1,17 @@
 // Re-export types from the shared lib that UI components need
 export type {
+  AnalyticsCorrelation,
+  AnalyticsCoverageSummary,
+  AnalyticsFrequencyBucket,
+  AnalyticsHeatmapCell,
+  AnalyticsHourBucket,
+  AnalyticsBestWindow,
+  AnalyticsSummaryPayload,
+  AnalyticsRefreshMode,
+  AnalyticsSummaryQuery,
+  CollectBatchSize,
+  OutreachRecipient,
+  OutreachTemplate,
   ResearchCandidate,
   ResearchJobConfig,
   ResearchStep,
@@ -40,6 +52,20 @@ export interface DiscoveredSubredditRow {
   userCount: number;
   postCount: number;
   isNsfw: boolean;
+}
+
+export interface OutreachSyncPayload {
+  fetched: number;
+  matched: number;
+  inserted: number;
+}
+
+export interface AnalyticsRefreshPayload {
+  scanned: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  remainingMissing: number;
 }
 
 export type JobPhase = 'idle' | 'running' | 'completed' | 'failed' | 'cancelled';

@@ -23,6 +23,9 @@ interface RedditSubredditPostData {
   created_utc: number;
   over_18: boolean;
   crosspost_parent?: string;
+  score?: number;
+  num_comments?: number;
+  upvote_ratio?: number;
 }
 
 interface RedditUserPostData extends RedditSubredditPostData {
@@ -62,6 +65,9 @@ const parseUserPost = (data: RedditUserPostData): UserSubmission => ({
   createdUtc: data.created_utc ?? 0,
   over18: Boolean(data.over_18),
   crosspostParent: data.crosspost_parent ?? null,
+  score: typeof data.score === 'number' ? data.score : null,
+  numComments: typeof data.num_comments === 'number' ? data.num_comments : null,
+  upvoteRatio: typeof data.upvote_ratio === 'number' ? data.upvote_ratio : null,
 });
 
 export const collectSubredditPosts = async (
@@ -126,6 +132,9 @@ export const collectSubredditPosts = async (
             createdUtc: post.created_utc ?? 0,
             isNsfw: post.over_18 ? 1 : 0,
             crosspostParent: post.crosspost_parent ?? null,
+            score: typeof post.score === 'number' ? post.score : null,
+            numComments: typeof post.num_comments === 'number' ? post.num_comments : null,
+            upvoteRatio: typeof post.upvote_ratio === 'number' ? post.upvote_ratio : null,
           });
         });
 
