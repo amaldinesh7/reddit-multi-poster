@@ -867,15 +867,13 @@ export default function Home() {
               {/* Left Column: Create Post */}
               <div className="lg:pr-6">
                 {/* Section Header with Quick Actions - Desktop only */}
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold tracking-tight hidden lg:block">Your post</h2>
-                  {/* Quick Actions - Load Last Post Settings */}
+                <div className="hidden lg:flex items-center justify-between mb-4 pb-3 border-b border-border/30">
+                  <h2 className="text-xl font-semibold tracking-tight">Your post</h2>
                   <QuickActions
                     onLoadLastPost={applyLastPostSettings}
                     hasLastPost={hasLastPostSettings}
                     lastPostDate={lastPostSettingsDate}
                     justApplied={justAppliedLastPost}
-                    className="hidden lg:flex"
                   />
                 </div>
                 {/* Mobile Quick Actions */}
@@ -982,7 +980,9 @@ export default function Home() {
               {/* Right Column: Communities & Queue */}
               <div className="lg:pl-6">
                 {/* Section Header - Desktop only */}
-                <h2 className="text-xl font-semibold tracking-tight hidden lg:block mb-4 lg:mb-4">Where to post</h2>
+                <div className="hidden lg:block mb-4 pb-3 border-b border-border/30">
+                  <h2 className="text-xl font-semibold tracking-tight">Where to post</h2>
+                </div>
 
                 {/* Communities Section */}
                 <section 

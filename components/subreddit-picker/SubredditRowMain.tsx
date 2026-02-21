@@ -56,7 +56,7 @@ const SubredditRowMain: React.FC<SubredditRowMainProps> = ({
         {hasError && (
           <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" aria-hidden="true" />
         )}
-        <span className={`text-[15px] sm:text-sm truncate select-none font-medium ${hasError ? 'text-red-400' : 'text-foreground/75'}`}>
+        <span className={`text-[15px] sm:text-sm truncate select-none font-medium ${hasError ? 'text-red-400' : ''}`}>
           r/{name}
         </span>
 

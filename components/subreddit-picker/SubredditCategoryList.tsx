@@ -169,7 +169,7 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
             </button>
 
             {isExpanded && (
-              <div className="space-y-1 ml-2 pl-3 border-l border-border/40">
+              <div className="space-y-1 ml-2 pl-3 border-l border-border/40 [&_span.font-medium]:text-foreground/70">
                 {subreddits.map((name) => {
                   const key = normalizeSubredditKey(name);
                   const hasError = !!(showValidationErrors && hasMissingFlair(name));
