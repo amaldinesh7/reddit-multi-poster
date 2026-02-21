@@ -7,6 +7,7 @@ import { useRouter } from 'next/router';
 import axios from 'axios';
 import { checkAuthCookies, redirectToLogin } from '@/lib/serverAuth';
 import * as Sentry from '@sentry/nextjs';
+import { SITE_URL } from '@/lib/site-config';
 import MediaUpload from '../components/MediaUpload';
 import PostComposer, { PostComposerRef } from '../components/PostComposer';
 import { AppLoader, Skeleton, SubredditRowSkeleton, CardSkeleton } from '@/components/ui/loader';
@@ -813,14 +814,14 @@ export default function Home() {
         <meta name="keywords" content="reddit, multi poster, cross-post, subreddit, bulk posting, reddit automation, content sharing, social media tool, reddit scheduler" />
         <meta name="author" content="Reddit Multi Poster" />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://reddit-multi-poster.vercel.app/" />
+        <link rel="canonical" href={`${SITE_URL}/`} />
 
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://reddit-multi-poster.vercel.app/" />
+        <meta property="og:url" content={`${SITE_URL}/`} />
         <meta property="og:title" content="Reddit Multi Poster - Share Once, Reach Everywhere" />
         <meta property="og:description" content="Stop wasting time copy-pasting. Post to 30+ subreddits with one click. Smart scheduling prevents spam flags. Auto-flair detection. Real-time progress tracking." />
-        <meta property="og:image" content="https://reddit-multi-poster.vercel.app/og-image.svg" />
+        <meta property="og:image" content={`${SITE_URL}/og-image.svg`} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:site_name" content="Reddit Multi Poster" />
@@ -828,10 +829,10 @@ export default function Home() {
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://reddit-multi-poster.vercel.app/" />
+        <meta name="twitter:url" content={`${SITE_URL}/`} />
         <meta name="twitter:title" content="Reddit Multi Poster - Share Once, Reach Everywhere" />
         <meta name="twitter:description" content="Post to 30+ subreddits with one click. Smart scheduling, auto-flairs, real-time tracking. The tool every Reddit content creator needs." />
-        <meta name="twitter:image" content="https://reddit-multi-poster.vercel.app/og-image.svg" />
+        <meta name="twitter:image" content={`${SITE_URL}/og-image.svg`} />
         <meta name="twitter:creator" content="@redditposter" />
       </Head>
 

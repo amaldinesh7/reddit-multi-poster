@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://reddit-multi-poster.vercel.app">
+  <a href="https://redditmultiposter.com">
     <img src="https://img.shields.io/badge/Try%20It-Live%20Demo-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="Live Demo" />
   </a>
 </p>
@@ -66,7 +66,7 @@ Reddit Multi Poster handles the tedious work so you can focus on what matters.
 
 ### Use the Live App
 
-1. Visit [reddit-multi-poster.vercel.app](https://reddit-multi-poster.vercel.app)
+1. Visit [redditmultiposter.com](https://redditmultiposter.com)
 2. Click "Continue with Reddit" to connect your account
 3. Upload your content and select your communities
 4. Hit "Start Posting" — done!
@@ -131,7 +131,7 @@ MIT License — feel free to use this for your own projects.
 </p>
 
 <p align="center">
-  <a href="https://reddit-multi-poster.vercel.app">
+  <a href="https://redditmultiposter.com">
     <img src="https://img.shields.io/badge/Try%20Reddit%20Multi%20Poster-FF4500?style=for-the-badge&logo=reddit&logoColor=white" alt="Try It Now" />
   </a>
 </p>
