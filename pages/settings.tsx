@@ -5,6 +5,7 @@ import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Loader2, Search, FolderPlus, RefreshCw, GripVertical, FlaskConical, Crown, AlertTriangle } from 'lucide-react';
+import { LogoLoader } from '@/components/ui/loader';
 import { useSubreddits } from '../hooks/useSubreddits';
 import { useLocalSubredditCache } from '../hooks/useLocalSubredditCache';
 import { useAuth } from '../hooks/useAuth';
@@ -452,8 +453,8 @@ export default function Settings() {
     return (
       <div className="min-h-viewport bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading…</p>
+          <LogoLoader size="md" />
+          <p className="text-sm text-muted-foreground">Loading…</p>
         </div>
       </div>
     );
@@ -653,15 +654,18 @@ export default function Settings() {
                   </div>
                 </SortableContext>
 
-                <DragOverlay>
+                <DragOverlay dropAnimation={{
+                  duration: 200,
+                  easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+                }}>
                   {activeId && activeDragData?.type === 'subreddit' && activeDragData.subreddit ? (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/20 border-2 border-primary shadow-lg">
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card border-2 border-primary/60 shadow-xl shadow-primary/10 backdrop-blur-sm scale-[1.02]">
                       <GripVertical className="w-3 h-3 text-primary" />
                       <span className="text-sm font-medium">r/{activeDragData.subreddit.subreddit_name}</span>
                     </div>
                   ) : activeId ? (
-                    <div className="p-4 bg-primary/10 border-2 border-primary border-dashed rounded-xl">
-                      Dragging...
+                    <div className="p-4 bg-card border-2 border-primary/60 rounded-xl shadow-xl shadow-primary/10 backdrop-blur-sm scale-[1.01]">
+                      <span className="text-sm text-muted-foreground">Moving list...</span>
                     </div>
                   ) : null}
                 </DragOverlay>

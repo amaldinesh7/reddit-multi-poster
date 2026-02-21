@@ -14,6 +14,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
+import { LogoLoader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -85,6 +86,7 @@ interface AnalyticsData {
     errorCode: string | null;
     redditUrl: string | null;
     createdAt: string;
+    username: string | null;
   }>;
   totalUsers: number;
   topPosters: TopPoster[];
@@ -235,7 +237,7 @@ export default function AdminPanel() {
       <>
         {header}
         <div className="min-h-viewport bg-background flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+          <LogoLoader size="md" />
         </div>
       </>
     );

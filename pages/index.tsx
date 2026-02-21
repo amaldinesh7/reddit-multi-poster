@@ -8,7 +8,6 @@ import axios from 'axios';
 import { checkAuthCookies, redirectToLogin } from '@/lib/serverAuth';
 import * as Sentry from '@sentry/nextjs';
 import { SITE_URL } from '@/lib/site-config';
-import MediaUpload from '../components/MediaUpload';
 import PostComposer, { PostComposerRef } from '../components/PostComposer';
 import { AppLoader, Skeleton, SubredditRowSkeleton, CardSkeleton } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -61,6 +60,13 @@ const QueueSkeleton = () => (
   </div>
 );
 
+const MediaUploadSkeleton = () => (
+  <div className="space-y-3">
+    <CardSkeleton className="h-40" />
+    <Skeleton className="h-10 w-full rounded-lg" />
+  </div>
+);
+
 // Dynamic imports for heavy components with loading states
 const SubredditFlairPicker = dynamic(
   () => import('../components/SubredditFlairPicker'),
@@ -75,6 +81,14 @@ const PostingQueue = dynamic(
   { 
     loading: () => <QueueSkeleton />,
     ssr: false
+  }
+);
+
+const MediaUpload = dynamic(
+  () => import('../components/MediaUpload'),
+  {
+    loading: () => <MediaUploadSkeleton />,
+    ssr: false,
   }
 );
 
@@ -867,7 +881,7 @@ export default function Home() {
               {/* Left Column: Create Post */}
               <div className="lg:pr-6">
                 {/* Section Header with Quick Actions - Desktop only */}
-                <div className="hidden lg:flex items-center justify-between mb-4 pb-3 border-b border-border/30">
+                <div className="hidden lg:flex items-center justify-between mb-4 pb-3 border-b border-border/40">
                   <h2 className="text-xl font-semibold tracking-tight">Your post</h2>
                   <QuickActions
                     onLoadLastPost={applyLastPostSettings}
@@ -980,7 +994,7 @@ export default function Home() {
               {/* Right Column: Communities & Queue */}
               <div className="lg:pl-6">
                 {/* Section Header - Desktop only */}
-                <div className="hidden lg:block mb-4 pb-3 border-b border-border/30">
+                <div className="hidden lg:block mb-4 pb-3 border-b border-border/40">
                   <h2 className="text-xl font-semibold tracking-tight">Where to post</h2>
                 </div>
 
@@ -1028,7 +1042,7 @@ export default function Home() {
                         size="sm"
                         className="h-9 px-3 text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground rounded-md transition-colors hover:bg-secondary"
                         aria-label="Manage communities and flairs"
-                        onClick={() => { window.location.href = '/settings'; }}
+                        onClick={() => { router.push('/settings'); }}
                       >
                         <Settings className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" />
                         Manage
