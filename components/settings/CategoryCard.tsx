@@ -110,10 +110,10 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
     <Card
       ref={setDroppableRef}
       {...containerDragProps}
-      className={`glass-card rounded-xl overflow-hidden transition-all duration-200 ${isDragging ? 'opacity-50 ring-2 ring-primary/50' : ''
+      className={`glass-card rounded-xl overflow-hidden transition-all duration-200 ${isDragging ? 'ring-2 ring-primary/50' : ''
         } ${isDropTarget ? 'ring-2 ring-primary bg-primary/5' : ''}`}
     >
-      <CardHeader className="p-4 bg-secondary/20 border-b border-border/30">
+      <CardHeader className="p-4 bg-secondary/20 border-b border-border/50">
         <div className="flex items-center gap-3">
           <div
             {...dragHandleProps}
@@ -236,7 +236,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
               ))}
 
               {(!category.user_subreddits || category.user_subreddits.length === 0) && (
-                <div className={`text-center py-6 border-2 border-dashed rounded-lg transition-colors ${isDropTarget ? 'border-primary bg-primary/5' : 'border-border/30'
+                <div className={`text-center py-6 border-2 border-dashed rounded-lg transition-colors ${isDropTarget ? 'border-primary bg-primary/5' : 'border-border/50'
                   }`}>
                   <p className="text-xs text-muted-foreground">
                     {isDropTarget ? 'Drop here to move' : 'No subreddits yet. Add one above or drag here.'}

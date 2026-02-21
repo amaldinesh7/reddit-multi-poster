@@ -27,7 +27,7 @@ const SubredditRowExpandedDetails: React.FC<SubredditRowExpandedDetailsProps> = 
   }
 
   return (
-    <div className="px-4 py-3 bg-muted/30 border-t border-border/30 space-y-2 animate-in slide-in-from-top-2 duration-200">
+    <div className="px-4 py-3 bg-muted/30 border-t border-border/50 space-y-2 animate-in slide-in-from-top-2 duration-200">
       {hasGuidelines && (
         <div className="text-xs">
           <span className="font-medium text-foreground">📝 Guidelines:</span>

@@ -15,6 +15,7 @@ import {
   FileText,
   Type,
   SlidersHorizontal,
+  Info,
 } from 'lucide-react';
 import {
   DropdownMenuRoot,
@@ -223,14 +224,15 @@ const SubredditRowActions: React.FC<SubredditRowActionsProps> = ({
       )}
 
       {!isLoading && canExpand && (
-        <button
-          onClick={onExpandClick}
-          className="bg-secondary/80 hover:bg-secondary text-foreground/70 hover:text-foreground rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer flex-shrink-0"
-          aria-label="Community rules"
-          title="Community rules"
-        >
-          <span className="font-serif font-bold italic text-[11px]">i</span>
-        </button>
+        <Tooltip content="Community rules & guidelines" side="left">
+          <button
+            onClick={onExpandClick}
+            className="text-muted-foreground/60 hover:text-foreground hover:bg-secondary/80 rounded-md p-1 transition-colors cursor-pointer flex-shrink-0"
+            aria-label="Community rules"
+          >
+            <Info className="h-3.5 w-3.5" />
+          </button>
+        </Tooltip>
       )}
 
       {showCustomizeButton && (

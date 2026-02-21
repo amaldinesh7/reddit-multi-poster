@@ -1,65 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
+import React from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Detect if the app is running as an installed PWA (standalone mode).
- * Returns false during SSR.
- */
-const useIsPwa = (): boolean => {
-  const [isPwa, setIsPwa] = useState(false);
-
-  useEffect(() => {
-    const standalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
-    setIsPwa(standalone);
-  }, []);
-
-  return isPwa;
-};
-
-/**
- * Animated logo loader with pulsing effect
+ * Stacked Bars loader — five bars dancing in rhythm.
+ * Apple Music visualizer feel: minimal, clean, satisfying.
  */
 export function LogoLoader({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
-  const sizeClasses = {
-    sm: 'w-8 h-8',
-    md: 'w-12 h-12',
-    lg: 'w-16 h-16',
+  const barConfig = {
+    sm: { count: 4, width: 'w-[3px]', gap: 'gap-[3px]', height: 'h-6' },
+    md: { count: 5, width: 'w-[3.5px]', gap: 'gap-[4px]', height: 'h-8' },
+    lg: { count: 5, width: 'w-1', gap: 'gap-[5px]', height: 'h-10' },
   };
 
+  const config = barConfig[size];
+
   return (
-    <div className="relative">
-      {/* Outer glow ring */}
-      <div 
-        className={cn(
-          "absolute inset-0 rounded-xl bg-gradient-to-r from-orange-500/30 via-violet-500/20 to-orange-500/30",
-          "animate-pulse blur-lg scale-125"
-        )}
-      />
-      {/* Logo container with subtle bounce */}
-      <div 
-        className={cn(
-          sizeClasses[size],
-          "relative rounded-xl overflow-hidden",
-          "animate-logo-pulse"
-        )}
-      >
-        <Image
-          src="/logo.png"
-          alt="Loading"
-          fill
-          sizes={
-            size === 'sm' ? '32px' : size === 'lg' ? '64px' : '48px'
-          }
-          className="object-contain"
+    <div
+      className={cn('flex items-center', config.gap, config.height)}
+      role="status"
+      aria-label="Loading"
+    >
+      {Array.from({ length: config.count }).map((_, i) => (
+        <div
+          key={i}
+          className={cn(
+            config.width,
+            'rounded-full bg-primary animate-[bar-dance_1.2s_cubic-bezier(0.4,0,0.6,1)_infinite]'
+          )}
+          style={{ animationDelay: `${i * 120}ms` }}
         />
-      </div>
-      {/* Orbiting dot */}
-      <div className="absolute inset-0 animate-orbit">
-        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]" />
-      </div>
+      ))}
     </div>
   );
 }
@@ -156,7 +126,7 @@ export function CardSkeleton({ className }: { className?: string }) {
  */
 export function SubredditRowSkeleton() {
   return (
-    <div className="flex items-center gap-3 p-3 rounded-lg border border-border/30 bg-secondary/30">
+    <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-secondary/30">
       <Skeleton variant="circular" className="w-8 h-8 shrink-0" />
       <div className="flex-1 space-y-2">
         <Skeleton className="h-4 w-32" />
@@ -168,19 +138,10 @@ export function SubredditRowSkeleton() {
 }
 
 /**
- * Main app loader — subtle, native-feeling.
- *
- * PWA mode (standalone): logo-only with gentle pulse. The OS splash screen
- * already handled branding, so this is just a brief bridge.
- *
- * Browser mode: logo + a thin shimmer bar for visual feedback.
- *
- * Accepts `exiting` prop so the parent can trigger a smooth fade-out
- * before unmounting.
+ * Main app loader — centered stacked bars with smooth fade transition.
+ * Accepts `exiting` prop so the parent can trigger a fade-out before unmounting.
  */
 export function AppLoader({ exiting = false }: { exiting?: boolean }) {
-  const isPwa = useIsPwa();
-
   return (
     <div
       className={cn(
@@ -191,17 +152,7 @@ export function AppLoader({ exiting = false }: { exiting?: boolean }) {
       aria-label="Loading application"
       role="status"
     >
-      <div className="relative flex flex-col items-center">
-        {/* Logo — always shown */}
-        <LogoLoader size="lg" />
-
-        {/* Thin shimmer bar — browser mode only */}
-        {!isPwa && (
-          <div className="mt-6 w-36 h-0.5 rounded-full bg-muted/20 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-orange-500/80 to-violet-500/80 rounded-full animate-loading-bar" />
-          </div>
-        )}
-      </div>
+      <LogoLoader size="lg" />
     </div>
   );
 }
@@ -235,10 +186,10 @@ export function SectionLoader({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center py-12", className)}>
+    <div className={cn("flex flex-col items-center justify-center py-12 gap-4", className)}>
       <LogoLoader size="md" />
       {message && (
-        <p className="mt-4 text-sm text-muted-foreground">{message}</p>
+        <p className="text-sm text-muted-foreground">{message}</p>
       )}
     </div>
   );

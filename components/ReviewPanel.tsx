@@ -3,7 +3,7 @@ import NextImage from 'next/image';
 import { Drawer, DrawerContent, DrawerTitle, DrawerClose } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Link as LinkIcon, Pencil } from 'lucide-react';
+import { Link as LinkIcon, Pencil, FileText, Send, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { X } from 'lucide-react';
 import { PerSubredditOverride } from '@/components/subreddit-picker';
 
@@ -118,30 +118,41 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 sm:px-8 sm:py-4 space-y-4">
-            <div className="max-w-3xl mx-auto w-full space-y-4">
-              <section className="space-y-2 border-b border-border/40 pb-3">
-                {mediaUrl && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <LinkIcon className="h-4 w-4" />
-                    <span className="truncate">{mediaUrl}</span>
-                  </div>
-                )}
-                {mediaPreviews.length > 0 && renderMediaPreview()}
-                <div className="text-sm font-semibold">{title || 'Untitled post'}</div>
-                {body && (
-                  <div className="text-xs text-muted-foreground whitespace-pre-wrap break-words">
-                    {body}
-                  </div>
-                )}
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-8 sm:py-5 space-y-5">
+            <div className="max-w-3xl mx-auto w-full space-y-5">
+
+              {/* Post preview */}
+              <section>
+                <div className="flex items-center gap-2 mb-2.5">
+                  <FileText className="h-3.5 w-3.5 text-muted-foreground/70" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Your post</span>
+                </div>
+                <div className="rounded-lg border border-border/50 bg-secondary/20 p-3.5 space-y-2">
+                  {mediaUrl && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <LinkIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="truncate">{mediaUrl}</span>
+                    </div>
+                  )}
+                  {mediaPreviews.length > 0 && renderMediaPreview()}
+                  <p className="text-sm font-semibold leading-snug">{title || 'Untitled post'}</p>
+                  {body && (
+                    <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words line-clamp-4">
+                      {body}
+                    </p>
+                  )}
+                </div>
               </section>
 
-              <section className="space-y-2 border-b border-border/40 pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-medium text-muted-foreground">Selected</div>
-                  <span className="text-xs text-muted-foreground">{selectedTargets.length}</span>
+              {/* Destinations */}
+              <section>
+                <div className="flex items-center gap-2 mb-2.5">
+                  <Send className="h-3.5 w-3.5 text-muted-foreground/70" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    Posting to {selectedTargets.length} {selectedTargets.length === 1 ? 'community' : 'communities'}
+                  </span>
                 </div>
-                <div className="space-y-1.5">
+                <div className="rounded-lg border border-border/50 divide-y divide-border/30 overflow-hidden">
                   {selectedTargets.map((target) => {
                     const isProfile = target.startsWith('u/');
                     const subredditKey = isProfile ? '' : target.replace('r/', '');
@@ -154,18 +165,23 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({
                       (contentOverrides[subredditKey].title || contentOverrides[subredditKey].body);
 
                     return (
-                      <div key={target} className="flex items-center justify-between gap-2 py-1.5">
-                        <div className="min-w-0 flex items-center gap-1.5">
-                          <div className="text-sm font-medium truncate">{target}</div>
+                      <div key={target} className="flex items-center justify-between gap-2 px-3.5 py-2.5 bg-card/50 hover:bg-secondary/20 transition-colors">
+                        <div className="min-w-0 flex items-center gap-2">
+                          {flairMissing ? (
+                            <AlertTriangle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                          ) : (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500/70 flex-shrink-0" />
+                          )}
+                          <span className="text-sm font-medium truncate">{target}</span>
                           {hasCustomContent && (
-                            <span title="Custom content applied">
-                              <Pencil className="h-3 w-3 text-muted-foreground/60 flex-shrink-0" />
+                            <span title="Custom content" aria-label="Custom content">
+                              <Pencil className="h-3 w-3 text-violet-400/70 flex-shrink-0" aria-hidden="true" />
                             </span>
                           )}
                         </div>
-                        <div className="flex flex-wrap gap-1.5 justify-end">
+                        <div className="flex flex-wrap gap-1.5 justify-end flex-shrink-0">
                           {flairMissing && (
-                            <Badge variant="destructive" className="text-[10px]">Flair required</Badge>
+                            <Badge variant="destructive" className="text-[10px]">Flair missing</Badge>
                           )}
                           {flairText && (
                             <Badge variant="secondary" className="text-[10px]">{flairText}</Badge>
@@ -186,26 +202,27 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({
             </div>
           </div>
 
-          <div className="shrink-0 border-t border-border/40 px-4 py-3 sm:px-8 sm:py-4 bg-background/95">
-            <div className="max-w-3xl mx-auto w-full">
+          <div className="shrink-0 border-t border-border/50 px-4 py-3 sm:px-8 sm:py-4 bg-background/95 backdrop-blur-sm">
+            <div className="max-w-3xl mx-auto w-full space-y-2">
               <div className="flex items-center gap-2">
                 <Button
                   onClick={onPostNow}
                   disabled={!canPost}
-                  className="flex-1 cursor-pointer"
+                  className="flex-1 cursor-pointer h-11"
                 >
-                  Post now
+                  <Send className="h-4 w-4 mr-2" />
+                  Post to {selectedTargets.length} {selectedTargets.length === 1 ? 'community' : 'communities'}
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={onResetSelection}
-                  className="h-10 cursor-pointer"
+                  className="h-11 cursor-pointer"
                 >
                   Reset
                 </Button>
               </div>
               {!canPost && (
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-xs text-muted-foreground">
                   Add a title and resolve blocking issues to enable posting.
                 </p>
               )}

@@ -50,9 +50,9 @@ const SubredditItemComponent: React.FC<SubredditItemComponentProps> = ({
     <div
       {...containerDragProps}
       className={`
-        flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/20 border border-border/30 
+        flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/20 border border-border/50 
         transition-all duration-200 hover:bg-secondary/30
-        ${isDragging ? 'opacity-50 ring-2 ring-primary/50' : ''}
+        ${isDragging ? 'ring-2 ring-primary/50' : ''}
       `}
     >
       <div {...dragHandleProps} className="cursor-grab touch-none select-none">
