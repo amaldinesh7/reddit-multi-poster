@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Crown } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { PostRequirements } from '@/utils/reddit';
 import CopyGenerationDialog from '@/components/ai/CopyGenerationDialog';
 
@@ -112,10 +111,10 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            Customize for r/{subredditName}
-            <Badge className="text-[10px] font-semibold bg-gradient-to-r from-amber-400/20 to-orange-500/20 text-amber-300 border border-amber-400/30">
-              PRO
-            </Badge>
+            Customize for <span className="text-primary">r/{subredditName}</span>
+            <div className="flex h-5 w-5 items-center justify-center rounded-md bg-gradient-to-br from-violet-500/20 to-purple-600/20" title="Pro feature">
+              <Crown className="h-3 w-3 text-violet-400" />
+            </div>
           </DialogTitle>
           <p className="text-xs text-muted-foreground">
             Override title and description for this community only.

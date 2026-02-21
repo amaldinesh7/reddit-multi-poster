@@ -387,9 +387,8 @@ export default function Home() {
 
   const handleReviewAndPostAction = React.useCallback(() => {
     if (reviewCtaMode === 'missing_essentials') {
-      // Focus title field if title is missing
       if (!hasTitle) {
-        postComposerRef.current?.focusTitle();
+        postComposerRef.current?.showTitleValidation();
       }
       return;
     }
@@ -1213,7 +1212,7 @@ export default function Home() {
                           className="text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors bg-transparent border-0 p-0 text-left"
                           onClick={() => {
                             if (!hasTitle) {
-                              postComposerRef.current?.focusTitle();
+                              postComposerRef.current?.showTitleValidation();
                             }
                           }}
                         >

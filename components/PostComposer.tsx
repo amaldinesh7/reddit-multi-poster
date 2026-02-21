@@ -23,6 +23,7 @@ interface Props {
 
 export interface PostComposerRef {
   focusTitle: () => void;
+  showTitleValidation: () => void;
 }
 
 const PostComposer = forwardRef<PostComposerRef, Props>(function PostComposer({
@@ -39,6 +40,7 @@ const PostComposer = forwardRef<PostComposerRef, Props>(function PostComposer({
 }, ref) {
   const [showBody, setShowBody] = usePersistentState<boolean>('rmp_show_body', false);
   const [isAiDialogOpen, setIsAiDialogOpen] = React.useState(false);
+  const [titleError, setTitleError] = React.useState(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const count = value.length;
@@ -46,9 +48,20 @@ const PostComposer = forwardRef<PostComposerRef, Props>(function PostComposer({
   const bodyLimit = 40000;
   const hasBody = (body?.length ?? 0) > 0;
 
-  // Expose focusTitle method to parent components
+  // Clear title error when user starts typing
+  useEffect(() => {
+    if (value.trim().length > 0 && titleError) {
+      setTitleError(false);
+    }
+  }, [value, titleError]);
+
   useImperativeHandle(ref, () => ({
     focusTitle: () => {
+      titleRef.current?.focus();
+      titleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    },
+    showTitleValidation: () => {
+      setTitleError(true);
       titleRef.current?.focus();
       titleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     },
@@ -115,8 +128,14 @@ const PostComposer = forwardRef<PostComposerRef, Props>(function PostComposer({
             placeholder="Post title"
             value={value}
             onChange={(e) => handleChange(e.target.value)}
-            className="resize-none min-h-[40px] overflow-hidden pr-14"
+            className={`resize-none min-h-[40px] overflow-hidden pr-14 transition-colors ${
+              titleError
+                ? 'border-red-500 ring-1 ring-red-500/30 focus-visible:ring-red-500/50'
+                : ''
+            }`}
             rows={1}
+            aria-invalid={titleError}
+            aria-describedby={titleError ? 'title-error-msg' : undefined}
           />
           {hasProAccess ? (
             <button
@@ -146,7 +165,14 @@ const PostComposer = forwardRef<PostComposerRef, Props>(function PostComposer({
             </ProUpgradeHint>
           )}
         </div>
-        <div className="flex justify-end mt-1">
+        <div className="flex items-center justify-between mt-1">
+          {titleError ? (
+            <span id="title-error-msg" className="text-xs text-red-500 animate-in fade-in slide-in-from-top-1 duration-200" role="alert">
+              Please add a title before posting
+            </span>
+          ) : (
+            <span />
+          )}
           <span className={`text-xs ${count > limit * 0.9 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
             {count}/{limit}
           </span>
