@@ -113,6 +113,15 @@ export interface EventProperties {
   kept?: number;
   removed?: number;
   
+  // Marketing attribution (UTM)
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  utm_term?: string;
+  initial_referrer?: string;
+  referring_domain?: string;
+
   // Anonymous ID linking (for funnel continuity)
   $anon_distinct_id?: string;
 }

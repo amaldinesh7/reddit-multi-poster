@@ -13,6 +13,7 @@ import {
   type AnalyticsEvent,
   type EventProperties,
 } from './posthog-types';
+import type { UtmParams } from './utm';
 
 // Re-export types and utilities for convenience
 export { isPostHogEnabled, ANALYTICS_ENVIRONMENT };
@@ -183,6 +184,30 @@ export const identifyUser = (
 
   queueAction((loadedClient) => {
     loadedClient.identify(userId, properties);
+  });
+  void loadPostHogClient();
+};
+
+/**
+ * Register UTM / marketing attribution as PostHog "super properties".
+ * Super properties are automatically attached to every subsequent event
+ * in the session, so individual trackEvent calls don't need to pass them.
+ */
+export const registerUtmProperties = (params: UtmParams): void => {
+  const cleaned: Record<string, string> = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (value) cleaned[key] = value;
+  }
+  if (Object.keys(cleaned).length === 0) return;
+
+  const activeClient = getPostHogClient();
+  if (activeClient) {
+    activeClient.register(cleaned);
+    return;
+  }
+
+  queueAction((loadedClient) => {
+    loadedClient.register(cleaned);
   });
   void loadPostHogClient();
 };

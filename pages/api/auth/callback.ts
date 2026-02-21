@@ -5,6 +5,7 @@ import { upsertUser, getUserByRedditId } from '../../../lib/supabase';
 import { serialize } from 'cookie';
 import { applyRateLimit, authRateLimit } from '../../../lib/rateLimit';
 import { trackServerEvent, identifyServerUser, aliasServerUser, flushPostHogServer } from '../../../lib/posthog-server';
+import { parseUtmFromCookie } from '../../../lib/utm';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -117,17 +118,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           reddit_username: redditUser.name,
           created_at: supabaseUser.created_at,
         });
+
+        // Read UTM attribution params set by the login API
+        const utmParams = parseUtmFromCookie(req.cookies['rmp_utm']) ?? {};
         
-        // Track the appropriate event
+        // Track the appropriate event with marketing attribution
         if (isNewUser) {
           trackServerEvent(userId, 'signup_completed', {
             reddit_username: redditUser.name,
             is_new_user: true,
+            ...utmParams,
           });
         } else {
           trackServerEvent(userId, 'login_completed', {
             reddit_username: redditUser.name,
             is_new_user: false,
+            ...utmParams,
           });
         }
       }
@@ -171,6 +177,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           })
         : '',
       serialize('reddit_oauth_state', '', { path: '/', maxAge: 0 }),
+      serialize('rmp_utm', '', { path: '/', maxAge: 0 }),
     ].filter(Boolean) as string[];
     
     res.setHeader('Set-Cookie', cookies);

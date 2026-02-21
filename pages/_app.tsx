@@ -11,7 +11,8 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { inter, fontVariables } from "@/lib/fonts";
 import { swrConfig } from "@/lib/swr";
-import { initPostHogClient, trackPageView } from "@/lib/posthog";
+import { initPostHogClient, trackPageView, registerUtmProperties } from "@/lib/posthog";
+import { captureUtmParams, storeUtmParams, getStoredUtmParams } from "@/lib/utm";
 
 const MobileBottomNav = dynamic(() => import("@/components/layout/MobileBottomNav"), {
   ssr: false,
@@ -109,6 +110,22 @@ export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
     initPostHogClient();
   }, []);
+
+  // Capture UTM params from the landing URL and register as PostHog super properties.
+  // Runs once — on the first render when router.query is populated.
+  useEffect(() => {
+    const utmFromUrl = captureUtmParams(router.query);
+    if (utmFromUrl) {
+      storeUtmParams(utmFromUrl);
+      registerUtmProperties(utmFromUrl);
+      return;
+    }
+
+    const stored = getStoredUtmParams();
+    if (stored) {
+      registerUtmProperties(stored);
+    }
+  }, [router.query]);
 
   // Track page views on route changes
   useEffect(() => {
