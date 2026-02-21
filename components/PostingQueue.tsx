@@ -73,6 +73,10 @@ interface Props {
   onPostActionReady?: (handler: () => void) => void;
   onReviewRequest?: () => void;
   hideMobileBar?: boolean;
+  /** Notifies parent when posting state changes (for desktop stop button) */
+  onProcessingChange?: (state: { isProcessing: boolean; currentIndex: number; totalItems: number }) => void;
+  /** Exposes internal cancel function to parent (for desktop stop button) */
+  onCancelReady?: (cancelFn: () => void) => void;
 }
 
 export interface PostingQueueHandle {
@@ -198,6 +202,8 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
   onPostActionReady,
   onReviewRequest,
   hideMobileBar = false,
+  onProcessingChange,
+  onCancelReady,
 }, ref) => {
   const router = useRouter();
   const maxItems = maxItemsProp ?? QUEUE_LIMITS.MAX_TOTAL_ITEMS;
@@ -773,6 +779,18 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
       onPostActionReady(handleButtonClick);
     }
   }, [onPostActionReady, handleButtonClick]);
+
+  useEffect(() => {
+    onProcessingChange?.({
+      isProcessing: running,
+      currentIndex: state.currentIndex,
+      totalItems: state.items.length,
+    });
+  }, [running, state.currentIndex, state.items.length, onProcessingChange]);
+
+  useEffect(() => {
+    onCancelReady?.(cancel);
+  }, [onCancelReady, cancel]);
 
   return (
     <div className="space-y-4" ref={queueRef} tabIndex={-1}>
