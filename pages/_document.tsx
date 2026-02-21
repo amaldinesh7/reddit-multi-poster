@@ -1,4 +1,6 @@
 import { Html, Head, Main, NextScript } from "next/document";
+import Script from "next/script";
+import { SITE_URL } from "@/lib/site-config";
 
 const Document = (): JSX.Element => {
   // JSON-LD structured data for SEO
@@ -7,7 +9,7 @@ const Document = (): JSX.Element => {
     "@type": "WebApplication",
     "name": "Reddit Multi Poster",
     "description": "Post to multiple Reddit communities with a single click. Upload once, share everywhere with smart scheduling and automatic flair management.",
-    "url": "https://reddit-multi-poster.vercel.app",
+    "url": SITE_URL,
     "applicationCategory": "SocialNetworkingApplication",
     "operatingSystem": "Any",
     "browserRequirements": "Requires JavaScript. Requires HTML5.",
@@ -26,7 +28,7 @@ const Document = (): JSX.Element => {
       "Secure Reddit OAuth authentication",
       "Image and URL content support"
     ],
-    "screenshot": "https://reddit-multi-poster.vercel.app/og-image.svg",
+    "screenshot": `${SITE_URL}/og-image.svg`,
     "author": {
       "@type": "Organization",
       "name": "Reddit Multi Poster"
@@ -37,12 +39,16 @@ const Document = (): JSX.Element => {
     <Html lang="en" suppressHydrationWarning>
       <Head>
         {/* JSON-LD Structured Data */}
-        <script
+        <Script
+          id="structured-data"
           type="application/ld+json"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
         
-        <script
+        <Script
+          id="theme-detection"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(){var t=localStorage.getItem('reddit-multi-poster-theme');var r=t==='light'?'light':'dark';document.documentElement.classList.toggle('dark',r==='dark');})();`,
           }}

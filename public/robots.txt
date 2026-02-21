@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://reddit-multi-poster.vercel.app/sitemap.xml
+Sitemap: https://redditmultiposter.com/sitemap.xml
 
 # Block access to API routes for crawlers
 Disallow: /api/

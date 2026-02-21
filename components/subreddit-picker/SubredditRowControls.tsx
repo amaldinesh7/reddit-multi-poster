@@ -47,7 +47,10 @@ const SubredditRowControls: React.FC<SubredditRowControlsProps> = ({
   return (
     <div
       className="flex items-center gap-2 px-3 py-2.5 bg-zinc-100/80 dark:bg-zinc-800/50 border-t border-border/40"
+      role="group"
+      tabIndex={0}
       onClick={onControlsClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onControlsClick?.(e as unknown as React.MouseEvent<HTMLDivElement>); } }}
     >
       {flairOptions.length > 0 && (
         <NativeSelect

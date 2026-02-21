@@ -20,6 +20,31 @@ interface RecentPostsTableProps {
 type SortField = 'createdAt' | 'subreddit' | 'status';
 type SortDirection = 'asc' | 'desc';
 
+interface SortHeaderProps {
+  field: SortField;
+  sortField: SortField;
+  sortDirection: SortDirection;
+  onSort: (field: SortField) => void;
+  children: React.ReactNode;
+}
+
+const SortHeader = ({ field, sortField, sortDirection, onSort, children }: SortHeaderProps) => (
+  <button
+    onClick={() => onSort(field)}
+    className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+    aria-label={`Sort by ${field}`}
+  >
+    {children}
+    {sortField === field && (
+      sortDirection === 'asc' ? (
+        <ChevronUp className="w-3 h-3" />
+      ) : (
+        <ChevronDown className="w-3 h-3" />
+      )
+    )}
+  </button>
+);
+
 const RecentPostsTable: React.FC<RecentPostsTableProps> = ({ data, className = '' }) => {
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -105,24 +130,6 @@ const RecentPostsTable: React.FC<RecentPostsTableProps> = ({ data, className = '
       return sortDirection === 'asc' ? comparison : -comparison;
     });
 
-  // Sort header component
-  const SortHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
-    <button
-      onClick={() => handleSort(field)}
-      className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-      aria-label={`Sort by ${field}`}
-    >
-      {children}
-      {sortField === field && (
-        sortDirection === 'asc' ? (
-          <ChevronUp className="w-3 h-3" />
-        ) : (
-          <ChevronDown className="w-3 h-3" />
-        )
-      )}
-    </button>
-  );
-
   return (
     <div className={`rounded-xl border border-border/50 bg-card ${className}`}>
       <div className="p-5 border-b border-border/50">
@@ -169,16 +176,16 @@ const RecentPostsTable: React.FC<RecentPostsTableProps> = ({ data, className = '
             <thead>
               <tr className="border-b border-border/50">
                 <th className="px-5 py-3 text-left">
-                  <SortHeader field="createdAt">Date</SortHeader>
+                  <SortHeader field="createdAt" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>Date</SortHeader>
                 </th>
                 <th className="px-5 py-3 text-left">
-                  <SortHeader field="subreddit">Subreddit</SortHeader>
+                  <SortHeader field="subreddit" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>Subreddit</SortHeader>
                 </th>
                 <th className="px-5 py-3 text-left">
                   <span className="text-xs font-medium text-muted-foreground">Type</span>
                 </th>
                 <th className="px-5 py-3 text-left">
-                  <SortHeader field="status">Status</SortHeader>
+                  <SortHeader field="status" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>Status</SortHeader>
                 </th>
                 <th className="px-5 py-3 text-left">
                   <span className="text-xs font-medium text-muted-foreground">Link</span>

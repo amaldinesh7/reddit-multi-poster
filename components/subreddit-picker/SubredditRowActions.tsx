@@ -122,7 +122,7 @@ const SubredditRowActions: React.FC<SubredditRowActionsProps> = ({
   }
 
   return (
-    <div className="flex items-center gap-1.5 flex-shrink-0" onClick={onControlsClick}>
+    <div className="flex items-center gap-1.5 flex-shrink-0" role="group" tabIndex={0} onClick={onControlsClick} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onControlsClick?.(e as unknown as React.MouseEvent<HTMLDivElement>); } }}>
       {hasValidationIssues && validationSummary && !failedPost && (
         <DropdownMenuRoot open={isValidationMenuOpen} onOpenChange={setIsValidationMenuOpen}>
           <DropdownMenuTrigger asChild>

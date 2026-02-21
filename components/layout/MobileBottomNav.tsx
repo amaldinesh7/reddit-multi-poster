@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import { LogOut, ExternalLink, Shield } from 'lucide-react';
 import { House, GearSix, Question, UserCircle } from 'phosphor-react';
 import { Avatar } from '@/components/ui/avatar';
@@ -182,7 +183,6 @@ const MobileBottomNav: React.FC = () => {
           "bg-background",
           "pb-[env(safe-area-inset-bottom)]"
         )}
-        role="navigation"
         aria-label="Main navigation"
       >
         <div className={cn(railClassName, "px-1")}>
@@ -283,14 +283,14 @@ const MobileBottomNav: React.FC = () => {
 
               {/* Admin Panel - Only for admins */}
               {isAdmin && (
-                <a
+                <Link
                   href="/admin"
                   onClick={() => setProfileOpen(false)}
                   className="flex items-center gap-3 w-full py-3 px-1 rounded-lg text-sm font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer active:opacity-70"
                 >
                   <Shield className="w-4 h-4 text-muted-foreground" />
                   Admin Panel
-                </a>
+                </Link>
               )}
 
               {/* Logout */}

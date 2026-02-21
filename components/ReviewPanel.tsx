@@ -1,4 +1,5 @@
 import React from 'react';
+import NextImage from 'next/image';
 import { Drawer, DrawerContent, DrawerTitle, DrawerClose } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -72,17 +73,23 @@ const ReviewPanel: React.FC<ReviewPanelProps> = ({
     return (
       <div className="w-full">
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          {mediaPreviews.map((preview, index) => (
+          {mediaPreviews.map((preview) => (
             preview.type.startsWith('image/') ? (
-              <img
-                key={`${preview.url}-${index}`}
-                src={preview.url}
-                alt="Selected media"
-                className="h-16 w-16 sm:h-20 sm:w-20 rounded-md object-cover border border-border/60 shadow-sm flex-shrink-0"
-              />
+              <div
+                key={preview.url}
+                className="relative h-16 w-16 sm:h-20 sm:w-20 rounded-md overflow-hidden border border-border/60 shadow-sm flex-shrink-0"
+              >
+                <NextImage
+                  src={preview.url}
+                  alt="Selected media"
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
+              </div>
             ) : (
               <div
-                key={`${preview.url}-${index}`}
+                key={preview.url}
                 className="h-16 w-16 sm:h-20 sm:w-20 rounded-md border border-border/60 bg-secondary/60 flex items-center justify-center text-[10px] text-muted-foreground flex-shrink-0"
               >
                 file

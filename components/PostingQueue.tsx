@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
 import {
@@ -219,8 +219,17 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
   // Track if a retry is in progress
   const [isRetrying, setIsRetrying] = useState(false);
 
-  // Track if user dismissed validation warnings
-  const [validationDismissed, setValidationDismissed] = useState(false);
+  // Track validation dismissal using a key derived from inputs.
+  // When any input changes, the key changes and the dismissal is implicitly reset.
+  const validationKey = useMemo(
+    () => JSON.stringify([items.map(i => i.subreddit), caption, body, Object.keys(contentOverrides ?? {}), Object.keys(customTitles ?? {})]),
+    [items, caption, body, contentOverrides, customTitles]
+  );
+  const [dismissedValidationKey, setDismissedValidationKey] = useState<string | null>(null);
+  const validationDismissed = dismissedValidationKey === validationKey;
+  const setValidationDismissed = useCallback((dismissed: boolean) => {
+    setDismissedValidationKey(dismissed ? validationKey : null);
+  }, [validationKey]);
 
   // Get flair data for the currently editing post's subreddit
   const editingSubreddit = editingPost?.subreddit || '';
@@ -305,11 +314,6 @@ const PostingQueue = React.forwardRef<PostingQueueHandle, Props>(({
     validation.result,
     validation.issuesBySubreddit,
   ]);
-
-  // Reset validation dismissed state when items change
-  useEffect(() => {
-    setValidationDismissed(false);
-  }, [items, caption, body, contentOverrides, customTitles]);
 
   // Show validation warnings only when there are issues and not dismissed
   // When onValidationChange is provided, we use inline display instead of the panel

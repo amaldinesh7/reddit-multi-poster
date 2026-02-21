@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { X, Share, PlusSquare, ChevronRight, Smartphone, Zap, CheckCircle2, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -409,7 +410,7 @@ export const PwaOnboarding: React.FC<PwaOnboardingProps> = ({ hasQueueItems = fa
         <div className="flex items-center justify-center py-4">
           <div className="relative">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center shadow-lg shadow-primary/25">
-              <img src="/logo.png" alt="Multi Poster" className="w-10 h-10" />
+              <Image src="/logo.png" alt="Multi Poster" width={40} height={40} className="w-10 h-10" />
             </div>
             <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-background border-2 border-primary flex items-center justify-center">
               <PlusSquare className="w-3 h-3 text-primary" />
@@ -479,7 +480,7 @@ export const PwaOnboarding: React.FC<PwaOnboardingProps> = ({ hasQueueItems = fa
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center shadow-md shadow-primary/20">
-                  <img src="/logo.png" alt="" className="w-6 h-6" aria-hidden="true" />
+                  <Image src="/logo.png" alt="" width={24} height={24} className="w-6 h-6" aria-hidden="true" />
                 </div>
                 <CardTitle id="pwa-prompt-title" className="text-lg font-bold text-foreground">
                   {platform === 'ios-safari' ? '' : 'Add to Home Screen'}
@@ -514,7 +515,7 @@ export const PwaOnboarding: React.FC<PwaOnboardingProps> = ({ hasQueueItems = fa
             <div className="flex items-center gap-3">
               <div className="relative">
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center shadow-sm animate-pwa-icon-pulse">
-                  <img src="/logo.png" alt="" className="w-5 h-5" aria-hidden="true" />
+                  <Image src="/logo.png" alt="" width={20} height={20} className="w-5 h-5" aria-hidden="true" />
                 </div>
                 <div className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-background animate-pulse" />
               </div>

@@ -259,9 +259,9 @@ const CopyGenerationDialog: React.FC<CopyGenerationDialogProps> = ({
       </div>
 
       {/* Style pills */}
-      <div className="space-y-1.5">
-        <label className="text-xs text-muted-foreground">Style</label>
-        <div className="flex flex-wrap gap-1.5">
+      <fieldset className="space-y-1.5 border-0 p-0 m-0">
+        <legend className="text-xs text-muted-foreground">Style</legend>
+        <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Tone style">
           {toneOptions.map((opt) => {
             const Icon = opt.icon;
             const selected = tone === opt.value;
@@ -269,6 +269,8 @@ const CopyGenerationDialog: React.FC<CopyGenerationDialogProps> = ({
               <button
                 key={opt.value}
                 type="button"
+                role="radio"
+                aria-checked={selected}
                 onClick={() => setTone(opt.value)}
                 className={cn(
                   "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs cursor-pointer transition-colors",
@@ -283,7 +285,7 @@ const CopyGenerationDialog: React.FC<CopyGenerationDialogProps> = ({
             );
           })}
         </div>
-      </div>
+      </fieldset>
 
       {/* Use my posts checkbox */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-4">

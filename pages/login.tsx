@@ -1,9 +1,12 @@
 import React from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import { Upload, Layers, Sparkles } from 'lucide-react';
 import { trackEvent } from '@/lib/posthog';
+import { SITE_URL } from '@/lib/site-config';
 
 interface MeResponse {
   authenticated: boolean;
@@ -78,24 +81,24 @@ export default function Login() {
         <meta name="description" content="Sign in with your Reddit account to start posting to multiple communities at once. Secure OAuth login - we never see your password. Free to get started." />
         <meta name="keywords" content="reddit login, reddit multi poster sign in, cross-post tool, reddit automation login" />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://reddit-multi-poster.vercel.app/login" />
+        <link rel="canonical" href={`${SITE_URL}/login`} />
 
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://reddit-multi-poster.vercel.app/login" />
+        <meta property="og:url" content={`${SITE_URL}/login`} />
         <meta property="og:title" content="Sign In - Reddit Multi Poster" />
         <meta property="og:description" content="Connect your Reddit account and start sharing to 30+ communities with one click. Secure OAuth - your password stays with Reddit." />
-        <meta property="og:image" content="https://reddit-multi-poster.vercel.app/og-image.svg" />
+        <meta property="og:image" content={`${SITE_URL}/og-image.svg`} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:site_name" content="Reddit Multi Poster" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://reddit-multi-poster.vercel.app/login" />
+        <meta name="twitter:url" content={`${SITE_URL}/login`} />
         <meta name="twitter:title" content="Sign In - Reddit Multi Poster" />
         <meta name="twitter:description" content="Connect your Reddit account and start sharing to 30+ communities with one click. Secure OAuth authentication." />
-        <meta name="twitter:image" content="https://reddit-multi-poster.vercel.app/og-image.svg" />
+        <meta name="twitter:image" content={`${SITE_URL}/og-image.svg`} />
       </Head>
 
       <div className="min-h-viewport relative overflow-hidden">
@@ -113,13 +116,13 @@ export default function Login() {
             <div className="p-4 sm:p-8 sm:backdrop-blur-xl sm:bg-white/[0.03] sm:border sm:border-white/[0.08] sm:rounded-3xl sm:shadow-[0_0_80px_rgba(255,69,0,0.05),0_25px_50px_-12px_rgba(0,0,0,0.5)]">
               {/* Logo */}
               <div className="flex flex-col items-center mb-8">
-                <a
+                <Link
                   href="/"
                   aria-label="Go to post screen"
                   className="w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center mb-4 shadow-lg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
                 >
-                  <img src="/logo.png" alt="Reddit Multi Poster" className="w-full h-full object-contain" />
-                </a>
+                  <Image src="/logo.png" alt="Reddit Multi Poster" width={80} height={80} className="w-full h-full object-contain" />
+                </Link>
                 <h1 className="text-2xl font-bold text-white mb-2">Reddit Multi Poster</h1>
                 <p className="text-gray-400 text-center text-sm">
                   Post to multiple communities in one click
@@ -199,12 +202,12 @@ export default function Login() {
                 </a>
               </p>
               <p className="text-gray-600 text-xs">
-                <a
+                <Link
                   href="/help"
                   className="text-gray-500 hover:text-orange-400 transition-colors cursor-pointer"
                 >
                   Need help?
-                </a>
+                </Link>
               </p>
             </div>
           </div>

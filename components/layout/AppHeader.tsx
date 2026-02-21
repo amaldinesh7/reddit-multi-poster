@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { ChevronDown, User, Settings, LogOut, Shield, Infinity, ArrowLeft, HelpCircle } from 'lucide-react';
@@ -172,7 +174,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           )}
           <div className="flex min-w-0 shrink-0 items-center gap-2.5">
             {!pageTitle && (
-              <a
+              <Link
                 href="/"
                 aria-label="Go to post screen"
                 className={cn(
@@ -181,12 +183,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 )}
               >
-                <img 
+                <Image 
                   src="/logo.png" 
                   alt="Reddit Multi Poster" 
+                  width={36}
+                  height={36}
                   className="h-full w-full object-contain" 
                 />
-              </a>
+              </Link>
             )}
             {pageTitle ? (
               <div className="flex items-center gap-2 min-w-0">
