@@ -112,9 +112,7 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Customize for <span className="text-primary">r/{subredditName}</span>
-            <div className="flex h-5 w-5 items-center justify-center rounded-md bg-gradient-to-br from-violet-500/20 to-purple-600/20" title="Pro feature">
-              <Crown className="h-3 w-3 text-violet-400" />
-            </div>
+            <Crown className="h-3.5 w-3.5 text-violet-400" aria-label="Pro feature" />
           </DialogTitle>
           <p className="text-xs text-muted-foreground">
             Override title and description for this community only.
