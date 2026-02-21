@@ -179,6 +179,8 @@ export default function Home() {
     issuesBySubreddit: Record<string, ValidationIssue[]>;
   } | null>(null);
   const [isMoreActionsOpen, setIsMoreActionsOpen] = React.useState(false);
+  const [postingProgress, setPostingProgress] = React.useState<{ isProcessing: boolean; currentIndex: number; totalItems: number }>({ isProcessing: false, currentIndex: 0, totalItems: 0 });
+  const cancelPostingRef = React.useRef<(() => void) | null>(null);
   const [hasValidationFieldInteraction, setHasValidationFieldInteraction] = React.useState(false);
   const [hasValidationCtaIntent, setHasValidationCtaIntent] = React.useState(false);
   const [validationNavigatorIndex, setValidationNavigatorIndex] = React.useState(0);
@@ -393,6 +395,14 @@ export default function Home() {
     issuesBySubreddit: Record<string, ValidationIssue[]>;
   }) => {
     setValidationState(state);
+  }, []);
+
+  const handleProcessingChange = React.useCallback((state: { isProcessing: boolean; currentIndex: number; totalItems: number }) => {
+    setPostingProgress(state);
+  }, []);
+
+  const handleCancelReady = React.useCallback((cancelFn: () => void) => {
+    cancelPostingRef.current = cancelFn;
   }, []);
 
   const handleOpenReview = React.useCallback(() => {
@@ -1146,7 +1156,7 @@ export default function Home() {
                       )}
                       <div className="flex items-center gap-2">
                         {/* When posting is in progress, show posting status and Stop button */}
-                        {queueJobHook.state.isProcessing ? (
+                        {postingProgress.isProcessing ? (
                           <>
                             <Button
                               disabled
@@ -1154,10 +1164,10 @@ export default function Home() {
                               aria-label="Posting in progress"
                             >
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Posting ({queueJobHook.state.currentIndex}/{queueJobHook.state.items.length})
+                              Posting ({postingProgress.currentIndex}/{postingProgress.totalItems})
                             </Button>
                             <Button
-                              onClick={() => queueJobHook.cancel()}
+                              onClick={() => cancelPostingRef.current?.()}
                               variant="destructive"
                               className="cursor-pointer"
                               aria-label="Stop posting"
@@ -1256,6 +1266,8 @@ export default function Home() {
                     }}
                     onReviewRequest={handleReviewAndPostAction}
                     hideMobileBar={isReviewOpen}
+                    onProcessingChange={handleProcessingChange}
+                    onCancelReady={handleCancelReady}
                   />
                 </section>
               </div>
