@@ -50,6 +50,7 @@ interface AnalyticsResponse {
     errorCode: string | null;
     redditUrl: string | null;
     createdAt: string;
+    username: string | null;
   }>;
   
   // Per-user stats (for comparison)
@@ -161,8 +162,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .map(([date, counts]) => ({ date, ...counts }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    // Recent posts (last 50)
-    const recentPosts = posts.slice(0, 50).map(p => ({
+    // Recent posts (last 50) — resolve usernames via a single lookup
+    const recentPostsRaw = posts.slice(0, 50);
+    const recentUserIds = [...new Set(recentPostsRaw.map(p => p.user_id))];
+    const { data: recentUsers } = recentUserIds.length > 0
+      ? await client.from('users').select('id, reddit_username').in('id', recentUserIds)
+      : { data: [] };
+    const recentUserMap = new Map((recentUsers || []).map(u => [u.id, u.reddit_username]));
+
+    const recentPosts = recentPostsRaw.map(p => ({
       id: p.id,
       subreddit: p.subreddit_name,
       postKind: p.post_kind,
@@ -170,6 +178,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       errorCode: p.error_code,
       redditUrl: p.reddit_post_url,
       createdAt: p.created_at,
+      username: recentUserMap.get(p.user_id) ?? null,
     }));
 
     // Count unique users

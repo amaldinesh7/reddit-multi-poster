@@ -10,6 +10,7 @@ interface RecentPost {
   errorCode: string | null;
   redditUrl: string | null;
   createdAt: string;
+  username: string | null;
 }
 
 interface RecentPostsTableProps {
@@ -179,6 +180,9 @@ const RecentPostsTable: React.FC<RecentPostsTableProps> = ({ data, className = '
                   <SortHeader field="createdAt" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>Date</SortHeader>
                 </th>
                 <th className="px-5 py-3 text-left">
+                  <span className="text-xs font-medium text-muted-foreground">User</span>
+                </th>
+                <th className="px-5 py-3 text-left">
                   <SortHeader field="subreddit" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>Subreddit</SortHeader>
                 </th>
                 <th className="px-5 py-3 text-left">
@@ -202,6 +206,21 @@ const RecentPostsTable: React.FC<RecentPostsTableProps> = ({ data, className = '
                     <span className="text-sm text-muted-foreground">
                       {formatDate(post.createdAt)}
                     </span>
+                  </td>
+                  <td className="px-5 py-3">
+                    {post.username ? (
+                      <a
+                        href={`https://reddit.com/user/${post.username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-primary hover:underline cursor-pointer"
+                        aria-label={`View u/${post.username} on Reddit`}
+                      >
+                        u/{post.username}
+                      </a>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </td>
                   <td className="px-5 py-3">
                     <span className="text-sm font-medium">r/{post.subreddit}</span>

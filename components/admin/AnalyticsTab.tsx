@@ -45,6 +45,7 @@ interface AnalyticsData {
     errorCode: string | null;
     redditUrl: string | null;
     createdAt: string;
+    username: string | null;
   }>;
   totalUsers: number;
   topPosters: TopPoster[];
