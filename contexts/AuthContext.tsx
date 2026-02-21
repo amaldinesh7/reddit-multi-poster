@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useCallback, useMemo, useEffect, useRef } from 'react';
 import useSWR, { mutate } from 'swr';
 import axios from 'axios';
 import { fetcher, SWR_KEYS } from '@/lib/swr';
 import { captureClientError } from '@/lib/clientErrorHandler';
+import { identifyUser, resetUser, trackEvent } from '@/lib/posthog';
 
 // ============================================================================
 // Types
@@ -133,6 +134,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const limits = data?.limits ?? DEFAULT_LIMITS;
   const errorMessage = error ? 'Failed to check authentication' : null;
 
+  // Identify the user client-side once the session is restored
+  const identifiedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!user || identifiedRef.current === user.userId) return;
+    identifyUser(user.userId, { reddit_username: user.redditUsername });
+    identifiedRef.current = user.userId;
+  }, [user]);
+
   // Actions
   const login = useCallback(() => {
     window.location.href = '/api/auth/login';
@@ -140,7 +149,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = useCallback(async () => {
     try {
+      trackEvent('logout', { source: 'header' });
       await axios.post('/api/auth/logout');
+      resetUser();
       // Clear the SWR cache
       await mutate(SWR_KEYS.AUTH, { authenticated: false }, { revalidate: false });
       window.location.href = '/login';

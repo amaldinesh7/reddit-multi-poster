@@ -10,7 +10,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as Sentry from '@sentry/nextjs';
-import { supabase } from '@/lib/supabase';
 import {
   QueueJob,
   QueueJobItem,
@@ -19,7 +18,7 @@ import {
   JobProgressUpdate,
   QUEUE_JOB_CONSTANTS,
 } from '@/lib/queueJob';
-import { RealtimeChannel } from '@supabase/supabase-js';
+import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import { captureClientError } from '@/lib/clientErrorHandler';
 import { useDirectUpload, UploadedFile } from './useDirectUpload';
 
@@ -167,6 +166,7 @@ export function useQueueJob(): UseQueueJobReturn {
   const { uploadFiles, isUploading, progress: uploadProgress, error: uploadError } = useDirectUpload();
   
   // Refs for cleanup
+  const supabaseClientRef = useRef<SupabaseClient | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -185,13 +185,30 @@ export function useQueueJob(): UseQueueJobReturn {
   // Realtime Subscription
   // ============================================================================
 
-  const subscribeToJob = useCallback((jobId: string) => {
-    // Clean up existing subscription
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
+  const getSupabaseClient = useCallback(async (): Promise<SupabaseClient> => {
+    if (supabaseClientRef.current) {
+      return supabaseClientRef.current;
     }
 
-    const channel = supabase
+    const module = await import('@/lib/supabase');
+    supabaseClientRef.current = module.supabase;
+    return module.supabase;
+  }, []);
+
+  const removeCurrentChannel = useCallback(() => {
+    if (channelRef.current && supabaseClientRef.current) {
+      supabaseClientRef.current.removeChannel(channelRef.current);
+    }
+    channelRef.current = null;
+  }, []);
+
+  const subscribeToJob = useCallback(async (jobId: string) => {
+    const supabaseClient = await getSupabaseClient();
+
+    // Clean up existing subscription
+    removeCurrentChannel();
+
+    const channel = supabaseClient
       .channel(`queue_job:${jobId}`)
       .on(
         'postgres_changes',
@@ -230,14 +247,11 @@ export function useQueueJob(): UseQueueJobReturn {
       });
 
     channelRef.current = channel;
-  }, []);
+  }, [getSupabaseClient, removeCurrentChannel]);
 
   const unsubscribeFromJob = useCallback(() => {
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-    }
-  }, []);
+    removeCurrentChannel();
+  }, [removeCurrentChannel]);
 
   // ============================================================================
   // Polling for Processing

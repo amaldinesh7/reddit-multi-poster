@@ -2,16 +2,21 @@ import "@/styles/globals.css";
 import { useState, useEffect, useRef } from "react";
 import type { AppProps } from "next/app";
 import Head from "next/head";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import { SWRConfig } from "swr";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { MobileBottomNav } from "@/components/layout";
 import { inter, fontVariables } from "@/lib/fonts";
 import { swrConfig } from "@/lib/swr";
-import { initPostHogClient, trackPageView } from "@/lib/posthog";
+import { initPostHogClient, trackPageView, registerUtmProperties } from "@/lib/posthog";
+import { captureUtmParams, storeUtmParams, getStoredUtmParams } from "@/lib/utm";
+
+const MobileBottomNav = dynamic(() => import("@/components/layout/MobileBottomNav"), {
+  ssr: false,
+});
 
 /**
  * Thin progress bar shown during page transitions.
@@ -67,17 +72,16 @@ const RouteProgressBar = () => {
 
 /**
  * Wrapper that applies a subtle fade-in on every page mount.
- * Keeps transitions fast (150ms) so navigation feels instant but polished.
+ * Uses a high starting opacity (0.92) so shared elements like headers
+ * don't visibly blink during client-side navigation.
  */
 const PageTransition = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const [transitionStage, setTransitionStage] = useState<"enter" | "visible">("enter");
 
   useEffect(() => {
-    // Reset to enter state on route change
     setTransitionStage("enter");
 
-    // Trigger visible on next frame so the CSS transition activates
     const raf = requestAnimationFrame(() => {
       setTransitionStage("visible");
     });
@@ -87,10 +91,11 @@ const PageTransition = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div
+      style={transitionStage === "enter" ? { opacity: 0.92 } : undefined}
       className={
         transitionStage === "enter"
-          ? "opacity-0 transition-none"
-          : "opacity-100 transition-opacity duration-150 ease-out"
+          ? "transition-none"
+          : "opacity-100 transition-opacity duration-100 ease-out"
       }
     >
       {children}
@@ -105,6 +110,22 @@ export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
     initPostHogClient();
   }, []);
+
+  // Capture UTM params from the landing URL and register as PostHog super properties.
+  // Runs once — on the first render when router.query is populated.
+  useEffect(() => {
+    const utmFromUrl = captureUtmParams(router.query);
+    if (utmFromUrl) {
+      storeUtmParams(utmFromUrl);
+      registerUtmProperties(utmFromUrl);
+      return;
+    }
+
+    const stored = getStoredUtmParams();
+    if (stored) {
+      registerUtmProperties(stored);
+    }
+  }, [router.query]);
 
   // Track page views on route changes
   useEffect(() => {

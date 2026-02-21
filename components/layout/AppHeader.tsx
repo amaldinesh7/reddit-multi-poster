@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/router';
 import { Avatar } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { ChevronDown, User, Settings, LogOut, Shield, Infinity, ArrowLeft, HelpCircle } from 'lucide-react';
@@ -114,11 +115,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   showBackButton = false,
   onBack,
 }) => {
+  const router = useRouter();
   const { isVisible, isAtTop } = useScrollDirection();
   const showUpgrade = entitlement !== 'paid' && onUpgrade;
   const hasProAccess = entitlement === 'paid' || entitlement === 'trial';
   const trimmedUserName = userName?.trim() || '';
-  const showAdminIcon = isAdmin && pageTitle === 'Admin Panel';
 
   const handleViewProfile = () => {
     if (!trimmedUserName) return;
@@ -126,15 +127,15 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   const handleSettings = () => {
-    window.location.href = '/settings';
+    router.push('/settings');
   };
 
   const handleHelp = () => {
-    window.location.href = '/help';
+    router.push('/help');
   };
 
   const handleAdminPanel = () => {
-    window.location.href = '/admin';
+    router.push('/admin');
   };
 
   const handleBack = () => {
@@ -194,7 +195,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             )}
             {pageTitle ? (
               <div className="flex items-center gap-2 min-w-0">
-                {showAdminIcon && <Shield className="w-4 h-4 text-cyan-400" aria-hidden="true" />}
                 <span className="truncate text-base font-semibold tracking-tight">
                   {pageTitle}
                 </span>

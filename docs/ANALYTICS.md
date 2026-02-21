@@ -46,9 +46,9 @@ This allows you to use a single PostHog project while keeping data separate.
 |-------|-------------|------------------|------------|
 | `login_clicked` | User clicks the login button | `pages/login.tsx` | `source` |
 | `oauth_started` | OAuth flow initiated with Reddit | `pages/api/auth/login.ts` | `source` |
-| `signup_completed` | New user completes registration | `pages/api/auth/callback.ts` | `reddit_username`, `is_new_user` |
-| `login_completed` | Returning user logs in | `pages/api/auth/callback.ts` | `reddit_username`, `is_new_user` |
-| `logout` | User logs out | Client-side | `source` |
+| `signup_completed` | New user completes registration | `pages/api/auth/callback.ts` | `reddit_username`, `is_new_user`, `utm_source`, `utm_medium`, `utm_campaign` |
+| `login_completed` | Returning user logs in | `pages/api/auth/callback.ts` | `reddit_username`, `is_new_user`, `utm_source`, `utm_medium`, `utm_campaign` |
+| `logout` | User logs out | `contexts/AuthContext.tsx` | `source` |
 
 ### Revenue & Conversion Events (Tier 1)
 
@@ -129,6 +129,26 @@ This allows you to use a single PostHog project while keeping data separate.
 |----------|------|-------------|---------|
 | `category_name` | `string` | Name of created category | `"Gaming"` |
 | `search_query` | `string` | Subreddit search term | `"programming"` |
+
+### Marketing Attribution Properties (UTM)
+
+These are automatically attached to **all** client-side events as PostHog "super properties" when a user arrives via a UTM-tagged link. They are also explicitly included in server-side `signup_completed` and `login_completed` events.
+
+| Property | Type | Description | Example |
+|----------|------|-------------|---------|
+| `utm_source` | `string` | Marketing channel | `"reddit"`, `"producthunt"`, `"cloud_msg"` |
+| `utm_medium` | `string` | Traffic medium | `"social"`, `"push"`, `"listing"` |
+| `utm_campaign` | `string` | Campaign name | `"launch_feb2026"` |
+| `utm_content` | `string` | Content variant / placement | `"subreddit_name"`, `"hero_cta"` |
+| `utm_term` | `string` | Paid search keyword | `"reddit multi poster"` |
+| `initial_referrer` | `string` | Full referrer URL at landing | `"https://www.reddit.com/r/startups/..."` |
+| `referring_domain` | `string` | Hostname of the referrer | `"reddit.com"` |
+
+**How it works:**
+1. User lands on any page with `?utm_source=...` params
+2. Params are stored in `sessionStorage` and registered as PostHog super properties
+3. Every subsequent event in that session automatically includes the UTM data
+4. On login/signup, UTM params are also sent server-side via a short-lived cookie
 
 ---
 
@@ -246,6 +266,46 @@ category_created / subreddit_search_used
 
 ---
 
+### 7. Marketing Attribution Funnel
+
+Tracks the full journey from a UTM-tagged marketing link to activation, broken down by channel.
+
+```
+$pageview (where utm_source is set)
+    ↓
+login_clicked
+    ↓
+signup_completed (with utm_source)
+    ↓
+first_post_created
+```
+
+**Key Metrics:**
+- Channel → Signup conversion rate (by `utm_source`)
+- Channel → Activation rate
+- Best-performing campaign (`utm_campaign`)
+
+**PostHog Setup:** Create this funnel and add a breakdown by `utm_source` to compare channels.
+
+---
+
+## UTM Link Templates for Launch
+
+Use these links when sharing on different marketing channels:
+
+| Channel | URL |
+|---------|-----|
+| Reddit | `https://yourapp.com/login?utm_source=reddit&utm_medium=social&utm_campaign=launch_feb2026&utm_content=SUBREDDIT_NAME` |
+| Cloud Messaging | `https://yourapp.com/login?utm_source=cloud_msg&utm_medium=push&utm_campaign=launch_feb2026` |
+| Product Hunt | `https://yourapp.com/login?utm_source=producthunt&utm_medium=listing&utm_campaign=launch_feb2026` |
+| Direct / DM | `https://yourapp.com/login?utm_source=direct_dm&utm_medium=message&utm_campaign=launch_feb2026` |
+| Twitter / X | `https://yourapp.com/login?utm_source=twitter&utm_medium=social&utm_campaign=launch_feb2026` |
+| Hacker News | `https://yourapp.com/login?utm_source=hackernews&utm_medium=social&utm_campaign=launch_feb2026` |
+
+Replace `yourapp.com` with your actual production domain.
+
+---
+
 ## Implementation Details
 
 ### Client-Side Tracking
@@ -313,6 +373,12 @@ identifyServerUser(userId, { reddit_username: 'user123' });
    - Post Engagement Funnel
    - Posts per user distribution
    - Error category breakdown
+
+5. **Marketing Attribution Dashboard**
+   - Signups by Source (`signup_completed` breakdown by `utm_source`)
+   - Page Views by Campaign (`$pageview` breakdown by `utm_campaign`)
+   - Channel Conversion Rate (funnel: `$pageview` → `signup_completed` → `first_post_created`, broken down by `utm_source`)
+   - Revenue by Channel (`checkout_completed` breakdown by `utm_source`)
 
 ### Cohort Suggestions
 

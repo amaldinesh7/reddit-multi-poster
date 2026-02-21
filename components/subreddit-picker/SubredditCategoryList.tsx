@@ -126,7 +126,7 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-1">
       {categorizedSubreddits.map(({ categoryName, subreddits }) => {
         const hasErrors = categoryHasErrors(subreddits);
         const isExpanded = expandedCategories.includes(categoryName);
@@ -134,10 +134,10 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
         const allSelected = subreddits.length > 0 && selectedCount === subreddits.length;
 
         return (
-          <div key={categoryName} className="space-y-3">
+          <div key={categoryName}>
             <button
               onClick={() => onToggleCategory(categoryName)}
-              className="w-full px-1 py-1.5 flex items-center justify-between hover:text-foreground transition-colors cursor-pointer"
+              className="w-full px-1 py-2 flex items-center justify-between hover:text-foreground transition-colors cursor-pointer"
               aria-expanded={isExpanded}
               aria-label={`${categoryName} category, ${subreddits.length} subreddits`}
             >
@@ -150,8 +150,8 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
                 {hasErrors && (
                   <AlertTriangle className="h-4 w-4 text-red-500" aria-label="Has validation errors" />
                 )}
-                <span className="font-medium text-sm">{categoryName}</span>
-                <span className="text-xs text-muted-foreground">
+                <span className="font-semibold text-sm tracking-tight">{categoryName}</span>
+                <span className="text-xs text-muted-foreground/70">
                   ({selectedCount}/{subreddits.length})
                 </span>
               </div>
@@ -169,7 +169,7 @@ const SubredditCategoryList: React.FC<SubredditCategoryListProps> = ({
             </button>
 
             {isExpanded && (
-              <div className="space-y-2">
+              <div className="space-y-1 ml-2 pl-3 border-l border-border/50 [&_span.font-medium]:text-foreground/70">
                 {subreddits.map((name) => {
                   const key = normalizeSubredditKey(name);
                   const hasError = !!(showValidationErrors && hasMissingFlair(name));
