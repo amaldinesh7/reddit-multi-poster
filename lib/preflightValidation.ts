@@ -272,18 +272,18 @@ function validateBody(input: PreflightInput): ValidationIssue[] {
     if (!reqs) continue;
 
     // Body required check
-    if (reqs.body_restriction_policy === 'required' && !body.trim()) {
-      issues.push({
-        code: 'BODY_REQUIRED',
-        severity: 'error',
-        subreddit,
-        message: `r/${subreddit} requires a description`,
-        suggestion: 'Add a description to your post',
-        field: 'body',
-        expectedCategory: 'fixable_now',
-      });
-      continue;
-    }
+    // if (reqs.body_restriction_policy === 'required' && !body.trim()) {
+    //   issues.push({
+    //     code: 'BODY_REQUIRED',
+    //     severity: 'error',
+    //     subreddit,
+    //     message: `r/${subreddit} requires a description`,
+    //     suggestion: 'Add a description to your post',
+    //     field: 'body',
+    //     expectedCategory: 'fixable_now',
+    //   });
+    //   continue;
+    // }
 
     // Min length (only if body exists)
     if (body && reqs.body_text_min_length && body.length < reqs.body_text_min_length) {
