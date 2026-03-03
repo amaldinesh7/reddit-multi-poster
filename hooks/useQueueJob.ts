@@ -163,7 +163,7 @@ const mergeResultsByIndex = (
 
 export function useQueueJob(): UseQueueJobReturn {
   const [state, setState] = useState<QueueJobState>(initialState);
-  const { uploadFiles, isUploading, progress: uploadProgress, error: uploadError } = useDirectUpload();
+  const { uploadFiles, cancelUpload, isUploading, progress: uploadProgress } = useDirectUpload();
   
   // Refs for cleanup
   const supabaseClientRef = useRef<SupabaseClient | null>(null);
@@ -582,7 +582,22 @@ export function useQueueJob(): UseQueueJobReturn {
   // ============================================================================
 
   const cancel = useCallback(async (): Promise<boolean> => {
-    const { jobId } = state;
+    const { jobId, isSubmitting } = state;
+
+    // Cancel during upload phase (no jobId yet)
+    if (!jobId && isSubmitting) {
+      cancelUpload();
+      setState(prev => ({
+        ...prev,
+        isSubmitting: false,
+        isUploading: false,
+        uploadProgress: null,
+        error: 'Upload cancelled',
+        endedAtMs: Date.now(),
+      }));
+      return true;
+    }
+
     if (!jobId) return false;
 
     try {
@@ -619,7 +634,7 @@ export function useQueueJob(): UseQueueJobReturn {
       }));
       return false;
     }
-  }, [state.jobId, stopPolling]);
+  }, [state.jobId, state.isSubmitting, stopPolling, cancelUpload]);
 
   // ============================================================================
   // Resume Job (for page refresh)
