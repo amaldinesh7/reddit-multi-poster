@@ -163,13 +163,14 @@ const mergeResultsByIndex = (
 
 export function useQueueJob(): UseQueueJobReturn {
   const [state, setState] = useState<QueueJobState>(initialState);
-  const { uploadFiles, isUploading, progress: uploadProgress, error: uploadError } = useDirectUpload();
+  const { uploadFiles, cancelUpload, isUploading, progress: uploadProgress } = useDirectUpload();
   
   // Refs for cleanup
   const supabaseClientRef = useRef<SupabaseClient | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const submitAbortControllerRef = useRef<AbortController | null>(null);
   const isProcessingRef = useRef(false);
 
   // Sync upload state
@@ -419,6 +420,10 @@ export function useQueueJob(): UseQueueJobReturn {
   ): Promise<string | null> => {
     const { showToast = true, toastTitle = 'Submission Failed' } = options;
 
+    // Create abort controller for the submit request
+    submitAbortControllerRef.current = new AbortController();
+    const submitSignal = submitAbortControllerRef.current.signal;
+
     setState(prev => ({
       ...prev,
       isSubmitting: true,
@@ -477,11 +482,17 @@ export function useQueueJob(): UseQueueJobReturn {
         })),
       };
 
+      // Check if aborted before submitting
+      if (submitSignal.aborted) {
+        throw new DOMException('Aborted', 'AbortError');
+      }
+
       // Submit to API (lightweight JSON, no file binaries)
       const response = await fetch('/api/queue/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
+        signal: submitSignal,
       });
 
       const data = await response.json();
@@ -514,6 +525,19 @@ export function useQueueJob(): UseQueueJobReturn {
 
       return jobId;
     } catch (error) {
+      // Handle abort errors silently (user cancelled)
+      if (error instanceof Error && error.name === 'AbortError') {
+        setState(prev => ({
+          ...prev,
+          isSubmitting: false,
+          isUploading: false,
+          uploadProgress: null,
+          error: 'Submission cancelled',
+          endedAtMs: prev.endedAtMs ?? Date.now(),
+        }));
+        return null;
+      }
+
       const errorMessage = captureClientError(error, 'useQueueJob.submit', {
         showToast,
         toastTitle,
@@ -528,6 +552,8 @@ export function useQueueJob(): UseQueueJobReturn {
         endedAtMs: prev.endedAtMs ?? Date.now(),
       }));
       return null;
+    } finally {
+      submitAbortControllerRef.current = null;
     }
   }, [subscribeToJob, startPolling, uploadFiles]);
 
@@ -582,7 +608,28 @@ export function useQueueJob(): UseQueueJobReturn {
   // ============================================================================
 
   const cancel = useCallback(async (): Promise<boolean> => {
-    const { jobId } = state;
+    const { jobId, isSubmitting } = state;
+
+    // Cancel during upload/submit phase (no jobId yet)
+    if (!jobId && isSubmitting) {
+      // Abort any ongoing upload
+      cancelUpload();
+      // Abort any ongoing submit request
+      if (submitAbortControllerRef.current) {
+        submitAbortControllerRef.current.abort();
+        submitAbortControllerRef.current = null;
+      }
+      setState(prev => ({
+        ...prev,
+        isSubmitting: false,
+        isUploading: false,
+        uploadProgress: null,
+        error: 'Submission cancelled',
+        endedAtMs: Date.now(),
+      }));
+      return true;
+    }
+
     if (!jobId) return false;
 
     try {
@@ -619,7 +666,7 @@ export function useQueueJob(): UseQueueJobReturn {
       }));
       return false;
     }
-  }, [state.jobId, stopPolling]);
+  }, [state.jobId, state.isSubmitting, stopPolling, cancelUpload]);
 
   // ============================================================================
   // Resume Job (for page refresh)
