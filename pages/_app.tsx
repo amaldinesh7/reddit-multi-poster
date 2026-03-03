@@ -5,6 +5,7 @@ import Head from "next/head";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import { SWRConfig } from "swr";
+import { Analytics } from "@vercel/analytics/next";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -181,6 +182,7 @@ export default function App({ Component, pageProps }: AppProps) {
           </AuthProvider>
         </SWRConfig>
       </ErrorBoundary>
+      <Analytics />
     </>
   );
 }
