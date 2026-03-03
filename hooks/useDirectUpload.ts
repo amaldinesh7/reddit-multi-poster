@@ -49,8 +49,20 @@ const isRetryableError = (error: unknown, response?: Response): boolean => {
   return false;
 };
 
-const delay = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number, signal?: AbortSignal): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'));
+      return;
+    }
+
+    const timeoutId = setTimeout(resolve, ms);
+
+    signal?.addEventListener('abort', () => {
+      clearTimeout(timeoutId);
+      reject(new DOMException('Aborted', 'AbortError'));
+    }, { once: true });
+  });
 
 export function useDirectUpload(): UseDirectUploadReturn {
   const [isUploading, setIsUploading] = useState(false);
@@ -196,7 +208,7 @@ export function useDirectUpload(): UseDirectUploadReturn {
                 attempt: attempt + 1,
                 fileIndex,
               });
-              await delay(RETRY_DELAYS_MS[attempt]);
+              await delay(RETRY_DELAYS_MS[attempt], signal);
             }
           }
 
