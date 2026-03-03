@@ -20,8 +20,9 @@ test.describe('@flow-edge Critical Edge Flows', () => {
     await setupQueueMockUnauthorized(authenticatedPage);
 
     await authenticatedPage.getByRole('button', { name: /review.*post/i }).click();
-    // Wait for the review drawer to open
-    const postNowButton = authenticatedPage.getByRole('button', { name: /post now/i });
+    // Wait for the review drawer to open (it renders as a dialog)
+    await expect(authenticatedPage.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+    const postNowButton = authenticatedPage.getByRole('button', { name: /post to \d+ communit/i });
     await expect(postNowButton).toBeVisible({ timeout: 5000 });
     await postNowButton.click();
 
@@ -46,8 +47,9 @@ test.describe('@flow-edge Critical Edge Flows', () => {
     await selectSubreddits(authenticatedPage, ['pics']);
 
     await authenticatedPage.getByRole('button', { name: /review.*post/i }).click();
-    // Wait for the review drawer to open
-    const postNowButton = authenticatedPage.getByRole('button', { name: /post now/i });
+    // Wait for the review drawer to open (it renders as a dialog)
+    await expect(authenticatedPage.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+    const postNowButton = authenticatedPage.getByRole('button', { name: /post to \d+ communit/i });
     await expect(postNowButton).toBeVisible({ timeout: 5000 });
     await postNowButton.click();
 
@@ -63,8 +65,9 @@ test.describe('@flow-edge Critical Edge Flows', () => {
     await setupQueueMockRateLimited(authenticatedPage);
 
     await authenticatedPage.getByRole('button', { name: /review.*post/i }).click();
-    // Wait for the review drawer to open
-    const postNowButton = authenticatedPage.getByRole('button', { name: /post now/i });
+    // Wait for the review drawer to open (it renders as a dialog)
+    await expect(authenticatedPage.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+    const postNowButton = authenticatedPage.getByRole('button', { name: /post to \d+ communit/i });
     await expect(postNowButton).toBeVisible({ timeout: 5000 });
     await postNowButton.click();
 
@@ -80,8 +83,9 @@ test.describe('@flow-edge Critical Edge Flows', () => {
     const queueMock = await setupQueueContractMock(authenticatedPage, ['pics'], ['success']);
 
     await authenticatedPage.getByRole('button', { name: /review.*post/i }).click();
-    // Wait for the review drawer to open
-    const postNowButton = authenticatedPage.getByRole('button', { name: /post now/i });
+    // Wait for the review drawer to open (it renders as a dialog)
+    await expect(authenticatedPage.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+    const postNowButton = authenticatedPage.getByRole('button', { name: /post to \d+ communit/i });
     await expect(postNowButton).toBeVisible({ timeout: 5000 });
     await postNowButton.click();
 
