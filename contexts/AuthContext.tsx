@@ -88,9 +88,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetcher,
     {
       revalidateOnMount: true,
-      revalidateOnFocus: false,
+      revalidateOnFocus: true,
       revalidateIfStale: false,
-      dedupingInterval: 300000, // 5 minutes - auth data rarely changes
+      dedupingInterval: 60_000, // 1 min — short enough to pick up post-payment webhook updates
       errorRetryCount: 1,
       shouldRetryOnError: (err) => {
         // Don't retry on auth errors

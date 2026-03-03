@@ -105,6 +105,10 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
   const displayTitle = useCustomTitle ? customTitle : globalTitle;
   const displayBody = useCustomBody ? customBody : globalBody;
 
+  const bodyError = bodyRequired && !displayBody.trim()
+    ? 'Description is required for this community'
+    : null;
+
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -255,18 +259,28 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
                     <span className="hidden sm:inline">AI</span>
                   </button>
                 </div>
-                <div className="flex justify-end mt-1">
+                <div className="flex justify-between items-center mt-1">
+                  {bodyError ? (
+                    <p className="text-xs text-red-500">{bodyError}</p>
+                  ) : (
+                    <span />
+                  )}
                   <span className={`text-xs ${displayBody.length > bodyMaxLength * 0.9 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
                     {displayBody.length}/{bodyMaxLength}
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="mt-2 px-3 py-2 bg-muted/50 rounded-md text-sm text-muted-foreground">
-                {globalBody ? (
-                  <>Using global: &quot;{globalBody.slice(0, 80)}{globalBody.length > 80 ? '...' : ''}&quot;</>
-                ) : (
-                  <span className="italic">No description set</span>
+              <div className="mt-2">
+                <div className="px-3 py-2 bg-muted/50 rounded-md text-sm text-muted-foreground">
+                  {globalBody ? (
+                    <>Using global: &quot;{globalBody.slice(0, 80)}{globalBody.length > 80 ? '...' : ''}&quot;</>
+                  ) : (
+                    <span className="italic">No description set</span>
+                  )}
+                </div>
+                {bodyError && (
+                  <p className="text-xs text-red-500 mt-1">{bodyError}</p>
                 )}
               </div>
             )}
@@ -289,7 +303,7 @@ export const CustomizePostDialog: React.FC<CustomizePostDialogProps> = ({
           <Button variant="outline" onClick={() => onOpenChange(false)} className="cursor-pointer">
             Cancel
           </Button>
-          <Button onClick={handleSave} className="cursor-pointer">
+          <Button onClick={handleSave} disabled={!!bodyError} className="cursor-pointer">
             Save
           </Button>
         </DialogFooter>

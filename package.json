@@ -49,6 +49,7 @@
     "@sentry/nextjs": "^10.38.0",
     "@supabase/supabase-js": "^2.90.1",
     "@types/formidable": "^3.4.5",
+    "@vercel/analytics": "^1.6.1",
     "autoprefixer": "^10.4.21",
     "axios": "^1.7.7",
     "better-sqlite3": "^11.7.0",

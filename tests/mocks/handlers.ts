@@ -17,6 +17,12 @@ export const mockResponses = {
     authenticated: true,
     me: testData.users.standard,
     userId: testData.supabaseUsers.standard,
+    entitlement: 'paid',
+    limits: {
+      maxSubreddits: 999,
+      maxPostItems: 999,
+      temporarySelectionEnabled: true,
+    },
   },
 
   /**

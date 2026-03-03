@@ -45,7 +45,16 @@ export const fillCoreLinkPostForm = async (
 export const selectSubreddits = async (page: Page, subreddits: string[]): Promise<void> => {
   for (const subreddit of subreddits) {
     // The checkbox is nested inside a button labeled "Toggle r/{subreddit}"
-    await page.getByRole('button', { name: new RegExp(`Toggle r/${subreddit}`, 'i') }).click();
+    const toggleButton = page.getByRole('button', { name: new RegExp(`Toggle r/${subreddit}`, 'i') });
+    const checkbox = toggleButton.getByRole('checkbox');
+    
+    // Only click if not already checked
+    const isChecked = await checkbox.isChecked();
+    if (!isChecked) {
+      await toggleButton.click();
+      // Wait for the checkbox state to update
+      await expect(checkbox).toBeChecked({ timeout: 2000 });
+    }
   }
 };
 
@@ -113,12 +122,69 @@ export const setupQueueContractMock = async (
     });
   });
 
-  // Mock /api/queue/process - triggers processing
+  // Build streaming response for the process endpoint
+  const buildStreamResponse = () => {
+    const lines: string[] = [
+      JSON.stringify({
+        type: 'status',
+        jobId: mockJobId,
+        status: 'processing',
+        currentIndex: 0,
+      }),
+    ];
+
+    subreddits.forEach((subreddit, index) => {
+      lines.push(
+        JSON.stringify({
+          type: 'progress',
+          jobId: mockJobId,
+          currentIndex: index,
+        })
+      );
+
+      const outcome = outcomes[index] ?? 'success';
+      lines.push(
+        JSON.stringify({
+          type: 'result',
+          jobId: mockJobId,
+          result: {
+            index,
+            subreddit,
+            status: outcome,
+            url: outcome === 'success' ? `https://reddit.com/r/${subreddit}/comments/mock123/test_post` : undefined,
+            error: outcome === 'error' ? 'Failed to post' : undefined,
+            postedAt: new Date().toISOString(),
+          },
+        })
+      );
+
+      if (index < subreddits.length - 1) {
+        lines.push(
+          JSON.stringify({
+            type: 'waiting',
+            jobId: mockJobId,
+            waitSeconds: 1,
+          })
+        );
+      }
+    });
+
+    lines.push(
+      JSON.stringify({
+        type: 'complete',
+        jobId: mockJobId,
+      })
+    );
+
+    return lines.join('\n');
+  };
+
+  // Mock /api/queue/process - returns streaming response
   await page.route('**/api/queue/process*', async (route: Route) => {
     await route.fulfill({
       status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ success: true }),
+      contentType: 'text/plain',
+      body: buildStreamResponse(),
     });
   });
 
